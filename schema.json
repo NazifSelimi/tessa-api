@@ -1,0 +1,1532 @@
+[
+    {
+        "TABLE_NAME": "brands",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "brands",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "brands",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "brands",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "cache",
+        "COLUMN_NAME": "key",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "cache",
+        "COLUMN_NAME": "value",
+        "COLUMN_TYPE": "mediumtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "cache",
+        "COLUMN_NAME": "expiration",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "cache_locks",
+        "COLUMN_NAME": "key",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "cache_locks",
+        "COLUMN_NAME": "owner",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "cache_locks",
+        "COLUMN_NAME": "expiration",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "product_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "quantity",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "price",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "carts",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "categories",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "categories",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "categories",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "categories",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupon_user",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "coupon_user",
+        "COLUMN_NAME": "coupon_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "coupon_user",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "coupon_user",
+        "COLUMN_NAME": "used_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "code",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "value",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "type",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "quantity",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "expiration_date",
+        "COLUMN_TYPE": "date",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "coupons",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "description",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "category",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "courses",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "uuid",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "UNI"
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "connection",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "queue",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "payload",
+        "COLUMN_TYPE": "longtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "exception",
+        "COLUMN_TYPE": "longtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "failed_jobs",
+        "COLUMN_NAME": "failed_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
+        "EXTRA": "DEFAULT_GENERATED",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "imageable_type",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "imageable_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "images",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "product_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "order_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "quantity",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "price",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "items",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "total_jobs",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "pending_jobs",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "failed_jobs",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "failed_job_ids",
+        "COLUMN_TYPE": "longtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "options",
+        "COLUMN_TYPE": "mediumtext",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "cancelled_at",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "job_batches",
+        "COLUMN_NAME": "finished_at",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "queue",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "payload",
+        "COLUMN_TYPE": "longtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "attempts",
+        "COLUMN_TYPE": "tinyint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "reserved_at",
+        "COLUMN_TYPE": "int unsigned",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "available_at",
+        "COLUMN_TYPE": "int unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "jobs",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "int unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "migrations",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "int unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "migrations",
+        "COLUMN_NAME": "migration",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "migrations",
+        "COLUMN_NAME": "batch",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "total",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "discount",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "0.00",
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "status",
+        "COLUMN_TYPE": "tinyint",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "0",
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "message",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "coupon_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "password_reset_tokens",
+        "COLUMN_NAME": "email",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "password_reset_tokens",
+        "COLUMN_NAME": "token",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "password_reset_tokens",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "tokenable_type",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "tokenable_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "token",
+        "COLUMN_TYPE": "varchar(64)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "UNI"
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "abilities",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "last_used_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "expires_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "personal_access_tokens",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "product_translations",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "product_translations",
+        "COLUMN_NAME": "product_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "product_translations",
+        "COLUMN_NAME": "locale",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "product_translations",
+        "COLUMN_NAME": "description",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "product_user",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "product_user",
+        "COLUMN_NAME": "product_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "brand_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "category_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "quantity",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "price",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "stylist_price",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "products",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "saloon_name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "saloon_city",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "saloon_address",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "saloon_phone",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "message",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "request_stylist",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "product_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "sale_price",
+        "COLUMN_TYPE": "decimal(8,2)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "start_date",
+        "COLUMN_TYPE": "datetime",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "end_date",
+        "COLUMN_TYPE": "datetime",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sales",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "ip_address",
+        "COLUMN_TYPE": "varchar(45)",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "user_agent",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "payload",
+        "COLUMN_TYPE": "longtext",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "sessions",
+        "COLUMN_NAME": "last_activity",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "code",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "UNI"
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "used",
+        "COLUMN_TYPE": "tinyint(1)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "0",
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "expires_at",
+        "COLUMN_TYPE": "datetime",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "created_by",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "used_by",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_invitation_codes",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "user_id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "MUL"
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "saloon_name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "saloon_address",
+        "COLUMN_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "saloon_city",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "saloon_phone",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "stylist_profiles",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "id",
+        "COLUMN_TYPE": "bigint unsigned",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "auto_increment",
+        "COLUMN_KEY": "PRI"
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "first_name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "last_name",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "phone",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "email",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": "UNI"
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "city",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "address",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "postcode",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "role",
+        "COLUMN_TYPE": "int",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "0",
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "email_verified_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "password",
+        "COLUMN_TYPE": "varchar(255)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "request_submitted",
+        "COLUMN_TYPE": "tinyint(1)",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": "0",
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "remember_token",
+        "COLUMN_TYPE": "varchar(100)",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "created_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "updated_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    },
+    {
+        "TABLE_NAME": "users",
+        "COLUMN_NAME": "deleted_at",
+        "COLUMN_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null,
+        "EXTRA": "",
+        "COLUMN_KEY": ""
+    }
+]
