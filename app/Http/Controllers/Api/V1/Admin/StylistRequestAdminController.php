@@ -14,12 +14,12 @@ class StylistRequestAdminController extends Controller
     ) {}
 
     /**
-     * List all stylist requests with pagination.
+     * List all stylist requests with pagination and filters.
      */
     public function index(Request $request)
     {
-        $filters = $request->only(['search']);
-        $perPage = $request->per_page ?? 20;
+        $filters = $request->only(['search', 'status']);
+        $perPage = (int) ($request->per_page ?? 20);
 
         $requests = $this->stylistRequestService->listFiltered($filters, $perPage);
 
@@ -35,7 +35,21 @@ class StylistRequestAdminController extends Controller
                 'per_page' => $requests->perPage(),
                 'total' => $requests->total(),
                 'last_page' => $requests->lastPage(),
+                'from' => $requests->firstItem(),
+                'to' => $requests->lastItem(),
             ]
+        );
+    }
+
+    /**
+     * Show a single stylist request.
+     */
+    public function show($id)
+    {
+        $stylistRequest = \App\Models\RequestStylist::with('user')->findOrFail($id);
+
+        return ApiResponse::ok(
+            $this->stylistRequestService->mapToResponse($stylistRequest)
         );
     }
 
@@ -60,8 +74,7 @@ class StylistRequestAdminController extends Controller
     }
 
     /**
-     * Reject a stylist request — no DB status column exists,
-     * so we just delete the request.
+     * Reject a stylist request — reverts role if needed and deletes the request.
      */
     public function reject(Request $request, $id)
     {

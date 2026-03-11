@@ -14,11 +14,26 @@ class StylistRequestService
     {
         $query = RequestStylist::with('user');
 
+        // Filter by approval status
+        if (!empty($filters['status'])) {
+            $status = $filters['status'];
+            if ($status === 'approved') {
+                $query->whereHas('user', fn ($q) => $q->where('role', User::ROLE_STYLIST));
+            } elseif ($status === 'pending') {
+                $query->whereHas('user', fn ($q) => $q->where('role', '!=', User::ROLE_STYLIST));
+            }
+        }
+
+        // Search by user name, email, or salon name/city
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('email', 'like', "%{$search}%")
-                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+            $query->where(function ($q) use ($search) {
+                $q->where('saloon_name', 'like', "%{$search}%")
+                  ->orWhere('saloon_city', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('email', 'like', "%{$search}%")
+                         ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                  });
             });
         }
 
@@ -31,18 +46,22 @@ class StylistRequestService
     public function mapToResponse($req): array
     {
         $user = $req->user;
+        $isApproved = $user ? $user->role === User::ROLE_STYLIST : false;
+
         return [
-            'id' => $req->id,
-            'userId' => $req->user_id,
+            'id' => (string) $req->id,
+            'userId' => (string) $req->user_id,
             'userName' => $user ? trim($user->first_name . ' ' . $user->last_name) : 'Unknown',
             'userEmail' => $user?->email,
             'saloonName' => $req->saloon_name,
-            'saloonCity' => $req->saloon_city,
             'saloonAddress' => $req->saloon_address,
+            'saloonCity' => $req->saloon_city,
             'saloonPhone' => $req->saloon_phone,
             'message' => $req->message,
-            'isApproved' => $user ? $user->role === User::ROLE_STYLIST : false,
+            'isApproved' => $isApproved,
+            'status' => $isApproved ? 'approved' : 'pending',
             'createdAt' => $req->created_at?->toISOString(),
+            'updatedAt' => $req->updated_at?->toISOString(),
         ];
     }
 

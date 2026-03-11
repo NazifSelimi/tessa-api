@@ -7,14 +7,27 @@ use App\Models\Order;
 class AdminOrderService
 {
     /**
+     * Map string status names to the Order model integer constants.
+     */
+    private const STATUS_MAP = [
+        'pending'   => Order::STATUS_PENDING,
+        'confirmed' => Order::STATUS_PAID,
+        'shipped'   => Order::STATUS_SHIPPED,
+        'cancelled' => Order::STATUS_CANCELLED,
+    ];
+
+    /**
      * List orders with optional filters and pagination.
      */
     public function listFiltered(array $filters, int $perPage = 20)
     {
-        $query = Order::with(['user', 'items.product', 'coupon']);
+        $query = Order::with(['user', 'items.product.images', 'coupon']);
 
         if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            $statusInt = self::STATUS_MAP[$filters['status']] ?? null;
+            if ($statusInt !== null) {
+                $query->where('status', $statusInt);
+            }
         }
 
         if (!empty($filters['date_from'])) {
@@ -46,8 +59,14 @@ class AdminOrderService
     public function updateStatus($id, string $status): Order
     {
         $order = Order::findOrFail($id);
-        $order->update(['status' => $status]);
 
-        return $order->load(['user', 'items.product', 'coupon']);
+        $statusInt = self::STATUS_MAP[$status] ?? null;
+        if ($statusInt === null) {
+            throw new \InvalidArgumentException("Invalid status: {$status}");
+        }
+
+        $order->update(['status' => $statusInt]);
+
+        return $order->load(['user', 'items.product.images', 'coupon']);
     }
 }

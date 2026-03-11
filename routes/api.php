@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\AdminCategoryController;
 use App\Http\Controllers\Api\V1\Admin\AdminBrandController;
+use App\Http\Controllers\Api\V1\Admin\AdminDistributorController;
 use App\Http\Controllers\Api\V1\Admin\AdminReportController;
 use App\Http\Controllers\Api\V1\Stylist\StylistCodeController;
 use App\Http\Controllers\Api\V1\Stylist\StylistDashboardController;
@@ -100,12 +101,17 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             
             // Stylist Request Management
             Route::get('/stylist-requests', [StylistRequestAdminController::class, 'index']);
+            Route::get('/stylist-requests/{id}', [StylistRequestAdminController::class, 'show']);
             Route::post('/stylist-requests/{id}/approve', [StylistRequestAdminController::class, 'approve']);
             Route::post('/stylist-requests/{id}/reject', [StylistRequestAdminController::class, 'reject']);
             
             // Reports & Analytics
             Route::get('/reports/sales', [AdminReportController::class, 'sales']);
             Route::get('/reports/products', [AdminReportController::class, 'products']);
+            
+            // Distributor Codes
+            Route::get('/distributor-codes', [AdminDistributorController::class, 'index']);
+            Route::get('/distributor-codes/stats', [AdminDistributorController::class, 'stats']);
         });
         
         // Stylist Routes

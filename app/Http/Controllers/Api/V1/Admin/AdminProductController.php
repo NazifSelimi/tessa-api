@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\ImageService;
 use App\Services\ProductService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ use Illuminate\Http\Request;
 class AdminProductController extends Controller
 {
     public function __construct(
-        protected ProductService $productService
+        protected ProductService $productService,
+        protected ImageService $imageService
     ) {}
 
     /**
@@ -37,7 +39,7 @@ class AdminProductController extends Controller
             'quantity' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'description' => ['nullable', 'string'],
             'locale' => ['nullable', 'string', 'max:10'],
         ])->validate();
@@ -50,11 +52,10 @@ class AdminProductController extends Controller
         $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product = Product::create($productData);
 
-        // Handle image upload
+        // Handle image upload — convert to WebP
         if ($request->hasFile('image')) {
-            $name = time() . '_' . uniqid() . '.' . $request->file('image')->getClientOriginalExtension();
-            $request->file('image')->storeAs('public/images', $name);
-            $product->images()->create(['name' => $name]);
+            $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
+            $product->images()->create(['name' => $filename]);
         }
 
         // Handle translation
@@ -97,7 +98,7 @@ class AdminProductController extends Controller
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
-            'image' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'image' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'description' => ['sometimes', 'nullable', 'string'],
             'locale' => ['nullable', 'string', 'max:10'],
         ])->validate();
@@ -110,12 +111,16 @@ class AdminProductController extends Controller
         $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product->update($productData);
 
-        // Handle image upload
+        // Handle image upload — convert to WebP and replace old images
         if ($request->hasFile('image')) {
+            // Delete old image files from storage
+            foreach ($product->images as $oldImage) {
+                $this->imageService->delete($oldImage->name);
+            }
             $product->images()->delete();
-            $name = time() . '_' . uniqid() . '.' . $request->file('image')->getClientOriginalExtension();
-            $request->file('image')->storeAs('public/images', $name);
-            $product->images()->create(['name' => $name]);
+
+            $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
+            $product->images()->create(['name' => $filename]);
         }
 
         // Handle translation update
@@ -146,6 +151,11 @@ class AdminProductController extends Controller
 
         if ($product->items()->exists()) {
             return ApiResponse::error('Cannot delete product with existing orders', 400);
+        }
+
+        // Delete image files from storage
+        foreach ($product->images as $image) {
+            $this->imageService->delete($image->name);
         }
 
         $product->images()->delete();
