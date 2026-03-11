@@ -19,19 +19,24 @@ class ProductResource extends JsonResource
             }
         }
 
-        // Get description from translations
+        // Get description from translations (locale-aware)
         $description = null;
+        $translations = null;
         if ($this->relationLoaded('translations') && $this->translations->isNotEmpty()) {
             $locale = app()->getLocale();
             $translation = $this->translations->firstWhere('locale', $locale)
                 ?? $this->translations->first();
             $description = $translation?->description;
+
+            // Return all translations as a locale-keyed map
+            $translations = $this->translations->pluck('description', 'locale');
         }
 
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
             'description' => $description,
+            'translations' => $translations,
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
             'quantity' => (int) $this->quantity,
