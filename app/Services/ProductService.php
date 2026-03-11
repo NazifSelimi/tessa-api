@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Exception;
@@ -250,5 +251,49 @@ class ProductService
                     ->where('end_date', '>=', now());
             });
         }
+
+        if (!empty($filters['in_stock'])) {
+            $query->where('quantity', '>', 0);
+        }
+
+        // Sorting — when no specific category is selected, order by category priority
+        // so care products (shampoo, conditioner, etc.) appear first and
+        // professional/chemical products (activators, hydrogen, hair color) appear last
+        $sort = $filters['sort'] ?? 'name_asc';
+
+        if (!isset($filters['category_id'])) {
+            $priorityMap = Category::pluck('name', 'id');
+            $highPriority   = ['Shampoo', 'Conditioner', 'Mask', 'Fluid', 'Lotion', 'Spray', 'Styling'];
+            $mediumPriority = ['Sets', 'Color Mask', 'Filler', 'Other', 'Tester'];
+            // low: Activator, Hydrogen Peroxide, Bleach and De Color
+            // last: Hair Color
+
+            $cases = [];
+            $bindings = [];
+            foreach ($priorityMap as $id => $name) {
+                if (in_array($name, $highPriority, true)) {
+                    $cases[] = "WHEN category_id = ? THEN 0";
+                } elseif (in_array($name, $mediumPriority, true)) {
+                    $cases[] = "WHEN category_id = ? THEN 1";
+                } elseif ($name === 'Hair Color') {
+                    $cases[] = "WHEN category_id = ? THEN 3";
+                } else {
+                    $cases[] = "WHEN category_id = ? THEN 2";
+                }
+                $bindings[] = $id;
+            }
+
+            if ($cases) {
+                $query->orderByRaw('CASE ' . implode(' ', $cases) . ' ELSE 2 END ASC', $bindings);
+            }
+        }
+
+        match ($sort) {
+            'name_desc'  => $query->orderBy('name', 'desc'),
+            'price_asc'  => $query->orderBy('price', 'asc'),
+            'price_desc' => $query->orderBy('price', 'desc'),
+            'newest'     => $query->orderBy('created_at', 'desc'),
+            default      => $query->orderBy('name', 'asc'),
+        };
     }
 }
