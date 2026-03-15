@@ -17,12 +17,10 @@ class DistributorCodeFactory extends Factory
     public function definition(): array
     {
         return [
-            'stylist_id' => \App\Models\User::factory()->create(['role' => 'stylist'])->id,
-            'code' => 'STYLIST-' . strtoupper(fake()->firstName()) . '-' . now()->year,
-            'discount_percentage' => fake()->numberBetween(5, 20),
-            'usage_count' => fake()->numberBetween(0, 100),
-            'total_revenue' => fake()->randomFloat(2, 0, 10000),
-            'is_active' => fake()->boolean(90),
+            'code' => 'STYLIST-' . strtoupper(fake()->firstName()) . '-' . strtoupper(\Illuminate\Support\Str::random(5)),
+            'used' => false,
+            'expires_at' => now()->addMonths(6),
+            'created_by' => \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_STYLIST, 'is_stylist' => true])->id,
         ];
     }
 }

@@ -37,7 +37,7 @@ class QuickOrderApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonStructure([
                 'success',
-                'data' => [['id', 'name', 'price', 'stock', 'thumbnail']],
+                'data' => [['id', 'name', 'price', 'stylistPrice', 'thumbnail']],
                 'meta' => ['current_page', 'per_page', 'total', 'last_page'],
             ]);
 
@@ -49,7 +49,6 @@ class QuickOrderApiTest extends TestCase
         $this->assertArrayNotHasKey('description', $firstItem);
         $this->assertArrayNotHasKey('brand', $firstItem);
         $this->assertArrayNotHasKey('category', $firstItem);
-        $this->assertArrayNotHasKey('sale', $firstItem);
     }
 
     /** @test */

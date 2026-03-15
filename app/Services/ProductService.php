@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Exception;
 
+
 class ProductService
 {
     /* ===================================================== */
@@ -118,6 +119,19 @@ class ProductService
     {
         return Product::with(['images', 'sale'])
             ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
+    /* ===================================================== */
+    /* SEARCH                                                */
+    /* ===================================================== */
+
+    public function search(string $query, int $limit = 10)
+    {
+        return Product::query()
+            ->with(['brand', 'category', 'translations', 'images', 'sale'])
+            ->where('name', 'like', '%' . $query . '%')
             ->limit($limit)
             ->get();
     }
@@ -256,44 +270,21 @@ class ProductService
             $query->where('quantity', '>', 0);
         }
 
-        // Sorting — when no specific category is selected, order by category priority
-        // so care products (shampoo, conditioner, etc.) appear first and
-        // professional/chemical products (activators, hydrogen, hair color) appear last
+        // Sorting — use database-driven sort_priority on categories
         $sort = $filters['sort'] ?? 'name_asc';
 
         if (!isset($filters['category_id'])) {
-            $priorityMap = Category::pluck('name', 'id');
-            $highPriority   = ['Shampoo', 'Conditioner', 'Mask', 'Fluid', 'Lotion', 'Spray', 'Styling'];
-            $mediumPriority = ['Sets', 'Color Mask', 'Filler', 'Other', 'Tester'];
-            // low: Activator, Hydrogen Peroxide, Bleach and De Color
-            // last: Hair Color
-
-            $cases = [];
-            $bindings = [];
-            foreach ($priorityMap as $id => $name) {
-                if (in_array($name, $highPriority, true)) {
-                    $cases[] = "WHEN category_id = ? THEN 0";
-                } elseif (in_array($name, $mediumPriority, true)) {
-                    $cases[] = "WHEN category_id = ? THEN 1";
-                } elseif ($name === 'Hair Color') {
-                    $cases[] = "WHEN category_id = ? THEN 3";
-                } else {
-                    $cases[] = "WHEN category_id = ? THEN 2";
-                }
-                $bindings[] = $id;
-            }
-
-            if ($cases) {
-                $query->orderByRaw('CASE ' . implode(' ', $cases) . ' ELSE 2 END ASC', $bindings);
-            }
+            $query->join('categories', 'products.category_id', '=', 'categories.id')
+                  ->orderBy('categories.sort_priority', 'asc')
+                  ->select('products.*');
         }
 
         match ($sort) {
-            'name_desc'  => $query->orderBy('name', 'desc'),
-            'price_asc'  => $query->orderBy('price', 'asc'),
-            'price_desc' => $query->orderBy('price', 'desc'),
-            'newest'     => $query->orderBy('created_at', 'desc'),
-            default      => $query->orderBy('name', 'asc'),
+            'name_desc'  => $query->orderBy('products.name', 'desc'),
+            'price_asc'  => $query->orderBy('products.price', 'asc'),
+            'price_desc' => $query->orderBy('products.price', 'desc'),
+            'newest'     => $query->orderBy('products.created_at', 'desc'),
+            default      => $query->orderBy('products.name', 'asc'),
         };
     }
 }

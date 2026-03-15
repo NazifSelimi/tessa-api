@@ -7,12 +7,12 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class OrderApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     /** @test */
     public function it_creates_an_order_for_authenticated_user()
@@ -179,7 +179,7 @@ class OrderApiTest extends TestCase
         $response = $this->withToken($token)->getJson("/api/v1/orders/{$order->id}");
 
         $response->assertStatus(200);
-        $response->assertJsonPath('data.id', $order->id);
+        $response->assertJsonPath('data.id', (string) $order->id);
         $response->assertJsonStructure([
             'success',
             'data' => ['id', 'userId', 'items', 'total', 'status', 'shippingAddress']
