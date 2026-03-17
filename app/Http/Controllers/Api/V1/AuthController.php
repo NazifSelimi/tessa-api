@@ -9,11 +9,13 @@ use App\Http\Requests\Api\V1\ProfileUpdateRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
 use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\PasswordResetMail;
 use App\Models\User;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -121,8 +123,7 @@ class AuthController extends Controller
                 ]
             );
 
-            // TODO: Send email with reset link containing $token
-            // Mail::to($user->email)->send(new PasswordResetMail($token));
+            Mail::to($user->email)->send(new PasswordResetMail($user, $token));
         }
 
         // Always return success to prevent email enumeration

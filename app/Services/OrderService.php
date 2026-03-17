@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Events\OrderPlaced;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -21,7 +23,7 @@ class OrderService
 
     public function createOrder(User $user, array $payload): Order
     {
-        return DB::transaction(function () use ($user, $payload) {
+        $order = DB::transaction(function () use ($user, $payload) {
             $shipping = $payload['shipping_address'] ?? [];
 
             // Update user information from shipping address
@@ -116,6 +118,18 @@ class OrderService
 
             return $order->load(['items.product.images', 'coupon', 'user']);
         });
+
+        // Dispatch after transaction commits so listeners never act on rolled-back data
+        try {
+            OrderPlaced::dispatch($order);
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch OrderPlaced event', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $order;
     }
 
     public function updateStatus(Order $order, int $status): Order

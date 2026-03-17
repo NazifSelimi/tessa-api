@@ -27,5 +27,9 @@ class AppServiceProvider extends ServiceProvider
                 $request->user()?->id ?: $request->ip()
             );
         });
+
+        // Event-listener bindings are auto-discovered by Laravel from app/Listeners/.
+        // See: OrderPlaced -> SendOrderConfirmation, SendNewOrderAdminNotification
+        //      OrderStatusUpdated -> SendOrderStatusUpdate
     }
 }

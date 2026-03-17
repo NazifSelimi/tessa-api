@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\OrderStatusUpdated;
 use App\Models\Order;
+use Illuminate\Support\Facades\Log;
 
 class AdminOrderService
 {
@@ -65,7 +67,17 @@ class AdminOrderService
             throw new \InvalidArgumentException("Invalid status: {$status}");
         }
 
+        $previousStatus = $order->status;
         $order->update(['status' => $statusInt]);
+
+        try {
+            OrderStatusUpdated::dispatch($order, $previousStatus);
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch OrderStatusUpdated event', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $order->load(['user', 'items.product.images', 'coupon']);
     }
