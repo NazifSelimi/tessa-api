@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ForgotPasswordRequest;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\ProfileUpdateRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
+use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -101,16 +105,14 @@ class AuthController extends Controller
         return ApiResponse::ok(new UserResource($user));
     }
 
-    public function forgotPassword(Request $request)
+    public function forgotPassword(ForgotPasswordRequest $request)
     {
-        $request->validate(['email' => ['required', 'email']]);
-
         $user = User::where('email', $request->email)->first();
 
         if ($user) {
-            $token = \Illuminate\Support\Str::random(64);
+            $token = Str::random(64);
             
-            \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+            DB::table('password_reset_tokens')->updateOrInsert(
                 ['email' => $user->email],
                 [
                     'email' => $user->email,
@@ -132,15 +134,9 @@ class AuthController extends Controller
         );
     }
 
-    public function resetPassword(Request $request)
+    public function resetPassword(ResetPasswordRequest $request)
     {
-        $request->validate([
-            'token' => ['required', 'string'],
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        $resetRecord = \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        $resetRecord = DB::table('password_reset_tokens')
             ->where('email', $request->email)
             ->first();
 
@@ -162,7 +158,7 @@ class AuthController extends Controller
         $user->save();
 
         // Delete the reset token
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        DB::table('password_reset_tokens')
             ->where('email', $request->email)
             ->delete();
 

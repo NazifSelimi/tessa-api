@@ -22,6 +22,8 @@ class CouponFactory extends Factory
             'code' => strtoupper(fake()->unique()->lexify('????-####')),
             'type' => $type,
             'value' => $type === 'percentage' ? fake()->numberBetween(5, 50) : fake()->numberBetween(5, 100),
+            'quantity' => fake()->numberBetween(1, 100),
+            'expiration_date' => now()->addDays(fake()->numberBetween(30, 90)),
             'min_purchase' => fake()->optional(0.7)->randomFloat(2, 20, 200),
             'max_discount' => $type === 'percentage' ? fake()->optional(0.5)->randomFloat(2, 50, 500) : null,
             'usage_limit' => fake()->optional(0.8)->numberBetween(10, 1000),

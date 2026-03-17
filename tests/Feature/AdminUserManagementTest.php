@@ -4,12 +4,12 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 
 class AdminUserManagementTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected $admin;
     protected $user;
@@ -19,12 +19,12 @@ class AdminUserManagementTest extends TestCase
         parent::setUp();
         
         $this->admin = User::factory()->create([
-            'role' => 'admin',
+            'role' => User::ROLE_ADMIN,
             'is_stylist' => false,
         ]);
         
         $this->user = User::factory()->create([
-            'role' => 'user',
+            'role' => User::ROLE_USER,
             'is_stylist' => false,
         ]);
     }
@@ -58,7 +58,7 @@ class AdminUserManagementTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $stylist = User::factory()->create(['role' => 'stylist']);
+        $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
 
         $response = $this->getJson('/api/v1/admin/users?role=stylist');
 
@@ -104,7 +104,7 @@ class AdminUserManagementTest extends TestCase
 
         $response = $this->putJson("/api/v1/admin/users/{$this->user->id}", [
             'first_name' => 'Updated',
-            'role' => 'stylist',
+            'role' => User::ROLE_STYLIST,
         ]);
 
         $response->assertStatus(200)
@@ -116,7 +116,7 @@ class AdminUserManagementTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $this->user->id,
             'first_name' => 'Updated',
-            'role' => 'stylist',
+            'role' => User::ROLE_STYLIST,
         ]);
     }
 
@@ -129,7 +129,7 @@ class AdminUserManagementTest extends TestCase
         $response = $this->deleteJson("/api/v1/admin/users/{$deleteUser->id}");
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('users', ['id' => $deleteUser->id]);
+        $this->assertSoftDeleted('users', ['id' => $deleteUser->id]);
     }
 
     public function test_admin_cannot_delete_own_account()

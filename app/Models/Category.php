@@ -12,6 +12,11 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'sort_priority',
+    ];
+
+    protected $casts = [
+        'sort_priority' => 'integer',
     ];
 
     public function products(): HasMany

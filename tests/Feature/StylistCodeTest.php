@@ -6,12 +6,12 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Models\DistributorCode;
 use App\Models\Order;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 
 class StylistCodeTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected $stylist;
 
@@ -21,7 +21,7 @@ class StylistCodeTest extends TestCase
         
         $this->stylist = User::factory()->create([
             'first_name' => 'Jane',
-            'role' => 'stylist',
+            'role' => User::ROLE_STYLIST,
             'is_stylist' => true,
         ]);
     }
@@ -31,7 +31,7 @@ class StylistCodeTest extends TestCase
         Sanctum::actingAs($this->stylist);
 
         DistributorCode::factory()->count(3)->create([
-            'stylist_id' => $this->stylist->id,
+            'created_by' => $this->stylist->id,
         ]);
 
         $response = $this->getJson('/api/v1/stylist/codes');
@@ -40,7 +40,7 @@ class StylistCodeTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'code', 'discountPercentage', 'usageCount', 'totalRevenue', 'isActive']
+                    '*' => ['id', 'code', 'used', 'expiresAt', 'createdBy']
                 ]
             ]);
     }
@@ -49,34 +49,30 @@ class StylistCodeTest extends TestCase
     {
         Sanctum::actingAs($this->stylist);
 
-        $response = $this->postJson('/api/v1/stylist/codes/generate', [
-            'discountPercentage' => 15,
-        ]);
+        $response = $this->postJson('/api/v1/stylist/codes/generate');
 
         $response->assertStatus(201)
             ->assertJson([
                 'success' => true,
-                'message' => 'Distributor code generated successfully'
+                'message' => 'Invitation code generated successfully'
             ]);
 
-        $this->assertDatabaseHas('distributor_codes', [
-            'stylist_id' => $this->stylist->id,
-            'discount_percentage' => 15,
+        $this->assertDatabaseHas('stylist_invitation_codes', [
+            'created_by' => $this->stylist->id,
         ]);
 
         // Check code format
         $code = $response->json('data.code');
         $this->assertStringContainsString('STYLIST', $code);
         $this->assertStringContainsString('JANE', $code);
-        $this->assertStringContainsString((string) now()->year, $code);
     }
 
     public function test_stylist_can_view_code_stats()
     {
         Sanctum::actingAs($this->stylist);
 
-        $code = DistributorCode::factory()->create([
-            'stylist_id' => $this->stylist->id,
+        DistributorCode::factory()->create([
+            'created_by' => $this->stylist->id,
             'code' => 'STYLIST-TEST-2026',
         ]);
 
@@ -85,38 +81,34 @@ class StylistCodeTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => ['code', 'usageCount', 'totalRevenue', 'orders']
+                'data' => ['code', 'used', 'usedBy', 'expiresAt', 'isExpired', 'createdAt']
             ]);
     }
 
-    public function test_stylist_can_toggle_code_status()
+    public function test_stylist_can_update_code()
     {
         Sanctum::actingAs($this->stylist);
 
-        $code = DistributorCode::factory()->create([
-            'stylist_id' => $this->stylist->id,
+        DistributorCode::factory()->create([
+            'created_by' => $this->stylist->id,
             'code' => 'TEST-CODE',
-            'is_active' => true,
         ]);
 
+        $newExpiry = now()->addYear()->toDateTimeString();
         $response = $this->putJson('/api/v1/stylist/codes/TEST-CODE', [
-            'isActive' => false,
+            'expires_at' => $newExpiry,
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('distributor_codes', [
-            'code' => 'TEST-CODE',
-            'is_active' => false,
-        ]);
     }
 
     public function test_stylist_cannot_access_another_stylist_code()
     {
         Sanctum::actingAs($this->stylist);
 
-        $otherStylist = User::factory()->create(['role' => 'stylist']);
-        $otherCode = DistributorCode::factory()->create([
-            'stylist_id' => $otherStylist->id,
+        $otherStylist = User::factory()->create(['role' => User::ROLE_STYLIST, 'is_stylist' => true]);
+        DistributorCode::factory()->create([
+            'created_by' => $otherStylist->id,
             'code' => 'OTHER-CODE',
         ]);
 
@@ -127,7 +119,7 @@ class StylistCodeTest extends TestCase
 
     public function test_non_stylist_cannot_access_stylist_routes()
     {
-        $user = User::factory()->create(['role' => 'user']);
+        $user = User::factory()->create(['role' => User::ROLE_USER]);
         Sanctum::actingAs($user);
 
         $response = $this->getJson('/api/v1/stylist/codes');

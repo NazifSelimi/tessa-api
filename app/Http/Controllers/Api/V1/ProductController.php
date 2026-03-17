@@ -78,11 +78,7 @@ class ProductController extends Controller
             return ApiResponse::ok([]);
         }
 
-        $results = Product::query()
-            ->with(['brand', 'category', 'translations', 'images', 'sale'])
-            ->where('name', 'like', '%' . $query . '%')
-            ->limit($limit)
-            ->get();
+        $results = $this->productService->search($query, $limit);
 
         return ApiResponse::ok(
             ProductResource::collection($results)->resolve()

@@ -3,23 +3,23 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     /** @test */
     public function it_registers_a_new_user()
     {
         $data = [
-            'name' => 'John Doe',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
             'email' => 'john@example.com',
             'phone' => '+1234567890',
             'password' => 'password123',
-            'password_confirmation' => 'password123',
         ];
 
         $response = $this->postJson('/api/v1/auth/register', $data);
@@ -44,7 +44,7 @@ class AuthApiTest extends TestCase
     public function it_validates_registration_data()
     {
         $response = $this->postJson('/api/v1/auth/register', [
-            'name' => 'Test',
+            'first_name' => 'Test',
             'email' => 'invalid-email',
             'password' => '123', // Too short
         ]);
@@ -133,7 +133,8 @@ class AuthApiTest extends TestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withToken($token)->putJson('/api/v1/auth/profile', [
-            'name' => 'Jane Smith',
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
             'phone' => '+9876543210',
         ]);
 
