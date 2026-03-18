@@ -4,6 +4,10 @@ namespace App\Services;
 
 use App\Models\RequestStylist;
 use App\Models\User;
+use App\Events\StylistRequestApproved;
+use App\Events\StylistRequestRejected;
+use App\Events\StylistRequestSubmitted;
+use Illuminate\Support\Facades\Log;
 
 class StylistRequestService
 {
@@ -96,6 +100,17 @@ class StylistRequestService
             ]
         );
 
+        // Dispatch event after successful approval so listeners can send emails/notifications
+        try {
+            StylistRequestApproved::dispatch($stylistRequest, $stylistRequest->user);
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch StylistRequestApproved event', [
+                'request_id' => $stylistRequest->id,
+                'user_id' => $stylistRequest->user_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return [
             'approved' => true,
             'data' => [
@@ -107,19 +122,34 @@ class StylistRequestService
     }
 
     /**
-     * Reject a stylist request — reverts role if needed and deletes the request.
+     * Reject a stylist request — reverts role if needed, emails the user, and deletes the request.
      */
-    public function reject($id): void
+    public function reject($id, ?string $reason = null): void
     {
-        $stylistRequest = RequestStylist::findOrFail($id);
+        $stylistRequest = RequestStylist::with('user')->findOrFail($id);
+
+        $user = $stylistRequest->user;
 
         // If user was already approved, revert role (explicit assignment)
-        if ($stylistRequest->user && $stylistRequest->user->role === User::ROLE_STYLIST) {
-            $stylistRequest->user->role = User::ROLE_USER;
-            $stylistRequest->user->save();
+        if ($user && $user->role === User::ROLE_STYLIST) {
+            $user->role = User::ROLE_USER;
+            $user->save();
         }
 
         $stylistRequest->delete();
+
+        // Dispatch event after successful rejection so listeners can send emails/notifications
+        if ($user) {
+            try {
+                StylistRequestRejected::dispatch($stylistRequest, $user, $reason);
+            } catch (\Throwable $e) {
+                Log::error('Failed to dispatch StylistRequestRejected event', [
+                    'request_id' => $stylistRequest->id,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**
@@ -148,6 +178,17 @@ class StylistRequestService
 
         // Mark user as having submitted a request
         $user->update(['request_submitted' => true]);
+        
+        // Dispatch event after successful creation so listeners can notify admins
+        try {
+            StylistRequestSubmitted::dispatch($stylistRequest, $user);
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch StylistRequestSubmitted event', [
+                'request_id' => $stylistRequest->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return [
             'created' => true,

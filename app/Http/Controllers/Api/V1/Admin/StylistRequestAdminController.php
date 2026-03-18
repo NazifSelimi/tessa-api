@@ -78,7 +78,10 @@ class StylistRequestAdminController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $this->stylistRequestService->reject($id);
+        // Optional reason for rejection (sent only in email, not stored)
+        $reason = $request->input('reason');
+
+        $this->stylistRequestService->reject($id, $reason);
 
         return ApiResponse::ok(null, 200, [], 'Stylist request rejected');
     }
