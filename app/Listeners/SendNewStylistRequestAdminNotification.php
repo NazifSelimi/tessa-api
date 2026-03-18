@@ -32,6 +32,7 @@ class SendNewStylistRequestAdminNotification implements ShouldQueue
                 'user_id' => $event->user->id,
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
     }
 }

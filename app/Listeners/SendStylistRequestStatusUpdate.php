@@ -41,6 +41,7 @@ class SendStylistRequestStatusUpdate implements ShouldQueue
                 'status' => $statusLabel,
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
     }
 }
