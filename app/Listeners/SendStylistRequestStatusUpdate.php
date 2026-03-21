@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\StylistRequestApproved;
 use App\Events\StylistRequestRejected;
+use App\Events\StylistRequestSubmitted;
 use App\Mail\Stylists\StylistRequestStatusMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +14,7 @@ class SendStylistRequestStatusUpdate implements ShouldQueue
 {
     public int $tries = 3;
 
-    public function handle(StylistRequestApproved|StylistRequestRejected $event): void
+    public function handle(StylistRequestApproved|StylistRequestRejected|StylistRequestSubmitted $event): void
     {
         $user = $event->user;
 
@@ -25,7 +26,11 @@ class SendStylistRequestStatusUpdate implements ShouldQueue
             return;
         }
 
-        $statusLabel = $event instanceof StylistRequestApproved ? 'Approved' : 'Rejected';
+        $statusLabel = match (true) {
+            $event instanceof StylistRequestSubmitted => 'Submitted',
+            $event instanceof StylistRequestApproved => 'Approved',
+            default => 'Rejected',
+        };
 
         try {
             Mail::to($user->email)->send(new StylistRequestStatusMail(
@@ -45,4 +50,3 @@ class SendStylistRequestStatusUpdate implements ShouldQueue
         }
     }
 }
-

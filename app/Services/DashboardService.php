@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\RequestStylist;
 use App\Models\User;
 
 class DashboardService
@@ -18,6 +19,7 @@ class DashboardService
             'totalRevenue' => number_format(Order::sum('total'), 2),
             'totalProducts' => Product::count(),
             'totalUsers' => User::count(),
+            'pendingStylistRequests' => RequestStylist::where('status', RequestStylist::STATUS_PENDING)->count(),
             'recentOrders' => Order::with('user')
                 ->latest()
                 ->limit(5)

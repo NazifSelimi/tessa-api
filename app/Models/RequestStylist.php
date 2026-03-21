@@ -11,6 +11,10 @@ class RequestStylist extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+
     protected $table = 'request_stylist';
     protected $fillable = [
         'user_id',
@@ -19,6 +23,12 @@ class RequestStylist extends Model
         'saloon_address',
         'saloon_phone',
         'message',
+        'status',
+        'rejection_reason',
+    ];
+
+    protected $casts = [
+        'status' => 'string',
     ];
 
     public function user(): BelongsTo

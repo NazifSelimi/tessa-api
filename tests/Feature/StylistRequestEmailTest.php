@@ -22,7 +22,7 @@ class StylistRequestEmailTest extends TestCase
     use DatabaseTransactions;
 
     /** @test */
-    public function submitting_a_stylist_request_dispatches_event_and_sends_admin_email()
+    public function submitting_a_stylist_request_dispatches_event_and_sends_admin_and_user_emails()
     {
         Mail::fake();
         Event::fake([StylistRequestSubmitted::class]);
@@ -52,8 +52,17 @@ class StylistRequestEmailTest extends TestCase
 
         $listener->handle(new StylistRequestSubmitted($request, $user));
 
+        $statusListener = new SendStylistRequestStatusUpdate();
+        $statusListener->handle(new StylistRequestSubmitted($request, $user));
+
         Mail::assertSent(NewStylistRequestAdminMail::class, function ($mail) use ($request, $user) {
             return $mail->requestStylist->id === $request->id && $mail->user->id === $user->id;
+        });
+
+        Mail::assertSent(StylistRequestStatusMail::class, function ($mail) use ($request, $user) {
+            return $mail->requestStylist?->id === $request->id
+                && $mail->user->id === $user->id
+                && $mail->statusLabel === 'Submitted';
         });
     }
 
@@ -133,4 +142,3 @@ class StylistRequestEmailTest extends TestCase
         });
     }
 }
-

@@ -5,11 +5,10 @@ namespace App\Events;
 use App\Models\RequestStylist;
 use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
 class StylistRequestRejected
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable;
 
     public function __construct(
         public readonly RequestStylist $request,
@@ -17,4 +16,3 @@ class StylistRequestRejected
         public readonly ?string $reason = null,
     ) {}
 }
-

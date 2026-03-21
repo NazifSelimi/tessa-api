@@ -21,11 +21,7 @@ class StylistRequestService
         // Filter by approval status
         if (!empty($filters['status'])) {
             $status = $filters['status'];
-            if ($status === 'approved') {
-                $query->whereHas('user', fn ($q) => $q->where('role', User::ROLE_STYLIST));
-            } elseif ($status === 'pending') {
-                $query->whereHas('user', fn ($q) => $q->where('role', '!=', User::ROLE_STYLIST));
-            }
+            $query->where('status', $status);
         }
 
         // Search by user name, email, or salon name/city
@@ -50,7 +46,8 @@ class StylistRequestService
     public function mapToResponse($req): array
     {
         $user = $req->user;
-        $isApproved = $user ? $user->role === User::ROLE_STYLIST : false;
+        $status = $req->status ?: RequestStylist::STATUS_PENDING;
+        $isApproved = $status === RequestStylist::STATUS_APPROVED;
 
         return [
             'id' => (string) $req->id,
@@ -63,7 +60,8 @@ class StylistRequestService
             'saloonPhone' => $req->saloon_phone,
             'message' => $req->message,
             'isApproved' => $isApproved,
-            'status' => $isApproved ? 'approved' : 'pending',
+            'status' => $status,
+            'rejectionReason' => $req->rejection_reason,
             'createdAt' => $req->created_at?->toISOString(),
             'updatedAt' => $req->updated_at?->toISOString(),
         ];
@@ -88,9 +86,12 @@ class StylistRequestService
         $stylistRequest->user->role = User::ROLE_STYLIST;
         $stylistRequest->user->request_submitted = true;
         $stylistRequest->user->save();
+        $stylistRequest->status = RequestStylist::STATUS_APPROVED;
+        $stylistRequest->rejection_reason = null;
+        $stylistRequest->save();
 
         // Create or update stylist profile from request data
-        $stylistRequest->user->stylistProfile()->updateOrCreate(
+        $stylistRequest->user->profile()->updateOrCreate(
             ['user_id' => $stylistRequest->user_id],
             [
                 'saloon_name' => $stylistRequest->saloon_name,
@@ -129,14 +130,15 @@ class StylistRequestService
         $stylistRequest = RequestStylist::with('user')->findOrFail($id);
 
         $user = $stylistRequest->user;
-
         // If user was already approved, revert role (explicit assignment)
         if ($user && $user->role === User::ROLE_STYLIST) {
             $user->role = User::ROLE_USER;
             $user->save();
         }
 
-        $stylistRequest->delete();
+        $stylistRequest->status = RequestStylist::STATUS_REJECTED;
+        $stylistRequest->rejection_reason = $reason;
+        $stylistRequest->save();
 
         // Dispatch event after successful rejection so listeners can send emails/notifications
         if ($user) {
@@ -158,23 +160,25 @@ class StylistRequestService
     public function submitRequest(User $user, array $validated): array
     {
         // Check if user already submitted a request
-        if ($user->request_submitted) {
+        $existingRequest = RequestStylist::where('user_id', $user->id)->latest()->first();
+
+        if ($existingRequest && $existingRequest->status !== RequestStylist::STATUS_REJECTED) {
             return ['created' => false, 'error' => 'You already have a stylist request submitted', 'code' => 422];
         }
 
-        $existingRequest = RequestStylist::where('user_id', $user->id)->first();
-        if ($existingRequest) {
-            return ['created' => false, 'error' => 'You already have a stylist request', 'code' => 422];
-        }
-
-        $stylistRequest = RequestStylist::create([
-            'user_id' => $user->id,
+        $payload = [
             'saloon_name' => $validated['saloon_name'],
             'saloon_city' => $validated['saloon_city'],
             'saloon_address' => $validated['saloon_address'],
             'saloon_phone' => $validated['saloon_phone'],
             'message' => $validated['message'] ?? null,
-        ]);
+            'status' => RequestStylist::STATUS_PENDING,
+            'rejection_reason' => null,
+        ];
+
+        $stylistRequest = $existingRequest
+            ? tap($existingRequest)->update($payload)
+            : RequestStylist::create(['user_id' => $user->id, ...$payload]);
 
         // Mark user as having submitted a request
         $user->update(['request_submitted' => true]);
@@ -199,7 +203,8 @@ class StylistRequestService
                 'saloonCity' => $stylistRequest->saloon_city,
                 'saloonAddress' => $stylistRequest->saloon_address,
                 'saloonPhone' => $stylistRequest->saloon_phone,
-                'status' => 'pending',
+                'status' => RequestStylist::STATUS_PENDING,
+                'rejectionReason' => null,
                 'createdAt' => $stylistRequest->created_at?->toISOString(),
             ],
         ];
@@ -226,8 +231,11 @@ class StylistRequestService
             'saloonCity' => $stylistRequest->saloon_city,
             'saloonAddress' => $stylistRequest->saloon_address,
             'saloonPhone' => $stylistRequest->saloon_phone,
-            'status' => $user->isStylist() ? 'approved' : 'pending',
+            'message' => $stylistRequest->message,
+            'status' => $stylistRequest->status ?: RequestStylist::STATUS_PENDING,
+            'rejectionReason' => $stylistRequest->rejection_reason,
             'createdAt' => $stylistRequest->created_at?->toISOString(),
+            'updatedAt' => $stylistRequest->updated_at?->toISOString(),
         ];
     }
 }
