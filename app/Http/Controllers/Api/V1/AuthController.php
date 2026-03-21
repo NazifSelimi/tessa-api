@@ -102,6 +102,10 @@ class AuthController extends Controller
             $user->postcode = $data['postcode'];
         }
 
+        if (array_key_exists('preferred_locale', $data)) {
+            $user->preferred_locale = $data['preferred_locale'];
+        }
+
         $user->save();
 
         return ApiResponse::ok(new UserResource($user));

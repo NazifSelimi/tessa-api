@@ -27,6 +27,7 @@ class User extends Authenticatable
         'city',
         'phone',
         'postcode',
+        'preferred_locale',
         'request_submitted',
         'password',
     ];

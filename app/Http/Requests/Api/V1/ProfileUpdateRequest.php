@@ -27,6 +27,7 @@ class ProfileUpdateRequest extends FormRequest
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'city' => ['sometimes', 'nullable', 'string', 'max:100'],
             'postcode' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'preferred_locale' => ['sometimes', 'nullable', Rule::in(['en', 'mk', 'shq'])],
         ];
     }
 }

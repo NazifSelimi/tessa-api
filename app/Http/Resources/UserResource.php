@@ -26,6 +26,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'role' => $roleValue,
             'isStylist' => (int) $this->role === \App\Models\User::ROLE_STYLIST,
+            'preferredLocale' => $this->preferred_locale,
             'address' => $this->address,
             'city' => $this->city,
             'postcode' => $this->postcode,
