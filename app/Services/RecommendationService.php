@@ -13,10 +13,10 @@ class RecommendationService
      *
      * @return array{products: array, bundles: array}
      */
-    public function getRecommendations(int $hairTypeId, array $concerns, ?string $budgetRange = null): array
+    public function getRecommendations(int $hairTypeId, array $concerns, ?string $budgetRange = null, bool $includeStylistOnly = false): array
     {
-        $products = $this->scoredProducts($hairTypeId, $concerns, $budgetRange);
-        $bundles  = $this->matchingBundles($hairTypeId, $concerns);
+        $products = $this->scoredProducts($hairTypeId, $concerns, $budgetRange, $includeStylistOnly);
+        $bundles  = $this->matchingBundles($hairTypeId, $concerns, $includeStylistOnly);
 
         if ($bundles->isEmpty()) {
             $dynamic = $this->generateDynamicBundle($products);
@@ -35,10 +35,14 @@ class RecommendationService
      * SCORING
      * ------------------------------------------------- */
 
-    protected function scoredProducts(int $hairTypeId, array $concerns, ?string $budgetRange): Collection
+    protected function scoredProducts(int $hairTypeId, array $concerns, ?string $budgetRange, bool $includeStylistOnly): Collection
     {
         $query = Product::query()
             ->with(['brand', 'category', 'translations', 'images', 'sale', 'hairTypes', 'hairConcerns']);
+
+        if (!$includeStylistOnly) {
+            $query->where('stylist_only', false);
+        }
 
         // Optional budget filtering
         if ($budgetRange !== null) {
@@ -90,11 +94,15 @@ class RecommendationService
     /**
      * Find static bundles whose products overlap with the matching hair type / concerns.
      */
-    protected function matchingBundles(int $hairTypeId, array $concerns): Collection
+    protected function matchingBundles(int $hairTypeId, array $concerns, bool $includeStylistOnly): Collection
     {
         return Bundle::query()
             ->where('is_dynamic', false)
-            ->whereHas('products', function ($q) use ($hairTypeId, $concerns) {
+            ->whereHas('products', function ($q) use ($hairTypeId, $concerns, $includeStylistOnly) {
+                if (!$includeStylistOnly) {
+                    $q->where('products.stylist_only', false);
+                }
+
                 $q->where(function ($sub) use ($hairTypeId, $concerns) {
                     $sub->whereHas('hairTypes', fn ($ht) => $ht->where('hair_types.id', $hairTypeId));
                     if (!empty($concerns)) {
@@ -102,7 +110,16 @@ class RecommendationService
                     }
                 });
             })
-            ->with(['products.images', 'products.brand', 'products.category'])
+            ->with([
+                'products' => function ($q) use ($includeStylistOnly) {
+                    if (!$includeStylistOnly) {
+                        $q->where('products.stylist_only', false);
+                    }
+                },
+                'products.images',
+                'products.brand',
+                'products.category',
+            ])
             ->get();
     }
 

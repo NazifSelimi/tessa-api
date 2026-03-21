@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\ProductIndexRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductService;
+use App\Support\ApiUserResolver;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 
@@ -18,9 +19,11 @@ class ProductController extends Controller
 
     public function index(ProductIndexRequest $request)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
         $products = $this->productService->paginate(
             $request->filters(),
-            $request->perPage()
+            $request->perPage(),
+            $viewer
         );
 
         return ApiResponse::ok(
@@ -37,6 +40,12 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
+        $viewer = ApiUserResolver::fromRequest(request());
+
+        if (!$this->productService->canView($product, $viewer)) {
+            return ApiResponse::error('Product not found', 404);
+        }
+
         return ApiResponse::ok(
             new ProductResource(
                 $this->productService->find($product)
@@ -46,10 +55,16 @@ class ProductController extends Controller
 
     public function related(Request $request, Product $product)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
+
+        if (!$this->productService->canView($product, $viewer)) {
+            return ApiResponse::error('Product not found', 404);
+        }
+
         $limit = (int) $request->query('limit', 4);
         $limit = min(max($limit, 1), 20);
 
-        $related = $this->productService->related($product, $limit);
+        $related = $this->productService->related($product, $limit, $viewer);
 
         return ApiResponse::ok(
             ProductResource::collection($related)->resolve()
@@ -58,10 +73,11 @@ class ProductController extends Controller
 
     public function featured(Request $request)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
         $limit = (int) $request->query('limit', 8);
         $limit = min(max($limit, 1), 20);
 
-        $latest = $this->productService->latest($limit);
+        $latest = $this->productService->latest($limit, $viewer);
 
         return ApiResponse::ok(
             ProductResource::collection($latest)->resolve()
@@ -70,6 +86,7 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
         $query = (string) $request->query('q', '');
         $limit = (int) $request->query('limit', 10);
         $limit = min(max($limit, 1), 50);
@@ -78,7 +95,7 @@ class ProductController extends Controller
             return ApiResponse::ok([]);
         }
 
-        $results = $this->productService->search($query, $limit);
+        $results = $this->productService->search($query, $limit, $viewer);
 
         return ApiResponse::ok(
             ProductResource::collection($results)->resolve()

@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use App\Models\Product;
+use App\Support\ApiUserResolver;
 use Illuminate\Http\Request;
 
 class QuickOrderController extends Controller
 {
     public function __invoke(Request $request)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
+
         $request->validate([
             'search'      => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
@@ -20,6 +23,10 @@ class QuickOrderController extends Controller
         $query = Product::query()
             ->select(['id', 'name', 'price', 'stylist_price', 'quantity', 'category_id'])
             ->with(['images' => fn ($q) => $q->limit(1)]);
+
+        if (!ApiUserResolver::canAccessStylistOnlyProducts($viewer)) {
+            $query->where('stylist_only', false);
+        }
 
         if ($search = $request->query('search')) {
             $query->where('name', 'like', '%' . $search . '%');

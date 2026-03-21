@@ -28,6 +28,7 @@ class RecommendedProductResource extends JsonResource
             'description'         => $description,
             'price'               => (float) $this->price,
             'stylistPrice'        => (float) $this->stylist_price,
+            'stylistOnly'         => (bool) $this->stylist_only,
             'quantity'            => (int) $this->quantity,
             'inStock'             => $this->quantity > 0,
             'brandId'             => (string) $this->brand_id,

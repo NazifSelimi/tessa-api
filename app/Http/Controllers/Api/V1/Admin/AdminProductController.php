@@ -22,15 +22,7 @@ class AdminProductController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->all();
-
-        // Map camelCase to snake_case
-        $fieldMap = ['categoryId' => 'category_id', 'brandId' => 'brand_id', 'stylistPrice' => 'stylist_price'];
-        foreach ($fieldMap as $camel => $snake) {
-            if (isset($data[$camel]) && !isset($data[$snake])) {
-                $data[$snake] = $data[$camel];
-            }
-        }
+        $data = $this->normalizeRequestData($request);
 
         $validated = validator($data, [
             'name' => ['required', 'string', 'max:255'],
@@ -39,9 +31,12 @@ class AdminProductController extends Controller
             'quantity' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
+            'stylist_only' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
-            'description' => ['nullable', 'string'],
-            'locale' => ['nullable', 'string', 'max:10'],
+            'translations' => ['nullable', 'array'],
+            'translations.en' => ['nullable', 'string'],
+            'translations.mk' => ['nullable', 'string'],
+            'translations.shq' => ['nullable', 'string'],
         ])->validate();
 
         // Auto-calculate stylist_price if not provided
@@ -49,24 +44,15 @@ class AdminProductController extends Controller
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'quantity', 'category_id', 'brand_id'])->toArray();
-        $product = Product::create($productData);
-
-        // Handle image upload — convert to WebP
+        // Handle image upload — convert to WebP before passing to the service
         if ($request->hasFile('image')) {
             $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
-            $product->images()->create(['name' => $filename]);
+            $validated['image'] = $filename;
         }
 
-        // Handle translation
-        if (!empty($validated['description'])) {
-            $product->translations()->create([
-                'locale' => $validated['locale'] ?? 'en',
-                'description' => $validated['description'],
-            ]);
-        }
+        $validated['translations'] = $this->normalizeTranslations($validated['translations'] ?? []);
 
-        $product->load(['brand', 'category', 'images', 'sale', 'translations']);
+        $product = $this->productService->create($validated);
 
         return ApiResponse::ok(
             new ProductResource($product),
@@ -83,13 +69,7 @@ class AdminProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        $data = $request->all();
-        $fieldMap = ['categoryId' => 'category_id', 'brandId' => 'brand_id', 'stylistPrice' => 'stylist_price'];
-        foreach ($fieldMap as $camel => $snake) {
-            if (isset($data[$camel]) && !isset($data[$snake])) {
-                $data[$snake] = $data[$camel];
-            }
-        }
+        $data = $this->normalizeRequestData($request);
 
         $validated = validator($data, [
             'name' => ['sometimes', 'string', 'max:255'],
@@ -98,9 +78,12 @@ class AdminProductController extends Controller
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
+            'stylist_only' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'locale' => ['nullable', 'string', 'max:10'],
+            'translations' => ['sometimes', 'array'],
+            'translations.en' => ['nullable', 'string'],
+            'translations.mk' => ['nullable', 'string'],
+            'translations.shq' => ['nullable', 'string'],
         ])->validate();
 
         // Auto-update stylist_price if price changed and stylist_price not provided
@@ -117,22 +100,16 @@ class AdminProductController extends Controller
             foreach ($product->images as $oldImage) {
                 $this->imageService->delete($oldImage->name);
             }
-            $product->images()->delete();
 
             $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
-            $product->images()->create(['name' => $filename]);
+            $validated['image'] = $filename;
         }
 
-        // Handle translation update
-        if (isset($validated['description'])) {
-            $locale = $validated['locale'] ?? 'en';
-            $product->translations()->updateOrCreate(
-                ['locale' => $locale],
-                ['description' => $validated['description']]
-            );
+        if (array_key_exists('translations', $validated)) {
+            $validated['translations'] = $this->normalizeTranslations($validated['translations'] ?? []);
         }
 
-        $product->load(['brand', 'category', 'images', 'sale', 'translations']);
+        $product = $this->productService->update($product, $validated);
 
         return ApiResponse::ok(
             new ProductResource($product),
@@ -240,5 +217,36 @@ class AdminProductController extends Controller
             [],
             "{$updated} products updated successfully"
         );
+    }
+
+    private function normalizeRequestData(Request $request): array
+    {
+        $data = $request->all();
+
+        $fieldMap = [
+            'categoryId' => 'category_id',
+            'brandId' => 'brand_id',
+            'stylistPrice' => 'stylist_price',
+            'stylistOnly' => 'stylist_only',
+        ];
+
+        foreach ($fieldMap as $camel => $snake) {
+            if (isset($data[$camel]) && !isset($data[$snake])) {
+                $data[$snake] = $data[$camel];
+            }
+        }
+
+        return $data;
+    }
+
+    private function normalizeTranslations(array $translations): array
+    {
+        return collect($translations)
+            ->map(fn ($description, $locale) => [
+                'locale' => $locale,
+                'description' => $description,
+            ])
+            ->values()
+            ->all();
     }
 }

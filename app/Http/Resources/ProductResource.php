@@ -39,6 +39,7 @@ class ProductResource extends JsonResource
             'translations' => $translations,
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
+            'stylistOnly' => (bool) $this->stylist_only,
             'quantity' => (int) $this->quantity,
             'inStock' => $this->quantity > 0,
 

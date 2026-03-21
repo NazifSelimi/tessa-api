@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\RecommendationRequest;
 use App\Http\Resources\BundleResource;
 use App\Http\Resources\RecommendedProductResource;
 use App\Services\RecommendationService;
+use App\Support\ApiUserResolver;
 use App\Support\ApiResponse;
 
 class RecommendationController extends Controller
@@ -17,10 +18,12 @@ class RecommendationController extends Controller
 
     public function __invoke(RecommendationRequest $request)
     {
+        $viewer = ApiUserResolver::fromRequest($request);
         $result = $this->recommendationService->getRecommendations(
             hairTypeId:  $request->validated('hair_type_id'),
             concerns:    $request->validated('concerns'),
             budgetRange: $request->validated('budget_range'),
+            includeStylistOnly: ApiUserResolver::canAccessStylistOnlyProducts($viewer),
         );
 
         return ApiResponse::ok([

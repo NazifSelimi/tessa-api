@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\Category;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Exception;
@@ -15,7 +15,7 @@ class ProductService
     /* INDEX (WITH FILTERING SUPPORT)                        */
     /* ===================================================== */
 
-    public function paginate(array $filters = [], int $perPage = 20)
+    public function paginate(array $filters = [], int $perPage = 20, ?User $viewer = null)
     {
         $query = Product::query()
             ->with([
@@ -26,6 +26,7 @@ class ProductService
                 'sale'
             ]);
 
+        $this->applyVisibilityFilter($query, $viewer);
         $this->applyFilters($query, $filters);
 
         return $query->paginate($perPage);
@@ -44,6 +45,15 @@ class ProductService
             'images',
             'sale'
         ]);
+    }
+
+    public function canView(Product $product, ?User $viewer = null): bool
+    {
+        if (!$product->stylist_only) {
+            return true;
+        }
+
+        return $viewer?->isStylist() || $viewer?->isAdmin();
     }
 
     /* ===================================================== */
@@ -102,38 +112,47 @@ class ProductService
     /* RELATED PRODUCTS                                      */
     /* ===================================================== */
 
-    public function related(Product $product, int $limit = 3)
+    public function related(Product $product, int $limit = 3, ?User $viewer = null)
     {
-        return Product::with(['brand', 'images'])
+        $query = Product::with(['brand', 'images'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->limit($limit)
-            ->get();
+            ->limit($limit);
+
+        $this->applyVisibilityFilter($query, $viewer);
+
+        return $query->get();
     }
 
     /* ===================================================== */
     /* LATEST                                                */
     /* ===================================================== */
 
-    public function latest(int $limit = 3)
+    public function latest(int $limit = 3, ?User $viewer = null)
     {
-        return Product::with(['images', 'sale'])
+        $query = Product::with(['images', 'sale'])
             ->latest()
-            ->limit($limit)
-            ->get();
+            ->limit($limit);
+
+        $this->applyVisibilityFilter($query, $viewer);
+
+        return $query->get();
     }
 
     /* ===================================================== */
     /* SEARCH                                                */
     /* ===================================================== */
 
-    public function search(string $query, int $limit = 10)
+    public function search(string $query, int $limit = 10, ?User $viewer = null)
     {
-        return Product::query()
+        $builder = Product::query()
             ->with(['brand', 'category', 'translations', 'images', 'sale'])
             ->where('name', 'like', '%' . $query . '%')
-            ->limit($limit)
-            ->get();
+            ->limit($limit);
+
+        $this->applyVisibilityFilter($builder, $viewer);
+
+        return $builder->get();
     }
 
     /* ===================================================== */
@@ -185,6 +204,7 @@ class ProductService
             'quantity',
             'price',
             'stylist_price',
+            'stylist_only',
         ])->toArray();
     }
 
@@ -194,17 +214,45 @@ class ProductService
             return;
         }
 
-        foreach ($data['translations'] as $translation) {
+        $translations = $data['translations'];
 
-            if (!isset($translation['locale'], $translation['description'])) {
+        // Accept either [{ locale, description }] or { en: "...", mk: "..." } input.
+        if (array_keys($translations) !== range(0, count($translations) - 1)) {
+            $translations = collect($translations)
+                ->map(fn ($description, $locale) => [
+                    'locale' => $locale,
+                    'description' => $description,
+                ])
+                ->values()
+                ->all();
+        }
+
+        foreach ($translations as $translation) {
+            if (!isset($translation['locale'])) {
+                continue;
+            }
+
+            $description = $translation['description'] ?? null;
+
+            if ($description === null || $description === '') {
+                $product->translations()->where('locale', $translation['locale'])->delete();
                 continue;
             }
 
             $product->translations()->updateOrCreate(
                 ['locale' => $translation['locale']],
-                ['description' => $translation['description']]
+                ['description' => $description]
             );
         }
+    }
+
+    private function applyVisibilityFilter(Builder $query, ?User $viewer = null): void
+    {
+        if ($viewer?->isStylist() || $viewer?->isAdmin()) {
+            return;
+        }
+
+        $query->where('stylist_only', false);
     }
 
     private function handleSale(Product $product, array $data): void
@@ -248,15 +296,15 @@ class ProductService
         }
 
         if (!empty($filters['min_price'])) {
-            $query->where('price', '>=', $filters['min_price']);
+            $query->where('products.price', '>=', $filters['min_price']);
         }
 
         if (!empty($filters['max_price'])) {
-            $query->where('price', '<=', $filters['max_price']);
+            $query->where('products.price', '<=', $filters['max_price']);
         }
 
         if (!empty($filters['search'])) {
-            $query->where('name', 'like', '%' . $filters['search'] . '%');
+            $query->where('products.name', 'like', '%' . $filters['search'] . '%');
         }
 
         if (!empty($filters['on_sale'])) {
@@ -267,7 +315,7 @@ class ProductService
         }
 
         if (!empty($filters['in_stock'])) {
-            $query->where('quantity', '>', 0);
+            $query->where('products.quantity', '>', 0);
         }
 
         // Sorting — use database-driven sort_priority on categories
