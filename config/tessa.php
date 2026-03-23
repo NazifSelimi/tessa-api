@@ -26,4 +26,16 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend Social Auth Callback Path
+    |--------------------------------------------------------------------------
+    |
+    | The SPA route that receives the OAuth result after the backend exchanges
+    | the provider authorization code for an application API token.
+    |
+    */
+
+    'social_auth_callback_path' => env('FRONTEND_SOCIAL_AUTH_CALLBACK_PATH', '/auth/social/callback'),
+
 ];

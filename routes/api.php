@@ -30,6 +30,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::get('/auth/oauth/{provider}/redirect', [AuthController::class, 'socialRedirect']);
+    Route::get('/auth/oauth/{provider}/callback', [AuthController::class, 'socialCallback']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
         ->middleware('throttle:5,1'); // 5 attempts per minute
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
@@ -131,5 +133,4 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         });
     });
 });
-
 

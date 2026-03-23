@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'role' => $roleValue,
             'isStylist' => (int) $this->role === \App\Models\User::ROLE_STYLIST,
             'preferredLocale' => $this->preferred_locale,
+            'avatar' => $this->avatar,
             'address' => $this->address,
             'city' => $this->city,
             'postcode' => $this->postcode,
@@ -35,6 +36,7 @@ class UserResource extends JsonResource
             'totalSpent' => $this->when(isset($this->total_spent), number_format((float) $this->total_spent, 2)),
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
+            'name' => trim(implode(' ', array_filter([$this->first_name, $this->last_name]))),
         ];
     }
 }
