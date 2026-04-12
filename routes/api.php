@@ -75,6 +75,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
             
             // Product Management
+            Route::get('/products', [AdminProductController::class, 'index']);
             Route::post('/products', [AdminProductController::class, 'store']);
             Route::put('/products/{id}', [AdminProductController::class, 'update']);
             Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
@@ -133,4 +134,3 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         });
     });
 });
-

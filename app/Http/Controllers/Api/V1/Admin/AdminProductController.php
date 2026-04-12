@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ProductIndexRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ImageService;
@@ -16,6 +17,29 @@ class AdminProductController extends Controller
         protected ProductService $productService,
         protected ImageService $imageService
     ) {}
+
+    /**
+     * List products with the same filtering and sorting options as the storefront.
+     */
+    public function index(ProductIndexRequest $request)
+    {
+        $products = $this->productService->paginate(
+            $request->filters(),
+            $request->perPage(),
+            $request->user()
+        );
+
+        return ApiResponse::ok(
+            ProductResource::collection($products)->resolve(),
+            200,
+            [
+                'current_page' => $products->currentPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+                'last_page' => $products->lastPage(),
+            ]
+        );
+    }
 
     /**
      * Create new product.
