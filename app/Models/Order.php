@@ -25,14 +25,22 @@ class Order extends Model
         'user_id',
         'total',
         'coupon_id',
+        'coupon_code',
         'message',
         'discount',
+        'shipping',
+        'tax',
         'status',
+        'payment_method',
+        'payment_status',
+        'tracking_number',
     ];
 
     protected $casts = [
         'total' => 'decimal:2',
         'discount' => 'decimal:2',
+        'shipping' => 'decimal:2',
+        'tax' => 'decimal:2',
         'status' => 'integer',
     ];
 

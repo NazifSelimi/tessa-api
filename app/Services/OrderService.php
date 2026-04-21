@@ -16,33 +16,41 @@ class OrderService
     public function userOrders(User $user)
     {
         return $user->orders()
-            ->with(['items.product', 'coupon', 'user'])
+            ->with(['items.product.images', 'coupon', 'user', 'info'])
             ->latest()
             ->paginate(15);
     }
 
-    public function createOrder(User $user, array $payload): Order
+    public function createOrder(?User $user, array $payload): Order
     {
         $order = DB::transaction(function () use ($user, $payload) {
             $shipping = $payload['shipping_address'] ?? [];
+            $isStylist = $user?->isStylist() ?? false;
 
-            // Update user information from shipping address
-            $user->update([
-                'first_name' => $shipping['firstName'] ?? $user->first_name,
-                'last_name' => $shipping['lastName'] ?? $user->last_name,
-                'phone' => $shipping['phone'] ?? $user->phone,
-                'address' => $shipping['address'] ?? $user->address,
-                'city' => $shipping['city'] ?? $user->city,
-                'postcode' => $shipping['zipCode'] ?? $shipping['zip'] ?? $user->postcode,
-            ]);
+            if ($user) {
+                // Keep the saved profile in sync for authenticated customers.
+                $user->update([
+                    'first_name' => $shipping['firstName'] ?? $user->first_name,
+                    'last_name' => $shipping['lastName'] ?? $user->last_name,
+                    'phone' => $shipping['phone'] ?? $user->phone,
+                    'address' => $shipping['address'] ?? $user->address,
+                    'city' => $shipping['city'] ?? $user->city,
+                    'postcode' => $shipping['zipCode'] ?? $shipping['zip'] ?? $user->postcode,
+                ]);
+            }
 
-            $order = $user->orders()->create([
+            $order = Order::create([
+                'user_id' => $user?->id,
                 'total' => 0,
                 'discount' => 0,
+                'shipping' => 0,
                 'message' => $payload['custom_message'] ?? null,
+                'payment_method' => $payload['payment_method'] ?? 'cod',
+                'payment_status' => 'pending',
+                'coupon_code' => null,
             ]);
 
-            $total = 0;
+            $subtotal = 0;
 
             foreach ($payload['items'] as $item) {
                 // Lock the product row to prevent overselling under concurrent requests
@@ -55,8 +63,8 @@ class OrderService
                     ]);
                 }
 
-                $price = $product->resolvePrice($user->isStylist());
-                $total += $price * $qty;
+                $price = $product->resolvePrice($isStylist);
+                $subtotal += $price * $qty;
 
                 $order->items()->create([
                     'product_id' => $product->id,
@@ -70,6 +78,7 @@ class OrderService
             // --- Coupon handling (atomic) ---
             $discount = 0;
             $couponId = null;
+            $appliedCouponCode = null;
 
             if (!empty($payload['coupon_code'])) {
                 $coupon = Coupon::lockForUpdate()
@@ -88,35 +97,42 @@ class OrderService
                     ]);
                 }
 
-                $discount = $coupon->calculateDiscount($total);
+                $discount = $coupon->calculateDiscount($subtotal);
                 $coupon->decrement('quantity');
                 $couponId = $coupon->id;
+                $appliedCouponCode = $coupon->code;
 
-                // Record coupon usage for the user
-                $user->coupons()->syncWithoutDetaching([
-                    $coupon->id => ['used_at' => now()],
-                ]);
+                // Record coupon usage for authenticated customers only.
+                if ($user) {
+                    $user->coupons()->syncWithoutDetaching([
+                        $coupon->id => ['used_at' => now()],
+                    ]);
+                }
             }
 
-            $order->total = $total - $discount;
+            $shippingCost = $this->resolveShippingCost($subtotal);
+
+            $order->total = $subtotal - $discount + $shippingCost;
             $order->discount = $discount;
+            $order->shipping = $shippingCost;
             $order->coupon_id = $couponId;
+            $order->coupon_code = $appliedCouponCode;
             $order->status = Order::STATUS_PENDING;
             $order->save();
 
             // Snapshot shipping details into order_infos table
             $order->info()->create([
-                'first_name'  => $shipping['firstName'] ?? $user->first_name,
-                'last_name'   => $shipping['lastName']  ?? $user->last_name,
-                'email'       => $shipping['email']     ?? $user->email,
-                'phone'       => $shipping['phone']     ?? $user->phone,
-                'address'     => $shipping['address']   ?? $user->address,
-                'city'        => $shipping['city']      ?? $user->city,
-                'postal_code' => $shipping['zipCode']   ?? $shipping['zip'] ?? $user->postcode,
+                'first_name'  => $shipping['firstName'] ?? $user?->first_name,
+                'last_name'   => $shipping['lastName']  ?? $user?->last_name,
+                'email'       => $shipping['email']     ?? $user?->email,
+                'phone'       => $shipping['phone']     ?? $user?->phone,
+                'address'     => $shipping['address']   ?? $user?->address,
+                'city'        => $shipping['city']      ?? $user?->city,
+                'postal_code' => $shipping['zipCode']   ?? $shipping['zip'] ?? $user?->postcode,
                 'country'     => $shipping['country']   ?? 'MK',
             ]);
 
-            return $order->load(['items.product.images', 'coupon', 'user']);
+            return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         });
 
         // Dispatch after transaction commits so listeners never act on rolled-back data
@@ -142,7 +158,7 @@ class OrderService
     {
         // Idempotency: already cancelled → no-op
         if ($order->status === Order::STATUS_CANCELLED) {
-            return $order->load(['items.product', 'coupon', 'user']);
+            return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         }
 
         if ($order->status !== Order::STATUS_PENDING) {
@@ -163,7 +179,12 @@ class OrderService
                 }
             }
 
-            return $order->load(['items.product', 'coupon', 'user']);
+            return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         });
+    }
+
+    private function resolveShippingCost(float $subtotal): float
+    {
+        return $subtotal >= 3000 ? 0.0 : 150.0;
     }
 }

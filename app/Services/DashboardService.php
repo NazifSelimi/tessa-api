@@ -20,19 +20,24 @@ class DashboardService
             'totalProducts' => Product::count(),
             'totalUsers' => User::count(),
             'pendingStylistRequests' => RequestStylist::where('status', RequestStylist::STATUS_PENDING)->count(),
-            'recentOrders' => Order::with('user')
+            'recentOrders' => Order::with(['user', 'info'])
                 ->latest()
                 ->limit(5)
                 ->get()
-                ->map(fn ($order) => [
-                    'id' => (string) $order->id,
-                    'total' => (float) $order->total,
-                    'status' => $order->status,
-                    'userName' => $order->user
+                ->map(function ($order) {
+                    $infoName = trim(($order->info->first_name ?? '') . ' ' . ($order->info->last_name ?? ''));
+                    $userName = $order->user
                         ? trim($order->user->first_name . ' ' . $order->user->last_name)
-                        : 'Unknown',
-                    'createdAt' => $order->created_at?->toISOString(),
-                ]),
+                        : '';
+
+                    return [
+                        'id' => (string) $order->id,
+                        'total' => (float) $order->total,
+                        'status' => $order->status,
+                        'userName' => $infoName !== '' ? $infoName : ($userName !== '' ? $userName : 'Unknown'),
+                        'createdAt' => $order->created_at?->toISOString(),
+                    ];
+                }),
         ];
     }
 }

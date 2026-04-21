@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Actions\CheckoutAction;
+use App\Http\Resources\OrderResource;
 use App\Support\ApiResponse;
 use App\Http\Requests\Api\V1\StoreOrderRequest;
 
@@ -20,6 +21,6 @@ class CheckoutController extends Controller
             $request->validated()
         );
 
-        return ApiResponse::ok(new \App\Http\Resources\OrderResource($order));
+        return ApiResponse::ok(new OrderResource($order), 201);
     }
 }

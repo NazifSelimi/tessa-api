@@ -45,6 +45,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('brands', [BrandController::class, 'index']);
     Route::post('coupons/validate', [CouponController::class, 'validate']);
     Route::post('recommendations', RecommendationController::class);
+    Route::post('/checkout', [CheckoutController::class, 'checkout']);
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -56,8 +57,6 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         Route::get('/orders/{order}', [OrderController::class, 'show']);
         Route::post('/orders', [OrderController::class, 'store']);
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
-
-        Route::post('/checkout', [CheckoutController::class, 'checkout']);
 
         // Stylist Requests
         Route::post('/stylist-requests', [StylistRequestController::class, 'store']);

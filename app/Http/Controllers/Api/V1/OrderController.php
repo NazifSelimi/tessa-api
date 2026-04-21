@@ -35,7 +35,7 @@ class OrderController extends Controller
     {
         $order = $request->user()
             ->orders()
-            ->with(['items.product', 'coupon', 'user'])
+            ->with(['items.product.images', 'coupon', 'user', 'info'])
             ->findOrFail($id);
 
         return ApiResponse::ok(

@@ -23,7 +23,7 @@ class AdminOrderService
      */
     public function listFiltered(array $filters, int $perPage = 20)
     {
-        $query = Order::with(['user', 'items.product.images', 'coupon']);
+        $query = Order::with(['user', 'info', 'items.product.images', 'coupon']);
 
         if (!empty($filters['status'])) {
             $statusInt = self::STATUS_MAP[$filters['status']] ?? null;
@@ -48,6 +48,12 @@ class AdminOrderService
                       $q2->where('first_name', 'like', "%{$search}%")
                          ->orWhere('last_name', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('info', function ($q2) use ($search) {
+                      $q2->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
                   });
             });
         }
@@ -79,6 +85,6 @@ class AdminOrderService
             ]);
         }
 
-        return $order->load(['user', 'items.product.images', 'coupon']);
+        return $order->load(['user', 'info', 'items.product.images', 'coupon']);
     }
 }

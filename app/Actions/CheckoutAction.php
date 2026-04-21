@@ -12,7 +12,7 @@ class CheckoutAction
 		private readonly OrderService $orderService
 	) {}
 
-	public function execute(User $user, array $payload): Order
+	public function execute(?User $user, array $payload): Order
 	{
 		return $this->orderService->createOrder($user, $payload);
 	}

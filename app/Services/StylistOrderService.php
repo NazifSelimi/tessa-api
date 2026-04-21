@@ -13,7 +13,7 @@ class StylistOrderService
     public function listByUser(User $user, int $perPage = 20)
     {
         return Order::where('user_id', $user->id)
-            ->with(['items.product.images', 'coupon'])
+            ->with(['items.product.images', 'coupon', 'user', 'info'])
             ->latest()
             ->paginate($perPage);
     }

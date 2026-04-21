@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class OrderResource extends JsonResource
 {
@@ -23,10 +22,17 @@ class OrderResource extends JsonResource
         $status = $statusMap[$this->status] ?? 'pending';
 
         $user = $this->user;
+        $shippingInfo = $this->relationLoaded('info') ? $this->info : null;
+        $fullName = trim(implode(' ', array_filter([
+            $shippingInfo?->first_name ?? $user?->first_name,
+            $shippingInfo?->last_name ?? $user?->last_name,
+        ])));
+        $country = $shippingInfo?->country ?? 'MK';
+        $state = $country === 'MK' ? 'North Macedonia' : $country;
 
         return [
             'id' => (string) $this->id,
-            'userId' => (string) $this->user_id,
+            'userId' => $this->user_id ? (string) $this->user_id : null,
             'items' => $this->items->map(function ($item) {
                 $product = $item->product;
                 $image = null;
@@ -51,17 +57,24 @@ class OrderResource extends JsonResource
             })->values(),
             'subtotal' => (float) $subtotal,
             'discount' => (float) ($this->discount ?? 0),
+            'shipping' => (float) ($this->shipping ?? 0),
+            'tax' => (float) ($this->tax ?? 0),
             'total' => (float) $this->total,
             'status' => $status,
+            'paymentMethod' => $this->payment_method ?? 'cod',
+            'paymentStatus' => $this->payment_status ?? 'pending',
             'shippingAddress' => [
-                'fullName' => trim(($user?->first_name ?? '') . ' ' . ($user?->last_name ?? '')),
-                'phone' => $user?->phone,
-                'address' => $user?->address,
-                'city' => $user?->city,
-                'zipCode' => $user?->postcode,
+                'fullName' => $fullName,
+                'phone' => $shippingInfo?->phone ?? $user?->phone ?? '',
+                'address' => $shippingInfo?->address ?? $user?->address ?? '',
+                'city' => $shippingInfo?->city ?? $user?->city ?? '',
+                'state' => $state,
+                'zipCode' => $shippingInfo?->postal_code ?? $user?->postcode ?? '',
+                'country' => $country,
             ],
             'customMessage' => $this->message,
-            'couponCode' => $this->coupon?->code,
+            'couponCode' => $this->coupon?->code ?? $this->coupon_code,
+            'trackingNumber' => $this->tracking_number,
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];
