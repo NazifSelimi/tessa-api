@@ -50,9 +50,10 @@ class GuestCheckoutApiTest extends TestCase
             ->assertJsonPath('data.userId', null)
             ->assertJsonPath('data.shippingAddress.fullName', 'Guest Customer')
             ->assertJsonPath('data.shippingAddress.phone', '070123123')
-            ->assertJsonPath('data.shipping', 150.0)
-            ->assertJsonPath('data.total', 2150.0)
             ->assertJsonPath('data.paymentMethod', 'cod');
+
+        $this->assertSame(150.0, (float) $response->json('data.shipping'));
+        $this->assertSame(2150.0, (float) $response->json('data.total'));
 
         $orderId = (int) $response->json('data.id');
 

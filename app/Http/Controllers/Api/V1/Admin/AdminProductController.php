@@ -56,6 +56,7 @@ class AdminProductController extends Controller
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
             'stylist_only' => ['nullable', 'boolean'],
+            'normalize_catalog_background' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'translations' => ['nullable', 'array'],
             'translations.en' => ['nullable', 'string'],
@@ -70,7 +71,13 @@ class AdminProductController extends Controller
 
         // Handle image upload — convert to WebP before passing to the service
         if ($request->hasFile('image')) {
-            $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
+            $filename = $this->imageService->storeAsWebP(
+                $request->file('image'),
+                'images',
+                1200,
+                82,
+                filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
+            );
             $validated['image'] = $filename;
         }
 
@@ -103,6 +110,7 @@ class AdminProductController extends Controller
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
             'stylist_only' => ['sometimes', 'boolean'],
+            'normalize_catalog_background' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'translations' => ['sometimes', 'array'],
             'translations.en' => ['nullable', 'string'],
@@ -125,7 +133,13 @@ class AdminProductController extends Controller
                 $this->imageService->delete($oldImage->name);
             }
 
-            $filename = $this->imageService->storeAsWebP($request->file('image'), 'images');
+            $filename = $this->imageService->storeAsWebP(
+                $request->file('image'),
+                'images',
+                1200,
+                82,
+                filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
+            );
             $validated['image'] = $filename;
         }
 
@@ -252,6 +266,7 @@ class AdminProductController extends Controller
             'brandId' => 'brand_id',
             'stylistPrice' => 'stylist_price',
             'stylistOnly' => 'stylist_only',
+            'normalizeCatalogBackground' => 'normalize_catalog_background',
         ];
 
         foreach ($fieldMap as $camel => $snake) {
