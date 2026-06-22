@@ -30,9 +30,19 @@ class OrderResource extends JsonResource
         $country = $shippingInfo?->country ?? 'MK';
         $state = $country === 'MK' ? 'North Macedonia' : $country;
 
+        // Expose who placed the order so admins can tell apart retail vs. pro
+        // (stylist) pricing at a glance. No user → guest checkout.
+        $roleMap = [
+            \App\Models\User::ROLE_ADMIN => 'admin',
+            \App\Models\User::ROLE_STYLIST => 'stylist',
+            \App\Models\User::ROLE_USER => 'user',
+        ];
+        $customerRole = $user ? ($roleMap[(int) $user->role] ?? 'user') : 'guest';
+
         return [
             'id' => (string) $this->id,
             'userId' => $this->user_id ? (string) $this->user_id : null,
+            'customerRole' => $customerRole,
             'items' => $this->items->map(function ($item) {
                 $product = $item->product;
                 $image = null;
@@ -46,9 +56,18 @@ class OrderResource extends JsonResource
                     }
                 }
 
+                $brandName = ($product && $product->relationLoaded('brand'))
+                    ? $product->brand?->name
+                    : null;
+                $categoryName = ($product && $product->relationLoaded('category'))
+                    ? $product->category?->name
+                    : null;
+
                 return [
                     'productId' => (string) $item->product_id,
                     'productName' => $product?->name ?? 'Unknown',
+                    'brandName' => $brandName,
+                    'categoryName' => $categoryName,
                     'quantity' => (int) $item->quantity,
                     'unitPrice' => (float) $item->price,
                     'total' => (float) ($item->price * $item->quantity),
