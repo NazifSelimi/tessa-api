@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\Stylist\StylistOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\StylistInvitationController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\RecommendationController;
@@ -37,6 +38,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
         ->middleware('throttle:5,1'); // 5 attempts per minute
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::get('/stylist-invitations/{token}', [StylistInvitationController::class, 'show'])
+        ->middleware('throttle:10,1');
+    Route::post('/stylist-invitations/{token}/activate', [StylistInvitationController::class, 'activate'])
+        ->middleware('throttle:5,1');
     Route::get('products', [ProductController::class, 'index']);
     Route::get('products/featured', [ProductController::class, 'featured']);
     Route::get('products/search', [ProductController::class, 'search']);
@@ -76,6 +81,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/users/{id}', [AdminUserController::class, 'show']);
             Route::put('/users/{id}', [AdminUserController::class, 'update']);
             Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+            Route::post('/stylist-invitations', [StylistInvitationController::class, 'create']);
             
             // Product Management
             Route::get('/products', [AdminProductController::class, 'index']);

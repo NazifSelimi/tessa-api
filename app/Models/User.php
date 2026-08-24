@@ -94,4 +94,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(StylistInvitationCode::class, 'used_by');
     }
+
+    public function activatedStylistInvitation(): HasOne
+    {
+        return $this->hasOne(StylistInvitation::class, 'activated_user_id');
+    }
 }
