@@ -19,7 +19,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'identifier' => ['required_without:email', 'nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8'],
         ];
     }
@@ -28,11 +29,14 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'))) {
+        $identifier = $this->identifier();
+        $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_login';
+
+        if (! Auth::attempt([$field => $field === 'email' ? Str::lower($identifier) : $this->normalizePhone($identifier), 'password' => $this->password])) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                'identifier' => __('auth.failed'),
             ]);
         }
 
@@ -59,6 +63,16 @@ class LoginRequest extends FormRequest
 
     protected function throttleKey(): string
     {
-        return Str::lower($this->input('email')).'|'.$this->ip();
+        return Str::lower($this->identifier()).'|'.$this->ip();
+    }
+
+    private function identifier(): string
+    {
+        return (string) ($this->input('identifier') ?: $this->input('email'));
+    }
+
+    private function normalizePhone(string $value): string
+    {
+        return preg_replace('/\D+/', '', $value) ?: '';
     }
 }

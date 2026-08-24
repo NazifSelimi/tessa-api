@@ -24,7 +24,7 @@ class StylistInvitationController extends Controller
         $invitations = \App\Models\StylistInvitation::query()
             ->select([
                 'id', 'source_reference', 'display_name', 'email', 'phone', 'city',
-                'business_name', 'business_city', 'expires_at', 'activated_at',
+                'business_name', 'business_city', 'expires_at', 'activated_at', 'revoked_at',
             ])
             ->when($data['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($query) use ($search) {
@@ -47,7 +47,7 @@ class StylistInvitationController extends Controller
                 'city' => $invitation->city,
                 'business_name' => $invitation->business_name,
                 'business_city' => $invitation->business_city,
-                'status' => $invitation->activated_at ? 'activated' : ($invitation->expires_at->isPast() ? 'expired' : 'pending'),
+                'status' => $invitation->activated_at ? 'activated' : ($invitation->revoked_at ? 'revoked' : ($invitation->expires_at->isPast() ? 'expired' : 'pending')),
                 'expires_at' => $invitation->expires_at->toISOString(),
                 'activated_at' => $invitation->activated_at?->toISOString(),
             ])->values(),
@@ -132,5 +132,35 @@ class StylistInvitationController extends Controller
             'activation_url' => rtrim(config('app.frontend_url', config('app.url')), '/') . '/stylist/activate/' . $token,
             'expires_at' => $invitation->expires_at->toISOString(),
         ], 201, [], 'Stylist activation link created successfully.');
+    }
+
+    public function reissue(string $id)
+    {
+        $invitation = \App\Models\StylistInvitation::findOrFail($id);
+
+        if ($invitation->activated_at) {
+            return ApiResponse::error('An activated account cannot receive a new invitation.', 422);
+        }
+
+        [$invitation, $token] = $this->invitations->reissue($invitation);
+
+        return ApiResponse::ok([
+            'id' => (string) $invitation->id,
+            'activation_url' => rtrim(config('app.frontend_url'), '/') . '/stylist/activate/' . $token,
+            'expires_at' => $invitation->expires_at->toISOString(),
+        ], 200, [], 'Activation link regenerated successfully.');
+    }
+
+    public function revoke(string $id)
+    {
+        $invitation = \App\Models\StylistInvitation::findOrFail($id);
+
+        if ($invitation->activated_at) {
+            return ApiResponse::error('An activated account cannot be revoked.', 422);
+        }
+
+        $invitation->update(['revoked_at' => now()]);
+
+        return ApiResponse::ok(null, 200, [], 'Invitation revoked successfully.');
     }
 }

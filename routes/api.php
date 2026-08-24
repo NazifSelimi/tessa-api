@@ -83,6 +83,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
             Route::get('/stylist-invitations', [StylistInvitationController::class, 'index']);
             Route::post('/stylist-invitations', [StylistInvitationController::class, 'create']);
+            Route::post('/stylist-invitations/{id}/reissue', [StylistInvitationController::class, 'reissue']);
+            Route::post('/stylist-invitations/{id}/revoke', [StylistInvitationController::class, 'revoke']);
             
             // Product Management
             Route::get('/products', [AdminProductController::class, 'index']);

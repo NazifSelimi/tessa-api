@@ -25,12 +25,14 @@ class StylistInvitation extends Model
         'token_hash',
         'expires_at',
         'activated_at',
+        'revoked_at',
         'activated_user_id',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'activated_at' => 'datetime',
+        'revoked_at' => 'datetime',
     ];
 
     public function activatedUser(): BelongsTo
@@ -40,6 +42,6 @@ class StylistInvitation extends Model
 
     public function isAvailable(): bool
     {
-        return $this->activated_at === null && $this->expires_at->isFuture();
+        return $this->activated_at === null && $this->revoked_at === null && $this->expires_at->isFuture();
     }
 }

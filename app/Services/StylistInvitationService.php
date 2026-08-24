@@ -31,7 +31,6 @@ class StylistInvitationService
     ];
 
     private const REQUIRED_FIELDS = [
-        'email',
         'phone',
         'address',
         'city',
@@ -100,7 +99,7 @@ class StylistInvitationService
             $user = new User([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
-                'email' => Str::lower($data['email']),
+                'email' => filled($data['email'] ?? null) ? Str::lower($data['email']) : null,
                 'phone' => $data['phone'],
                 'address' => $data['address'],
                 'city' => $data['city'],
@@ -110,6 +109,7 @@ class StylistInvitationService
             // Role fields are intentionally not mass assignable from public requests.
             $user->role = User::ROLE_STYLIST;
             $user->is_stylist = true;
+            $user->phone_login = $this->phoneLogin($data['phone']);
             $user->save();
 
             StylistProfile::create([
@@ -142,5 +142,30 @@ class StylistInvitationService
         }
 
         return $attributes;
+    }
+
+    public function reissue(StylistInvitation $invitation): array
+    {
+        $token = Str::random(64);
+        $invitation->update([
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => now()->addDays(30),
+            'revoked_at' => null,
+        ]);
+
+        return [$invitation->fresh(), $token];
+    }
+
+    private function phoneLogin(string $phone): string
+    {
+        $normalized = preg_replace('/\D+/', '', $phone) ?: '';
+
+        if (User::where('phone_login', $normalized)->exists()) {
+            throw ValidationException::withMessages([
+                'phone' => ['This phone number is already linked to an account.'],
+            ]);
+        }
+
+        return $normalized;
     }
 }

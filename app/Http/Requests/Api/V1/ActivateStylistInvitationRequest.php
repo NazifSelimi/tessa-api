@@ -17,7 +17,7 @@ class ActivateStylistInvitationRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:120'],
             'last_name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:100'],
