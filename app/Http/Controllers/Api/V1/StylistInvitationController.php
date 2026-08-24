@@ -13,6 +13,54 @@ class StylistInvitationController extends Controller
 {
     public function __construct(private readonly StylistInvitationService $invitations) {}
 
+    public function index(Request $request)
+    {
+        $data = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $invitations = \App\Models\StylistInvitation::query()
+            ->select([
+                'id', 'source_reference', 'display_name', 'email', 'phone', 'city',
+                'business_name', 'business_city', 'expires_at', 'activated_at',
+            ])
+            ->when($data['search'] ?? null, function ($query, string $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('display_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('business_name', 'like', "%{$search}%");
+                });
+            })
+            ->latest('id')
+            ->paginate($data['per_page'] ?? 25);
+
+        return ApiResponse::ok(
+            $invitations->getCollection()->map(fn ($invitation) => [
+                'id' => (string) $invitation->id,
+                'source_reference' => $invitation->source_reference,
+                'display_name' => $invitation->display_name,
+                'email' => $invitation->email,
+                'phone' => $invitation->phone,
+                'city' => $invitation->city,
+                'business_name' => $invitation->business_name,
+                'business_city' => $invitation->business_city,
+                'status' => $invitation->activated_at ? 'activated' : ($invitation->expires_at->isPast() ? 'expired' : 'pending'),
+                'expires_at' => $invitation->expires_at->toISOString(),
+                'activated_at' => $invitation->activated_at?->toISOString(),
+            ])->values(),
+            200,
+            [
+                'current_page' => $invitations->currentPage(),
+                'per_page' => $invitations->perPage(),
+                'total' => $invitations->total(),
+                'last_page' => $invitations->lastPage(),
+            ],
+        );
+    }
+
     public function show(string $token)
     {
         $invitation = $this->invitations->resolve($token);
