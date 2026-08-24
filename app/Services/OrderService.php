@@ -232,8 +232,7 @@ class OrderService
             $bundleDiscount = match ($bundle->promotion_type) {
                 'fixed_price' => max(0, $regularTotal - (float) $bundle->bundle_price),
                 'bonus_items' => $bundle->products
-                    ->filter(fn ($product) => (bool) $product->pivot->is_bonus)
-                    ->sum(fn ($product) => ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $product->pivot->quantity),
+                    ->sum(fn ($product) => ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $product->pivot->bonus_quantity),
                 default => $regularTotal * ((float) $bundle->discount_percentage / 100),
             };
 

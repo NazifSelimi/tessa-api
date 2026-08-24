@@ -41,7 +41,7 @@ class Bundle extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'bundle_products')
-            ->withPivot('quantity', 'is_bonus');
+            ->withPivot('quantity', 'is_bonus', 'bonus_quantity');
     }
 
     public function isAvailableFor(?User $user): bool

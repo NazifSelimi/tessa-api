@@ -34,6 +34,7 @@ class BundleResource extends JsonResource
                     'price'    => (float) $product->price,
                     'quantity' => (int) $product->pivot->quantity,
                     'isBonus'  => (bool) $product->pivot->is_bonus,
+                    'bonusQuantity' => (int) $product->pivot->bonus_quantity,
                     'image'    => $product->images->isNotEmpty()
                         ? asset('storage/images/' . $product->images->first()->name)
                         : null,

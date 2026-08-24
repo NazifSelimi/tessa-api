@@ -61,6 +61,7 @@ class AdminBundleController extends Controller
             'products.*.product_id' => ['required', 'integer', 'distinct', 'exists:products,id'],
             'products.*.quantity' => ['required', 'integer', 'min:1'],
             'products.*.is_bonus' => ['nullable', 'boolean'],
+            'products.*.bonus_quantity' => ['nullable', 'integer', 'min:0'],
         ]);
     }
 
@@ -70,6 +71,10 @@ class AdminBundleController extends Controller
             $product['product_id'] => [
                 'quantity' => $product['quantity'],
                 'is_bonus' => (bool) ($product['is_bonus'] ?? false),
+                'bonus_quantity' => min(
+                    (int) $product['quantity'],
+                    (int) ($product['bonus_quantity'] ?? ((bool) ($product['is_bonus'] ?? false) ? $product['quantity'] : 0))
+                ),
             ],
         ])->all());
     }
