@@ -25,30 +25,24 @@ class ProductCatalogGuidance
             'compatibleWith' => [],
         ];
 
+        if (in_array($category, ['hair color', 'bleach and de color'], true)) {
+            $guidance['compatibleWith'] = $isOroTherapy
+                ? ['Oro Therapy Gold Activator']
+                : ($isNoYellow ? ['No Yellow Violet Peroxide'] : ['Fanola Oxy']);
+        }
+
         if ($category === 'activator') {
             $guidance['compatibleWith'] = $isOroTherapy
                 ? ['Oro Therapy Color Keratin']
-                : ($isNoYellow
-                    ? ['Fanola Color', 'No Yellow Color', 'Fanola Toner', 'No Yellow Color Bleach']
-                    : ['Fanola Color', 'No Yellow Color', 'Color Zoom', 'Fanola Bleach']);
+                : ($isNoYellow ? ['No Yellow Color system'] : ['Fanola Color system']);
         }
 
         if ($category === 'hydrogen peroxide') {
+            // Hydrogen/peroxide is compatible with standard colour systems,
+            // but Oro Therapy requires its dedicated Gold Activator instead.
             $guidance['compatibleWith'] = $isOroTherapy
-                ? ['Oro Therapy Color Keratin']
+                ? []
                 : ['Fanola Color', 'No Yellow Color', 'Color Zoom', 'Fanola Bleach'];
-        }
-
-        if ($category === 'bleach and de color') {
-            $guidance['compatibleWith'] = $isOroTherapy
-                ? ['Oro Therapy Gold Activator']
-                : ($isNoYellow ? ['No Yellow Violet Peroxide'] : ['Fanola Oxy']);
-        }
-
-        if ($category === 'hair color') {
-            $guidance['compatibleWith'] = $isOroTherapy
-                ? ['Oro Therapy Gold Activator']
-                : ($isNoYellow ? ['No Yellow Violet Peroxide'] : ['Fanola Oxy']);
         }
 
         return $guidance;

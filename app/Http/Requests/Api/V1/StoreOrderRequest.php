@@ -22,6 +22,8 @@ class StoreOrderRequest extends FormRequest
 
             'custom_message' => ['nullable', 'string', 'max:1000'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
+            'bundle_ids' => ['nullable', 'array'],
+            'bundle_ids.*' => ['integer', 'distinct', 'exists:bundles,id'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],

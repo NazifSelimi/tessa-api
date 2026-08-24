@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\RecommendationController;
 use App\Http\Controllers\Api\V1\QuickOrderController;
+use App\Http\Controllers\Api\V1\BundleController;
+use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
 
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
@@ -45,6 +47,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('brands', [BrandController::class, 'index']);
     Route::post('coupons/validate', [CouponController::class, 'validate']);
     Route::post('recommendations', RecommendationController::class);
+    Route::get('bundles', [BundleController::class, 'index']);
     Route::post('/checkout', [CheckoutController::class, 'checkout']);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -81,6 +84,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
             Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
             Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate']);
+
+            Route::get('/bundles', [AdminBundleController::class, 'index']);
+            Route::post('/bundles', [AdminBundleController::class, 'store']);
+            Route::put('/bundles/{bundle}', [AdminBundleController::class, 'update']);
+            Route::delete('/bundles/{bundle}', [AdminBundleController::class, 'destroy']);
             
             // Coupon Management
             Route::get('/coupons', [AdminCouponController::class, 'index']);

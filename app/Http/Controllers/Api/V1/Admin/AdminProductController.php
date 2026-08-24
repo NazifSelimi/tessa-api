@@ -123,7 +123,7 @@ class AdminProductController extends Controller
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'quantity', 'category_id', 'brand_id'])->toArray();
+        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product->update($productData);
 
         // Handle image upload — convert to WebP and replace old images

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\OrderPlaced;
 use App\Models\Coupon;
+use App\Models\Bundle;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -51,6 +52,8 @@ class OrderService
             ]);
 
             $subtotal = 0;
+            $orderedQuantities = [];
+            $resolvedPrices = [];
 
             foreach ($payload['items'] as $item) {
                 // Lock the product row to prevent overselling under concurrent requests
@@ -65,6 +68,8 @@ class OrderService
 
                 $price = $product->resolvePrice($isStylist);
                 $subtotal += $price * $qty;
+                $orderedQuantities[$product->id] = ($orderedQuantities[$product->id] ?? 0) + $qty;
+                $resolvedPrices[$product->id] = $price;
 
                 $order->items()->create([
                     'product_id' => $product->id,
@@ -75,8 +80,14 @@ class OrderService
                 $product->decrement('quantity', $qty);
             }
 
-            // --- Coupon handling (atomic) ---
-            $discount = 0;
+            // Bundle promotions are recomputed from server-side product prices.
+            // This prevents a client from claiming a deal it did not actually qualify for.
+            $discount = $this->resolveBundleDiscount(
+                $payload['bundle_ids'] ?? [],
+                $orderedQuantities,
+                $resolvedPrices,
+                $user
+            );
             $couponId = null;
             $appliedCouponCode = null;
 
@@ -97,7 +108,7 @@ class OrderService
                     ]);
                 }
 
-                $discount = $coupon->calculateDiscount($subtotal);
+                $discount += $coupon->calculateDiscount(max(0, $subtotal - $discount));
                 $coupon->decrement('quantity');
                 $couponId = $coupon->id;
                 $appliedCouponCode = $coupon->code;
@@ -186,5 +197,49 @@ class OrderService
     private function resolveShippingCost(float $subtotal): float
     {
         return $subtotal >= 3000 ? 0.0 : 150.0;
+    }
+
+    private function resolveBundleDiscount(array $bundleIds, array $orderedQuantities, array $resolvedPrices, ?User $user): float
+    {
+        if (empty($bundleIds)) {
+            return 0;
+        }
+
+        $remaining = $orderedQuantities;
+        $discount = 0;
+        $bundles = Bundle::query()->with('products')->lockForUpdate()->findMany($bundleIds);
+
+        if ($bundles->count() !== count($bundleIds)) {
+            throw ValidationException::withMessages(['bundle_ids' => ['One or more selected offers are unavailable.']]);
+        }
+
+        foreach ($bundles as $bundle) {
+            if (!$bundle->isAvailableFor($user)) {
+                throw ValidationException::withMessages(['bundle_ids' => ["{$bundle->name} is not available for this account."]]);
+            }
+
+            $regularTotal = 0;
+            foreach ($bundle->products as $product) {
+                $required = (int) $product->pivot->quantity;
+                if (($remaining[$product->id] ?? 0) < $required) {
+                    throw ValidationException::withMessages(['bundle_ids' => ["Add all items from {$bundle->name} to use this offer."]]);
+                }
+
+                $remaining[$product->id] -= $required;
+                $regularTotal += ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $required;
+            }
+
+            $bundleDiscount = match ($bundle->promotion_type) {
+                'fixed_price' => max(0, $regularTotal - (float) $bundle->bundle_price),
+                'bonus_items' => $bundle->products
+                    ->filter(fn ($product) => (bool) $product->pivot->is_bonus)
+                    ->sum(fn ($product) => ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $product->pivot->quantity),
+                default => $regularTotal * ((float) $bundle->discount_percentage / 100),
+            };
+
+            $discount += min($regularTotal, $bundleDiscount);
+        }
+
+        return $discount;
     }
 }
