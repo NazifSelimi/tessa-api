@@ -30,9 +30,14 @@ class OrderResource extends JsonResource
         $country = $shippingInfo?->country ?? 'MK';
         $state = $country === 'MK' ? 'North Macedonia' : $country;
 
+        $customerRole = $user
+            ? ($user->isAdmin() ? 'admin' : ($user->isStylist() ? 'stylist' : 'user'))
+            : 'guest';
+
         return [
             'id' => (string) $this->id,
             'userId' => $this->user_id ? (string) $this->user_id : null,
+            'customerRole' => $customerRole,
             'items' => $this->items->map(function ($item) {
                 $product = $item->product;
                 $image = null;
@@ -49,6 +54,8 @@ class OrderResource extends JsonResource
                 return [
                     'productId' => (string) $item->product_id,
                     'productName' => $product?->name ?? 'Unknown',
+                    'brandName' => $product?->brand?->name,
+                    'categoryName' => $product?->category?->name,
                     'quantity' => (int) $item->quantity,
                     'unitPrice' => (float) $item->price,
                     'total' => (float) ($item->price * $item->quantity),
