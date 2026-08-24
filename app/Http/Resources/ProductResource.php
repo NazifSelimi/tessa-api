@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\ProductCatalogGuidance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +10,8 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $categoryName = $this->relationLoaded('category') ? $this->category?->name : null;
+
         // Get image from polymorphic images relation
         $primaryImage = null;
 
@@ -40,6 +43,7 @@ class ProductResource extends JsonResource
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
             'stylistOnly' => (bool) $this->stylist_only,
+            'catalogGuidance' => ProductCatalogGuidance::forProduct($categoryName, $this->name),
             'quantity' => (int) $this->quantity,
             'inStock' => $this->quantity > 0,
 
