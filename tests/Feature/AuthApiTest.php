@@ -149,4 +149,40 @@ class AuthApiTest extends TestCase
             'phone' => '+9876543210',
         ]);
     }
+
+    /** @test */
+    public function it_changes_password_when_the_current_password_is_valid()
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('current-password'),
+        ]);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withToken($token)->putJson('/api/v1/auth/password', [
+            'current_password' => 'current-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertOk();
+        $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
+    }
+
+    /** @test */
+    public function it_rejects_password_changes_with_an_invalid_current_password()
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('current-password'),
+        ]);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withToken($token)->putJson('/api/v1/auth/password', [
+            'current_password' => 'incorrect-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertTrue(Hash::check('current-password', $user->fresh()->password));
+    }
 }

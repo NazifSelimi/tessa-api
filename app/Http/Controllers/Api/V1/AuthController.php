@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ForgotPasswordRequest;
+use App\Http\Requests\Api\V1\ChangePasswordRequest;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\ProfileUpdateRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
@@ -187,6 +188,22 @@ class AuthController extends Controller
         $user->save();
 
         return ApiResponse::ok(new UserResource($user));
+    }
+
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        $user = $request->user();
+
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return ApiResponse::error('The current password is incorrect.', 422, [
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        return ApiResponse::ok(null, 200, [], 'Password updated successfully.');
     }
 
     public function forgotPassword(ForgotPasswordRequest $request)
