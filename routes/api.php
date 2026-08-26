@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\RecommendationController;
 use App\Http\Controllers\Api\V1\QuickOrderController;
 use App\Http\Controllers\Api\V1\BundleController;
+use App\Http\Controllers\Api\V1\HairProfileOptionController;
 use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
 
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
@@ -50,6 +51,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('products/{product}', [ProductController::class, 'show']);
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('brands', [BrandController::class, 'index']);
+    Route::get('hair-profile-options', HairProfileOptionController::class);
     Route::post('coupons/validate', [CouponController::class, 'validate']);
     Route::post('recommendations', RecommendationController::class);
     Route::get('bundles', [BundleController::class, 'index']);

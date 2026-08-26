@@ -22,8 +22,8 @@ class ProductIndexRequest extends FormRequest
             'on_sale'     => ['nullable', 'boolean'],
             'in_stock'    => ['nullable', 'boolean'],
             'sort'        => ['nullable', 'string', 'in:name_asc,name_desc,price_asc,price_desc,newest'],
-            'per_page'    => ['nullable', 'integer', 'min:1', 'max:100'],
-            'perPage'     => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page'    => ['nullable', 'integer', 'min:1', 'max:500'],
+            'perPage'     => ['nullable', 'integer', 'min:1', 'max:500'],
         ];
     }
 
@@ -38,6 +38,6 @@ class ProductIndexRequest extends FormRequest
     {
         $perPage = (int) $this->input('perPage', $this->input('per_page', 20));
 
-        return min(max($perPage, 1), 100);
+        return min(max($perPage, 1), 500);
     }
 }

@@ -43,6 +43,8 @@ class ProductResource extends JsonResource
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
             'stylistOnly' => (bool) $this->stylist_only,
+            'hairTypeIds' => $this->whenLoaded('hairTypes', fn () => $this->hairTypes->pluck('id')->map(fn ($id) => (int) $id)->values()),
+            'hairConcernIds' => $this->whenLoaded('hairConcerns', fn () => $this->hairConcerns->pluck('id')->map(fn ($id) => (int) $id)->values()),
             'catalogGuidance' => ProductCatalogGuidance::forProduct($categoryName, $this->name),
             'quantity' => (int) $this->quantity,
             'inStock' => $this->quantity > 0,

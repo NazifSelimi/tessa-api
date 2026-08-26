@@ -89,6 +89,23 @@ class QuickOrderApiTest extends TestCase
     }
 
     /** @test */
+    public function it_filters_quick_restock_to_color_categories()
+    {
+        $brand = Brand::factory()->create();
+        $colorCategory = Category::factory()->create(['name' => 'Hair Color']);
+        $otherCategory = Category::factory()->create(['name' => 'Shampoo']);
+
+        Product::factory()->create(['name' => 'Color shade', 'brand_id' => $brand->id, 'category_id' => $colorCategory->id]);
+        Product::factory()->create(['name' => 'Daily shampoo', 'brand_id' => $brand->id, 'category_id' => $otherCategory->id]);
+
+        $response = $this->getJson('/api/v1/products/quick-order?color_restock=1');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Color shade');
+    }
+
+    /** @test */
     public function it_validates_category_id_exists()
     {
         $response = $this->getJson('/api/v1/products/quick-order?category_id=9999');

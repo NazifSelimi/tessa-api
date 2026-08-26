@@ -23,7 +23,9 @@ class ProductService
                 'category',
                 'translations',
                 'images',
-                'sale'
+                'sale',
+                'hairTypes',
+                'hairConcerns',
             ]);
 
         $this->applyVisibilityFilter($query, $viewer);
@@ -43,7 +45,9 @@ class ProductService
             'category',
             'translations',
             'images',
-            'sale'
+            'sale',
+            'hairTypes',
+            'hairConcerns',
         ]);
     }
 
@@ -69,6 +73,7 @@ class ProductService
             $this->handleTranslations($product, $data);
             $this->handleSale($product, $data);
             $this->handleImage($product, $data);
+            $this->syncHairProfile($product, $data);
 
             return $this->find($product);
         });
@@ -87,6 +92,7 @@ class ProductService
             $this->handleTranslations($product, $data);
             $this->handleSale($product, $data);
             $this->handleImage($product, $data);
+            $this->syncHairProfile($product, $data);
 
             return $this->find($product);
         });
@@ -283,6 +289,17 @@ class ProductService
         $product->images()->create([
             'name' => $data['image']
         ]);
+    }
+
+    private function syncHairProfile(Product $product, array $data): void
+    {
+        if (array_key_exists('hair_type_ids', $data)) {
+            $product->hairTypes()->sync($data['hair_type_ids'] ?? []);
+        }
+
+        if (array_key_exists('hair_concern_ids', $data)) {
+            $product->hairConcerns()->sync($data['hair_concern_ids'] ?? []);
+        }
     }
 
     private function applyFilters(Builder $query, array $filters): void
