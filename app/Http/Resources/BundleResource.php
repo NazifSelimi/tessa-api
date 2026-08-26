@@ -32,6 +32,7 @@ class BundleResource extends JsonResource
                     'id'       => (string) $product->id,
                     'name'     => $product->name,
                     'price'    => (float) $product->price,
+                    'stylistPrice' => (float) $product->stylist_price,
                     'quantity' => (int) $product->pivot->quantity,
                     'isBonus'  => (bool) $product->pivot->is_bonus,
                     'bonusQuantity' => (int) $product->pivot->bonus_quantity,
