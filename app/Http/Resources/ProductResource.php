@@ -12,13 +12,26 @@ class ProductResource extends JsonResource
     {
         $categoryName = $this->relationLoaded('category') ? $this->category?->name : null;
 
-        // Get image from polymorphic images relation
+        // Prefer a card asset for new products; legacy rows remain valid fallbacks.
         $primaryImage = null;
+        $media = null;
 
         if ($this->relationLoaded('images')) {
             $images = $this->images;
             if ($images instanceof \Illuminate\Database\Eloquent\Collection && $images->isNotEmpty()) {
-                $primaryImage = asset('storage/images/' . $images->first()->name);
+                $primary = $images->firstWhere('variant', 'card')
+                    ?? $images->firstWhere('variant', 'detail')
+                    ?? $images->first();
+                $primaryImage = $this->imageUrl($primary);
+                $media = $images->map(fn ($image) => [
+                    'url' => $this->imageUrl($image),
+                    'alt' => $image->alt,
+                    'variant' => $image->variant ?? 'legacy',
+                    'background' => $image->background ?? 'unknown',
+                    'reviewStatus' => $image->review_status ?? 'legacy',
+                    'sortOrder' => (int) ($image->sort_order ?? 0),
+                    'metadata' => $image->metadata,
+                ])->values();
             }
         }
 
@@ -61,6 +74,24 @@ class ProductResource extends JsonResource
             ] : null),
 
             'image' => $primaryImage,
+            'media' => $media,
+            'collections' => $this->whenLoaded('catalogCollections', fn () => $this->catalogCollections
+                ->map(fn ($collection) => [
+                    'slug' => $collection->slug,
+                    'name' => $collection->name,
+                    'title' => $collection->title,
+                    'mappingStatus' => $collection->pivot?->mapping_status,
+                ])->values()),
+            'collectionAssignments' => $this->when(
+                $request->user()?->isAdmin() && $this->relationLoaded('collectionAssignments'),
+                fn () => $this->collectionAssignments->map(fn ($collection) => [
+                    'slug' => $collection->slug,
+                    'name' => $collection->name,
+                    'mappingStatus' => $collection->pivot?->mapping_status,
+                    'source' => $collection->pivot?->source,
+                    'notes' => $collection->pivot?->notes,
+                ])->values()
+            ),
 
             'sale' => $this->whenLoaded('sale', fn () => $this->sale ? [
                 'price' => (float) $this->sale->sale_price,
@@ -71,5 +102,14 @@ class ProductResource extends JsonResource
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    private function imageUrl($image): ?string
+    {
+        if ($image->url) {
+            return $image->url;
+        }
+
+        return $image->publicUrl();
     }
 }

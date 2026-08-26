@@ -58,7 +58,9 @@ class Product extends Model
 
     public function images(): MorphMany
     {
-        return $this->morphMany(Image::class, 'imageable');
+        return $this->morphMany(Image::class, 'imageable')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function sale(): HasOne
@@ -90,6 +92,23 @@ class Product extends Model
     {
         return $this->belongsToMany(Bundle::class, 'bundle_products')
             ->withPivot('quantity');
+    }
+
+    public function catalogCollections(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductCollection::class, 'product_collection_product')
+            ->withPivot(['mapping_status', 'source', 'notes'])
+            ->withTimestamps()
+            ->wherePivot('mapping_status', 'confirmed')
+            ->orderBy('product_collections.sort_priority');
+    }
+
+    public function collectionAssignments(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductCollection::class, 'product_collection_product')
+            ->withPivot(['mapping_status', 'source', 'notes'])
+            ->withTimestamps()
+            ->orderBy('product_collections.sort_priority');
     }
 
     /* ========================================= */

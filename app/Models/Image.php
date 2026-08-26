@@ -14,15 +14,27 @@ class Image extends Model
 
     protected $fillable = [
         'name',
+        'url',
+        'alt',
+        'sort_order',
+        'variant',
+        'background',
+        'review_status',
+        'metadata',
         'imageable_type',
         'imageable_id',
+    ];
+
+    protected $casts = [
+        'sort_order' => 'integer',
+        'metadata' => 'array',
     ];
 
     public function delete()
     {
         // Delete the image file from storage if needed
         if (is_string($this->name) && !str_starts_with($this->name, 'http')) {
-            Storage::delete('public/images/' . $this->name);
+            Storage::delete('public/images/' . ltrim($this->name, '/'));
         }
 
 
@@ -38,6 +50,19 @@ class Image extends Model
     public function product():BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function publicUrl(): ?string
+    {
+        if (!is_string($this->name) || $this->name === '') {
+            return null;
+        }
+
+        if (str_starts_with($this->name, 'http')) {
+            return $this->name;
+        }
+
+        return asset('storage/images/' . ltrim($this->name, '/'));
     }
 }
 /*

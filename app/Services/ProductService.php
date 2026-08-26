@@ -17,16 +17,23 @@ class ProductService
 
     public function paginate(array $filters = [], int $perPage = 20, ?User $viewer = null)
     {
+        $relations = [
+            'brand',
+            'category',
+            'translations',
+            'images',
+            'sale',
+            'hairTypes',
+            'hairConcerns',
+            'catalogCollections',
+        ];
+
+        if ($viewer?->isAdmin()) {
+            $relations[] = 'collectionAssignments';
+        }
+
         $query = Product::query()
-            ->with([
-                'brand',
-                'category',
-                'translations',
-                'images',
-                'sale',
-                'hairTypes',
-                'hairConcerns',
-            ]);
+            ->with($relations);
 
         $this->applyVisibilityFilter($query, $viewer);
         $this->applyFilters($query, $filters);
@@ -48,6 +55,7 @@ class ProductService
             'sale',
             'hairTypes',
             'hairConcerns',
+            'catalogCollections',
         ]);
     }
 
@@ -120,7 +128,7 @@ class ProductService
 
     public function related(Product $product, int $limit = 3, ?User $viewer = null)
     {
-        $query = Product::with(['brand', 'images'])
+        $query = Product::with(['brand', 'images', 'catalogCollections'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->limit($limit);
@@ -136,7 +144,7 @@ class ProductService
 
     public function latest(int $limit = 3, ?User $viewer = null)
     {
-        $query = Product::with(['images', 'sale'])
+        $query = Product::with(['images', 'sale', 'catalogCollections'])
             ->latest()
             ->limit($limit);
 
@@ -152,7 +160,7 @@ class ProductService
     public function search(string $query, int $limit = 10, ?User $viewer = null)
     {
         $builder = Product::query()
-            ->with(['brand', 'category', 'translations', 'images', 'sale'])
+            ->with(['brand', 'category', 'translations', 'images', 'sale', 'catalogCollections'])
             ->where('name', 'like', '%' . $query . '%')
             ->limit($limit);
 
@@ -171,7 +179,7 @@ class ProductService
             $query->where('start_date', '<=', now())
                 ->where('end_date', '>=', now());
         })
-            ->with(['sale', 'images'])
+            ->with(['sale', 'images', 'catalogCollections'])
             ->get();
     }
 
@@ -280,11 +288,21 @@ class ProductService
 
     private function handleImage(Product $product, array $data): void
     {
+        if (isset($data['image_assets']) && is_array($data['image_assets'])) {
+            $product->images()->get()->each->delete();
+
+            foreach ($data['image_assets'] as $asset) {
+                $product->images()->create($asset);
+            }
+
+            return;
+        }
+
         if (!isset($data['image'])) {
             return;
         }
 
-        $product->images()->delete();
+        $product->images()->get()->each->delete();
 
         $product->images()->create([
             'name' => $data['image']
@@ -310,6 +328,12 @@ class ProductService
 
         if (!empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
+        }
+
+        if (!empty($filters['collection'])) {
+            $query->whereHas('catalogCollections', function (Builder $collectionQuery) use ($filters) {
+                $collectionQuery->where('product_collections.slug', $filters['collection']);
+            });
         }
 
         if (!empty($filters['min_price'])) {

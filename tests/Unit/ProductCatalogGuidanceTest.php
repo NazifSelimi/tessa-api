@@ -13,7 +13,13 @@ class ProductCatalogGuidanceTest extends TestCase
 
         $this->assertSame('professional', $guidance['audience']);
         $this->assertTrue($guidance['professionalOnly']);
+        $this->assertNull($guidance['consumerRoutineRole']);
         $this->assertSame(['Fanola Oxy'], $guidance['compatibleWith']);
+        $this->assertSame('compatible_system_only', $guidance['professionalGuidance']['verificationStatus']);
+        $this->assertContains(
+            'Developer ratios, timing, and substitutions are intentionally omitted until manufacturer validation.',
+            $guidance['professionalGuidance']['notes']
+        );
     }
 
     public function test_it_pairs_oro_therapy_color_with_its_own_activator(): void
@@ -30,5 +36,7 @@ class ProductCatalogGuidanceTest extends TestCase
         $this->assertSame('consumer', $guidance['audience']);
         $this->assertFalse($guidance['professionalOnly']);
         $this->assertSame([], $guidance['compatibleWith']);
+        $this->assertSame('define', $guidance['consumerRoutineRole']);
+        $this->assertNull($guidance['professionalGuidance']);
     }
 }

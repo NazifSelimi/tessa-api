@@ -73,16 +73,16 @@ class AdminProductController extends Controller
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        // Handle image upload — convert to WebP before passing to the service
+        // Preserve the source and create non-destructive catalogue variants.
         if ($request->hasFile('image')) {
-            $filename = $this->imageService->storeAsWebP(
+            $validated['image_assets'] = $this->imageService->storeProductImageAssets(
                 $request->file('image'),
                 'images',
                 1200,
                 82,
                 filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
             );
-            $validated['image'] = $filename;
+            unset($validated['image']);
         }
 
         $validated['translations'] = $this->normalizeTranslations($validated['translations'] ?? []);
@@ -134,21 +134,16 @@ class AdminProductController extends Controller
         $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product->update($productData);
 
-        // Handle image upload — convert to WebP and replace old images
+        // Persist an original plus derived assets; existing products are untouched until replaced.
         if ($request->hasFile('image')) {
-            // Delete old image files from storage
-            foreach ($product->images as $oldImage) {
-                $this->imageService->delete($oldImage->name);
-            }
-
-            $filename = $this->imageService->storeAsWebP(
+            $validated['image_assets'] = $this->imageService->storeProductImageAssets(
                 $request->file('image'),
                 'images',
                 1200,
                 82,
                 filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
             );
-            $validated['image'] = $filename;
+            unset($validated['image']);
         }
 
         if (array_key_exists('translations', $validated)) {
@@ -176,12 +171,7 @@ class AdminProductController extends Controller
             return ApiResponse::error('Cannot delete product with existing orders', 400);
         }
 
-        // Delete image files from storage
-        foreach ($product->images as $image) {
-            $this->imageService->delete($image->name);
-        }
-
-        $product->images()->delete();
+        $product->images()->get()->each->delete();
         $product->translations()->delete();
         $product->sale()->delete();
         $product->delete();

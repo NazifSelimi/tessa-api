@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProductCollectionController;
 use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\StylistRequestController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -44,6 +45,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('/stylist-invitations/{token}/activate', [StylistInvitationController::class, 'activate'])
         ->middleware('throttle:5,1');
     Route::get('products', [ProductController::class, 'index']);
+    Route::get('product-collections', [ProductCollectionController::class, 'index']);
     Route::get('products/featured', [ProductController::class, 'featured']);
     Route::get('products/search', [ProductController::class, 'search']);
     Route::get('products/quick-order', QuickOrderController::class);

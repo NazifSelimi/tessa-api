@@ -16,6 +16,7 @@ class ProductIndexRequest extends FormRequest
         return [
             'brand_id'    => ['nullable', 'integer', 'exists:brands,id'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'collection'  => ['nullable', 'string', 'max:100', 'exists:product_collections,slug'],
             'min_price'   => ['nullable', 'numeric', 'min:0'],
             'max_price'   => ['nullable', 'numeric', 'min:0'],
             'search'      => ['nullable', 'string', 'max:255'],
