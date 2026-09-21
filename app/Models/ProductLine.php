@@ -4,24 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Category extends Model
+class ProductLine extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'brand_id',
         'name',
-        'sort_priority',
+        'slug',
+        'sort_order',
+        'is_active',
     ];
 
     protected $casts = [
-        'sort_priority' => 'integer',
+        'sort_order' => 'integer',
+        'is_active' => 'boolean',
     ];
 
-    public function products(): HasMany
+    public function brand(): BelongsTo
     {
-        return $this->hasMany(Product::class);
+        return $this->belongsTo(Brand::class);
     }
 
     public function productFamilies(): HasMany

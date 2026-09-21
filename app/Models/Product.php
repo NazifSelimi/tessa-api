@@ -46,6 +46,11 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function productFamily(): BelongsTo
+    {
+        return $this->belongsTo(ProductFamily::class);
+    }
+
     public function orders(): BelongsToMany
     {
         return $this->belongsToMany(Order::class)->withTimestamps();
