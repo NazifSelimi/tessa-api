@@ -13,6 +13,9 @@ class CatalogImageCandidateDiscovery
 {
     private const SOURCES = [
         'Fanola' => ['sitemap' => 'https://www.fanola.it/sitemap.xml', 'host' => 'fanola.it', 'type' => 'official_manufacturer'],
+        // These are Fanola ranges stored as separate local brands.
+        'Oro Therapy' => ['sitemap' => 'https://www.fanola.it/sitemap.xml', 'host' => 'fanola.it', 'type' => 'official_manufacturer'],
+        'No Yellow Color' => ['sitemap' => 'https://www.fanola.it/sitemap.xml', 'host' => 'fanola.it', 'type' => 'official_manufacturer'],
         'Rr Line' => ['sitemap' => 'https://www.rrline.it/sitemap.xml', 'host' => 'rrline.it', 'type' => 'official_manufacturer'],
         'RR Line' => ['sitemap' => 'https://www.rrline.it/sitemap.xml', 'host' => 'rrline.it', 'type' => 'official_manufacturer'],
     ];
