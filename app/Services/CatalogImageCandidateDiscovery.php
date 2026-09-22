@@ -190,7 +190,7 @@ class CatalogImageCandidateDiscovery
         // Coverage discovery may surface a plausible official page for Admin
         // review. It is never sufficient for approval; installation remains
         // gated on separately verified identity/package/shade evidence.
-        return $bestScore >= 0.40 ? $best : null;
+        return $bestScore >= 0.20 ? $best : null;
     }
 
     private function page(string $url): ?string
