@@ -34,7 +34,6 @@ class ReplaceCatalogImages extends Command
 
         $products = Product::query()
             ->with(['brand', 'category', 'images'])
-            ->whereHas('brand', fn ($query) => $query->whereIn('name', ['Fanola', 'Rr Line', 'RR Line']))
             ->when($this->option('product'), fn ($query, array $ids) => $query->whereIn('id', $ids))
             ->orderBy('id')
             ->get();
@@ -74,8 +73,8 @@ class ReplaceCatalogImages extends Command
                 return $row;
             }
 
-            $row['match_confidence'] = 'manual_source_required';
-            $row['replacement_status'] = 'manual_source_required';
+            $row['match_confidence'] = 'needs_review';
+            $row['replacement_status'] = 'needs_review';
             $row['exact_product_match'] = 'not_reviewed';
             $row['rejection_reason'] = 'The same source asset was discovered for multiple distinct products; exact identity cannot be established.';
             $row['review_reason'] = $row['rejection_reason'];
@@ -188,6 +187,8 @@ class ReplaceCatalogImages extends Command
             $confidence = 'download_failed';
         } elseif ($validation === 'validation_failed') {
             $confidence = 'validation_failed';
+        } elseif ($confidence === 'no_source') {
+            $confidence = 'missing';
         }
 
         return [
