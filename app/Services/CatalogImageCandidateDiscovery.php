@@ -80,20 +80,20 @@ class CatalogImageCandidateDiscovery
             ]];
         }
 
-        // The catalogue schema does not retain a manufacturer code, verified
-        // package size, or colour range/shade. A page-slug match is therefore
-        // discovery evidence only, never proof that an asset belongs to this
-        // exact SKU. Keep the product in the review queue until that identity
-        // evidence is supplied; do not propose gallery/OG assets speculatively.
+        // A manufacturer page match is useful coverage evidence, but without a
+        // stored code/package verification it remains review-only. Return one
+        // primary packshot rather than treating a page gallery as alternatives.
+        $image = $this->imageUrls($html, $pageUrl)[0];
+
         return [[
             'source_page_url' => $pageUrl,
             'source_domain' => parse_url($pageUrl, PHP_URL_HOST),
             'source_type' => $source['type'],
-            'source_image_url' => null,
-            'match_confidence' => 'manual_source_required',
+            'source_image_url' => $image,
+            'match_confidence' => 'needs_review',
             'rejection_reason' => $product->category?->name === 'Hair Color'
-                ? 'Exact colour range, shade and package size are not verified from the product record and manufacturer page alone.'
-                : 'Exact manufacturer product code and package size are not verified from the product record and manufacturer page alone.',
+                ? 'Manufacturer page is plausible, but exact colour range, shade and package size require review.'
+                : 'Manufacturer page is plausible, but exact product code and package size require review.',
         ]];
     }
 

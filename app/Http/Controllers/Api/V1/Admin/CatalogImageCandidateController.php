@@ -12,12 +12,17 @@ class CatalogImageCandidateController extends Controller
     {
         $audit = $this->latestAudit();
         abort_unless($audit, 404, 'No image candidate audit is available.');
+        $reviews = is_file($audit . '/admin_reviews.json') ? json_decode(File::get($audit . '/admin_reviews.json'), true) : [];
         $rows = collect(json_decode(File::get($audit . '/image_replacement_manifest.json'), true)['rows'] ?? [])
-            ->filter(fn (array $row) => filled($row['source_image_url']))
             ->values()
-            ->map(fn (array $row) => array_merge($row, [
-                'preview_url' => url('/api/v1/admin/catalog-image-candidates/' . $row['product_id'] . '/preview?rank=' . $row['candidate_rank']),
-            ]));
+            ->map(function (array $row) use ($reviews) {
+                $current = (string) ($row['current_primary_image'] ?? '');
+                return array_merge($row, [
+                    'current_image_url' => str_starts_with($current, ['http://', 'https://']) ? $current : ($current !== '' ? url('/storage/images/' . ltrim($current, '/')) : null),
+                    'preview_url' => url('/api/v1/admin/catalog-image-candidates/' . $row['product_id'] . '/preview?rank=' . $row['candidate_rank']),
+                    'admin_review' => $reviews[$row['product_id'] . ':' . $row['candidate_rank']] ?? null,
+                ]);
+            });
 
         return response()->json(['audit' => basename($audit), 'candidates' => $rows]);
     }
