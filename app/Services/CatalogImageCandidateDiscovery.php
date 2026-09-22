@@ -38,6 +38,19 @@ class CatalogImageCandidateDiscovery
             return [];
         }
 
+        // A shade-only legacy name cannot establish a colour range or packaging generation.
+        // Keep it review-only rather than assigning a plausible but unsafe range image.
+        if ($product->category?->name === 'Hair Color' && count($this->descriptiveTokens($product->name)) < 2) {
+            return [[
+                'source_page_url' => null,
+                'source_domain' => null,
+                'source_type' => $source['type'],
+                'source_image_url' => null,
+                'match_confidence' => 'ambiguous',
+                'rejection_reason' => 'Colour title lacks enough range context for a safe manufacturer page match.',
+            ]];
+        }
+
         $pages = $this->sitemapPages($source['sitemap'], $source['host']);
         $pageUrl = $this->bestPage($product->name, $pages);
         if ($pageUrl === null) {
@@ -152,8 +165,7 @@ class CatalogImageCandidateDiscovery
 
     private function bestPage(string $name, array $pages): ?string
     {
-        $needle = $this->normalise($name);
-        $tokens = array_filter(explode(' ', $needle), fn (string $token) => strlen($token) > 2 && ! preg_match('/^\\d+(ml|g|l)?$/', $token));
+        $tokens = $this->descriptiveTokens($name);
         $best = null;
         $bestScore = 0.0;
 
@@ -233,6 +245,15 @@ class CatalogImageCandidateDiscovery
     private function normalise(string $value): string
     {
         return trim(preg_replace('/\\s+/', ' ', preg_replace('/[^a-z0-9]+/', ' ', strtolower(Str::ascii($value)))) ?? '');
+    }
+
+    /** @return array<int, string> */
+    private function descriptiveTokens(string $value): array
+    {
+        return array_values(array_filter(
+            explode(' ', $this->normalise($value)),
+            fn (string $token) => strlen($token) > 2 && ! preg_match('/^\\d+(ml|g|l)?$/', $token)
+        ));
     }
 
     private function extension(?string $contentType, string $url): string
