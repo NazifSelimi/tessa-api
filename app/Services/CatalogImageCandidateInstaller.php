@@ -21,7 +21,7 @@ class CatalogImageCandidateInstaller
             return false;
         }
 
-        return DB::transaction(function () use ($candidate, $path) {
+        return DB::transaction(function () use ($candidate, $path, $auditDirectory) {
             $product = Product::query()->with('images')->findOrFail($candidate['product_id']);
             $sourceUrl = (string) ($candidate['source_image_url'] ?? '');
             if ($product->images->contains(fn ($image) => ($image->metadata['catalog_audit_source'] ?? null) === $sourceUrl)) {
