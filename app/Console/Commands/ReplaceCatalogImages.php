@@ -63,6 +63,26 @@ class ReplaceCatalogImages extends Command
             });
         })->values();
 
+        // A source asset cannot represent two distinct catalogue products. This
+        // remains a hard rejection even when future verified candidates are
+        // added to discovery.
+        $duplicateSources = $manifest->filter(fn (array $row) => filled($row['source_image_url']))
+            ->groupBy('source_image_url')
+            ->filter(fn ($rows) => $rows->pluck('product_id')->unique()->count() > 1);
+        $manifest = $manifest->map(function (array $row) use ($duplicateSources) {
+            if (! filled($row['source_image_url']) || ! isset($duplicateSources[$row['source_image_url']])) {
+                return $row;
+            }
+
+            $row['match_confidence'] = 'manual_source_required';
+            $row['replacement_status'] = 'manual_source_required';
+            $row['exact_product_match'] = 'not_reviewed';
+            $row['rejection_reason'] = 'The same source asset was discovered for multiple distinct products; exact identity cannot be established.';
+            $row['review_reason'] = $row['rejection_reason'];
+
+            return $row;
+        })->values();
+
         $this->writeCsv($directory . '/image_replacement_manifest.csv', $manifest->all());
         File::put($directory . '/image_replacement_manifest.json', json_encode([
             'generated_at' => now()->toIso8601String(),
@@ -96,7 +116,10 @@ class ReplaceCatalogImages extends Command
         if ($this->option('install-probable')) {
             $installer = app(CatalogImageCandidateInstaller::class);
             foreach ($manifest->filter(fn (array $row) => $row['candidate_rank'] === 1
-                && $row['replacement_status'] === 'probable'
+                && $row['replacement_status'] === 'approved_exact'
+                && $row['exact_product_match'] === 'verified'
+                && $row['exact_package_match'] === 'verified'
+                && in_array($row['exact_shade_match'], ['verified', 'not_applicable'], true)
                 && filled($row['downloaded_path'])) as $candidate) {
                 $installed += $installer->install($candidate, $directory) ? 1 : 0;
             }

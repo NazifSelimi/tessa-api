@@ -15,6 +15,13 @@ class CatalogImageCandidateInstaller
     /** @param array<string, mixed> $candidate */
     public function install(array $candidate, string $auditDirectory): bool
     {
+        if (($candidate['replacement_status'] ?? null) !== 'approved_exact'
+            || ($candidate['exact_product_match'] ?? null) !== 'verified'
+            || ($candidate['exact_package_match'] ?? null) !== 'verified'
+            || ! in_array($candidate['exact_shade_match'] ?? null, ['verified', 'not_applicable'], true)) {
+            return false;
+        }
+
         $relativePath = $candidate['downloaded_path'] ?? null;
         $path = $relativePath ? $auditDirectory . '/' . $relativePath : null;
         if (! is_string($path) || ! is_file($path)) {

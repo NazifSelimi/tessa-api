@@ -69,8 +69,7 @@ class CatalogImageCandidateDiscovery
             ]];
         }
 
-        $images = array_slice($this->imageUrls($html, $pageUrl), 0, 3);
-        if ($images === []) {
+        if ($this->imageUrls($html, $pageUrl) === []) {
             return [[
                 'source_page_url' => $pageUrl,
                 'source_domain' => parse_url($pageUrl, PHP_URL_HOST),
@@ -81,15 +80,21 @@ class CatalogImageCandidateDiscovery
             ]];
         }
 
-        return array_map(fn (string $url) => [
+        // The catalogue schema does not retain a manufacturer code, verified
+        // package size, or colour range/shade. A page-slug match is therefore
+        // discovery evidence only, never proof that an asset belongs to this
+        // exact SKU. Keep the product in the review queue until that identity
+        // evidence is supplied; do not propose gallery/OG assets speculatively.
+        return [[
             'source_page_url' => $pageUrl,
             'source_domain' => parse_url($pageUrl, PHP_URL_HOST),
             'source_type' => $source['type'],
-            'source_image_url' => $url,
-            // Exact package, size and shade are deliberately never auto-approved from a URL alone.
-            'match_confidence' => 'probable',
-            'rejection_reason' => null,
-        ], $images);
+            'source_image_url' => null,
+            'match_confidence' => 'manual_source_required',
+            'rejection_reason' => $product->category?->name === 'Hair Color'
+                ? 'Exact colour range, shade and package size are not verified from the product record and manufacturer page alone.'
+                : 'Exact manufacturer product code and package size are not verified from the product record and manufacturer page alone.',
+        ]];
     }
 
     /** @return array<string, mixed> */
