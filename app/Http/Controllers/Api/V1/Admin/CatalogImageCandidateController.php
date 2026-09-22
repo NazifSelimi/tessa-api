@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class CatalogImageCandidateController extends Controller
 {
@@ -18,7 +19,7 @@ class CatalogImageCandidateController extends Controller
             ->map(function (array $row) use ($reviews) {
                 $current = (string) ($row['current_primary_image'] ?? '');
                 return array_merge($row, [
-                    'current_image_url' => str_starts_with($current, ['http://', 'https://']) ? $current : ($current !== '' ? url('/storage/images/' . ltrim($current, '/')) : null),
+                    'current_image_url' => Str::startsWith($current, ['http://', 'https://']) ? $current : ($current !== '' ? url('/storage/images/' . ltrim($current, '/')) : null),
                     'preview_url' => url('/api/v1/admin/catalog-image-candidates/' . $row['product_id'] . '/preview?rank=' . $row['candidate_rank']),
                     'admin_review' => $reviews[$row['product_id'] . ':' . $row['candidate_rank']] ?? null,
                 ]);
