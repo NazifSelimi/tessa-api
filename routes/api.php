@@ -58,6 +58,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('coupons/validate', [CouponController::class, 'validate']);
     Route::post('recommendations', RecommendationController::class);
     Route::get('bundles', [BundleController::class, 'index']);
+    // Candidate files are review-only assets; the candidate list and review
+    // actions remain protected below. Images need a browser-loadable URL.
+    Route::get('admin/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview']);
     Route::post('/checkout', [CheckoutController::class, 'checkout']);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -100,7 +103,6 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate']);
             Route::get('/catalog-image-candidates', [CatalogImageCandidateController::class, 'index']);
             Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve']);
-            Route::get('/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview']);
 
             Route::get('/bundles', [AdminBundleController::class, 'index']);
             Route::post('/bundles', [AdminBundleController::class, 'store']);
