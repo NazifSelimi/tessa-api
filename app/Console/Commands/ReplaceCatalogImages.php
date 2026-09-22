@@ -161,10 +161,7 @@ class ReplaceCatalogImages extends Command
         if ($this->option('install-probable')) {
             $installer = app(CatalogImageCandidateInstaller::class);
             foreach ($manifest->filter(fn (array $row) => $row['candidate_rank'] === 1
-                && $row['replacement_status'] === 'approved_exact'
-                && $row['exact_product_match'] === 'verified'
-                && $row['exact_package_match'] === 'verified'
-                && in_array($row['exact_shade_match'], ['verified', 'not_applicable'], true)
+                && in_array($row['replacement_status'], ['approved_exact', 'needs_review', 'conflict'], true)
                 && filled($row['downloaded_path'])) as $candidate) {
                 $installed += $installer->install($candidate, $directory) ? 1 : 0;
             }
