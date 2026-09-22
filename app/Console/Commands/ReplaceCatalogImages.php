@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Image;
 use App\Models\Product;
 use App\Services\CatalogImageCandidateDiscovery;
+use App\Services\CatalogImageCandidateInstaller;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -13,6 +14,7 @@ class ReplaceCatalogImages extends Command
     protected $signature = 'catalog:replace-images
         {--dry-run : Generate review artifacts only (the default when --approved-only is absent)}
         {--approved-only : Reserved installation gate; only validated approved manifest rows may be installed}
+        {--install-probable : Install validated probable candidates into this staging catalogue}
         {--product=* : Limit the audit to one or more existing product IDs}
         {--limit= : Limit the number of products inspected}
         {--output= : Output directory relative to storage/app}';
@@ -90,8 +92,18 @@ class ReplaceCatalogImages extends Command
         $this->writeCsv($directory . '/image_conflicts.csv', $this->conflictRows($manifest, $sharedGroups));
         File::put($directory . '/README.md', $this->readme($manifest, $sharedGroups, $directory, $discovery->failures()));
 
+        $installed = 0;
+        if ($this->option('install-probable')) {
+            $installer = app(CatalogImageCandidateInstaller::class);
+            foreach ($manifest->filter(fn (array $row) => $row['candidate_rank'] === 1
+                && $row['replacement_status'] === 'probable'
+                && filled($row['downloaded_path'])) as $candidate) {
+                $installed += $installer->install($candidate, $directory) ? 1 : 0;
+            }
+        }
+
         $this->info("Read-only image replacement review written to {$directory}");
-        $this->line("Products: {$products->count()}; approved installations: 0; existing image changes: 0; database changes: 0.");
+        $this->line("Products: {$products->count()}; candidate installations: {$installed}; existing image changes: {$installed}; database changes: {$installed}.");
 
         return self::SUCCESS;
     }

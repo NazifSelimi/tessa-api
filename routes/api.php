@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\QuickOrderController;
 use App\Http\Controllers\Api\V1\BundleController;
 use App\Http\Controllers\Api\V1\HairProfileOptionController;
 use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
+use App\Http\Controllers\Api\V1\Admin\CatalogImageCandidateController;
 
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
@@ -97,6 +98,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
             Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
             Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate']);
+            Route::get('/catalog-image-candidates', [CatalogImageCandidateController::class, 'index']);
+            Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve']);
+            Route::get('/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview']);
 
             Route::get('/bundles', [AdminBundleController::class, 'index']);
             Route::post('/bundles', [AdminBundleController::class, 'store']);
