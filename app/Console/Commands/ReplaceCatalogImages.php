@@ -73,8 +73,8 @@ class ReplaceCatalogImages extends Command
                 return $row;
             }
 
-            $row['match_confidence'] = 'needs_review';
-            $row['replacement_status'] = 'needs_review';
+            $row['match_confidence'] = 'conflict';
+            $row['replacement_status'] = 'conflict';
             $row['exact_product_match'] = 'not_reviewed';
             $row['rejection_reason'] = 'The same source asset was discovered for multiple distinct products; exact identity cannot be established.';
             $row['review_reason'] = $row['rejection_reason'];
@@ -82,7 +82,53 @@ class ReplaceCatalogImages extends Command
             return $row;
         })->values();
 
+        $coverage = $products->map(function (Product $product) use ($manifest) {
+            $rows = $manifest->where('product_id', $product->id)->values();
+            $best = $rows->firstWhere('source_image_url', '!=', null) ?? $rows->first();
+            $status = $rows->pluck('replacement_status')->contains('conflict') ? 'conflict'
+                : ($rows->pluck('replacement_status')->contains('approved_exact') ? 'approved_exact'
+                    : ($rows->pluck('replacement_status')->contains('needs_review') ? 'needs_review' : 'missing'));
+
+            return [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'manufacturer' => $product->brand?->name,
+                'current_image_url' => $best['current_primary_image'] ?? null,
+                'status' => $status,
+                'candidate_count' => $rows->filter(fn (array $row) => filled($row['source_image_url']))->count(),
+                'best_candidate_url' => $best['source_image_url'] ?? null,
+                'best_candidate_local_path' => $best['downloaded_path'] ?? null,
+                'source_product_url' => $best['source_page_url'] ?? null,
+                'source_type' => $best['source_type'] ?? null,
+                'identity_verified' => ($best['exact_product_match'] ?? null) === 'verified',
+                'package_verified' => ($best['exact_package_match'] ?? null) === 'verified',
+                'size_verified' => ($best['exact_size_match'] ?? null) === 'verified',
+                'range_verified' => ($best['exact_range_match'] ?? null) === 'verified',
+                'shade_verified' => ($best['exact_shade_match'] ?? null) === 'verified',
+                'source_unique' => $status !== 'conflict',
+                'reason' => $best['rejection_reason'] ?? $best['review_reason'] ?? null,
+                'next_action' => match ($status) {
+                    'approved_exact' => 'Eligible for controlled installation.',
+                    'conflict' => 'Find a product-specific manufacturer asset; do not reuse this source.',
+                    'needs_review' => 'Verify manufacturer identity, package/size and, for colour, range/shade before approval.',
+                    default => 'Source an official manufacturer product page, catalogue or regional SKU page.',
+                },
+            ];
+        })->values();
+
         $this->writeCsv($directory . '/image_replacement_manifest.csv', $manifest->all());
+        $this->writeCsv($directory . '/catalog_image_coverage.csv', $coverage->all());
+        File::put($directory . '/catalog_image_coverage_summary.json', json_encode([
+            'total_products' => $coverage->count(),
+            'approved_exact' => $coverage->where('status', 'approved_exact')->count(),
+            'needs_review' => $coverage->where('status', 'needs_review')->count(),
+            'missing' => $coverage->where('status', 'missing')->count(),
+            'conflict' => $coverage->where('status', 'conflict')->count(),
+            'products_with_candidates' => $coverage->where('candidate_count', '>', 0)->count(),
+            'products_without_candidates' => $coverage->where('candidate_count', 0)->count(),
+            'unique_source_assets' => $manifest->pluck('source_image_url')->filter()->unique()->count(),
+            'duplicate_source_assets' => $duplicateSources->count(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         File::put($directory . '/image_replacement_manifest.json', json_encode([
             'generated_at' => now()->toIso8601String(),
             'read_only' => true,
