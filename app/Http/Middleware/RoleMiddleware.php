@@ -23,19 +23,20 @@ class RoleMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         // Check if user is authenticated
         if (!$request->user()) {
             return ApiResponse::error('Unauthenticated', 401);
         }
 
-        // Convert role name to integer if it's a string
-        $requiredRole = self::ROLE_MAP[strtolower($role)] ?? $role;
+        $requiredRoles = array_map(
+            fn (string $role) => self::ROLE_MAP[strtolower($role)] ?? $role,
+            $roles,
+        );
 
-        // Check if user has the required role
-        if ((int) $request->user()->role !== (int) $requiredRole) {
-            return ApiResponse::error('Unauthorized. Required role: ' . $role, 403);
+        if (! in_array((int) $request->user()->role, array_map('intval', $requiredRoles), true)) {
+            return ApiResponse::error('Unauthorized. Required role: ' . implode(' or ', $roles), 403);
         }
 
         return $next($request);

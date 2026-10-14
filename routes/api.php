@@ -27,11 +27,21 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\RecommendationController;
 use App\Http\Controllers\Api\V1\QuickOrderController;
+use App\Http\Controllers\Api\V1\ContentBlockController;
+use App\Http\Controllers\Api\V1\Admin\AdminContentBlockController;
 use App\Http\Controllers\Api\V1\BundleController;
 use App\Http\Controllers\Api\V1\HairProfileOptionController;
 use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
 use App\Http\Controllers\Api\V1\Admin\CatalogImageCandidateController;
 
+/*
+ * HTTP-to-domain map: docs/UI_TO_DATA_FLOW_REVIEW.md is the review entry point.
+ *
+ * Keep route comments focused on feature ownership and authorization. Controller
+ * and service comments belong beside the decision/query they explain so this
+ * file remains the authoritative public API surface rather than a second copy
+ * of business logic.
+ */
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -49,7 +59,6 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('product-collections', [ProductCollectionController::class, 'index']);
     Route::get('products/featured', [ProductController::class, 'featured']);
     Route::get('products/search', [ProductController::class, 'search']);
-    Route::get('products/quick-order', QuickOrderController::class);
     Route::get('products/{product}/related', [ProductController::class, 'related']);
     Route::get('products/{product}', [ProductController::class, 'show']);
     Route::get('categories', [CategoryController::class, 'index']);
@@ -58,6 +67,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('coupons/validate', [CouponController::class, 'validate']);
     Route::post('recommendations', RecommendationController::class);
     Route::get('bundles', [BundleController::class, 'index']);
+    Route::get('content-blocks', [ContentBlockController::class, 'index']);
     // Candidate files are review-only assets; the candidate list and review
     // actions remain protected below. Images need a browser-loadable URL.
     Route::get('admin/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview']);
@@ -67,6 +77,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('products/quick-order', QuickOrderController::class)
+            ->middleware('role:stylist,admin');
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
         Route::put('/auth/password', [AuthController::class, 'changePassword']);
 
@@ -102,7 +114,12 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
             Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate']);
             Route::get('/catalog-image-candidates', [CatalogImageCandidateController::class, 'index']);
+            Route::get('/catalog-image-health', [CatalogImageCandidateController::class, 'health']);
             Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve']);
+            Route::get('/content-blocks', [AdminContentBlockController::class, 'index']);
+            Route::post('/content-blocks', [AdminContentBlockController::class, 'store']);
+            Route::put('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'update']);
+            Route::delete('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'destroy']);
 
             Route::get('/bundles', [AdminBundleController::class, 'index']);
             Route::post('/bundles', [AdminBundleController::class, 'store']);
@@ -146,7 +163,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         });
         
         // Stylist Routes
-        Route::prefix('stylist')->middleware('role:stylist')->group(function () {
+        Route::prefix('stylist')->middleware('role:stylist,admin')->group(function () {
             // Dashboard
             Route::get('/dashboard', [StylistDashboardController::class, 'index']);
             

@@ -13,10 +13,20 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    /**
+     * Storefront catalogue entry point. ProductService owns queries and
+     * visibility, while ProductResource remains the client-facing DTO.
+     */
     public function __construct(
         protected ProductService $productService
     ) {}
 
+    /**
+     * Powers the product-listing screen and its filters.
+     *
+     * The optional bearer token affects stylist-only visibility; it never lets
+     * client filter input bypass the ProductIndexRequest allow-list.
+     */
     public function index(ProductIndexRequest $request)
     {
         $viewer = ApiUserResolver::fromRequest($request);
@@ -38,6 +48,10 @@ class ProductController extends Controller
         );
     }
 
+    /**
+     * Powers product detail. Route binding finds the row; canView prevents a
+     * hidden stylist-only row from becoming observable by an ordinary visitor.
+     */
     public function show(Product $product)
     {
         $viewer = ApiUserResolver::fromRequest(request());
@@ -53,6 +67,9 @@ class ProductController extends Controller
         );
     }
 
+    /**
+     * Powers the related-products rail on a product detail screen.
+     */
     public function related(Request $request, Product $product)
     {
         $viewer = ApiUserResolver::fromRequest($request);
@@ -71,6 +88,10 @@ class ProductController extends Controller
         );
     }
 
+    /**
+     * Powers the featured/latest storefront rail. The limit clamp is a public
+     * API safety boundary, not a presentation preference.
+     */
     public function featured(Request $request)
     {
         $viewer = ApiUserResolver::fromRequest($request);
@@ -84,6 +105,10 @@ class ProductController extends Controller
         );
     }
 
+    /**
+     * Powers catalogue search. An empty search is intentionally cheap and
+     * returns no records instead of issuing a broad database query.
+     */
     public function search(Request $request)
     {
         $viewer = ApiUserResolver::fromRequest($request);

@@ -3,12 +3,64 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class CatalogImageCandidateController extends Controller
 {
+    public function health(Request $request)
+    {
+        $data = $request->validate([
+            'status' => ['nullable', 'in:missing,needs_review,legacy,approved'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $products = Product::query()->with(['brand', 'images'])->get();
+        $rows = $products->map(function (Product $product): array {
+            $images = $product->images;
+            $primary = $images->firstWhere('variant', 'card')
+                ?? $images->firstWhere('variant', 'detail')
+                ?? $images->first();
+            $statuses = $images->pluck('review_status')->filter()->unique();
+
+            $status = match (true) {
+                $images->isEmpty() => 'missing',
+                $statuses->contains('needs_review') => 'needs_review',
+                $statuses->contains('approved') => 'approved',
+                default => 'legacy',
+            };
+
+            return [
+                'id' => (string) $product->id,
+                'name' => $product->name,
+                'brand' => $product->brand?->name,
+                'status' => $status,
+                'imageUrl' => $primary?->url ?: $primary?->publicUrl(),
+                'imageCount' => $images->count(),
+            ];
+        });
+
+        $counts = collect(['missing', 'needs_review', 'legacy', 'approved'])
+            ->mapWithKeys(fn (string $status) => [$status => $rows->where('status', $status)->count()]);
+        $status = $data['status'] ?? null;
+        $limit = $data['limit'] ?? 24;
+
+        return response()->json([
+            'summary' => [
+                'total' => $products->count(),
+                'with_image' => $products->count() - $counts['missing'],
+                ...$counts->all(),
+            ],
+            'products' => $rows
+                ->when($status, fn ($collection) => $collection->where('status', $status))
+                ->sortBy('name')
+                ->take($limit)
+                ->values(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $audit = $this->latestAudit();
