@@ -15,6 +15,11 @@ class ProductService
     /* INDEX (WITH FILTERING SUPPORT)                        */
     /* ===================================================== */
 
+    /**
+     * Storefront/admin catalogue query used by both listing controllers.
+     * Relations here are the data ProductResource needs; keep additions aligned
+     * with that DTO to avoid N+1 queries or silent response-field regressions.
+     */
     public function paginate(array $filters = [], int $perPage = 20, ?User $viewer = null)
     {
         $relations = [
@@ -45,6 +50,10 @@ class ProductService
     /* SHOW SINGLE                                           */
     /* ===================================================== */
 
+    /**
+     * Hydrates the detail-screen aggregate with the same relations expected by
+     * ProductResource. Visibility is intentionally checked by the caller.
+     */
     public function find(Product $product): Product
     {
         return $product->load([
@@ -59,6 +68,10 @@ class ProductService
         ]);
     }
 
+    /**
+     * Central visibility rule for public catalogue endpoints. Staff roles may
+     * inspect stylist-only catalogue rows; a normal authenticated user may not.
+     */
     public function canView(Product $product, ?User $viewer = null): bool
     {
         if (!$product->stylist_only) {
@@ -173,6 +186,11 @@ class ProductService
     /* PRODUCTS ON SALE                                      */
     /* ===================================================== */
 
+    /**
+     * Currently has no in-repository caller. Retain only if a scheduled job or
+     * external consumer depends on it; otherwise remove it with a regression
+     * test rather than allowing a second, undocumented sale-query contract.
+     */
     public function activeSales()
     {
         return Product::whereHas('sale', function ($query) {

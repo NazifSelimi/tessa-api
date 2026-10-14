@@ -8,13 +8,20 @@ use Illuminate\Support\Facades\DB;
 
 class CatalogImageCandidateInstaller
 {
-    public function __construct(private readonly ImageService $images)
+    public function __construct(
+        private readonly ImageService $images,
+        private readonly CatalogImageInstallationGate $gate,
+    )
     {
     }
 
-    /** @param array<string, mixed> $candidate */
-    public function install(array $candidate, string $auditDirectory): bool
+    /** @param array<string, mixed> $candidate @param array<string, mixed>|null $review */
+    public function install(array $candidate, string $auditDirectory, ?array $review): bool
     {
+        if (! $this->gate->allows($candidate, $review)) {
+            return false;
+        }
+
         $relativePath = $candidate['downloaded_path'] ?? null;
         $path = $relativePath ? $auditDirectory . '/' . $relativePath : null;
         if (! is_string($path) || ! is_file($path)) {
@@ -23,7 +30,7 @@ class CatalogImageCandidateInstaller
 
         return DB::transaction(function () use ($candidate, $path, $auditDirectory) {
             $product = Product::query()->with('images')->findOrFail($candidate['product_id']);
-            $sourceUrl = (string) ($candidate['source_image_url'] ?? '');
+            $sourceUrl = (string) $candidate['source_image_url'];
             if ($product->images->contains(fn ($image) => ($image->metadata['catalog_audit_source'] ?? null) === $sourceUrl)) {
                 return false;
             }

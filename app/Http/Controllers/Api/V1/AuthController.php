@@ -21,7 +21,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AuthController extends Controller
@@ -55,6 +57,7 @@ class AuthController extends Controller
         $user->city = $data['city'];
         $user->postcode = $data['postcode'];
         $user->password = Hash::make($data['password']);
+        $this->synchronizePhoneLogin($user, $data['phone']);
         $user->save();
 
         $token = $user->createToken('api')->plainTextToken;
@@ -167,6 +170,7 @@ class AuthController extends Controller
 
         if (array_key_exists('phone', $data)) {
             $user->phone = $data['phone'];
+            $this->synchronizePhoneLogin($user, $data['phone']);
         }
 
         if (array_key_exists('address', $data)) {
@@ -505,6 +509,35 @@ class AuthController extends Controller
         return rtrim((string) config('tessa.frontend_url'), '/') . (string) config('tessa.social_auth_callback_path');
     }
 
+    private function synchronizePhoneLogin(User $user, string $phone): void
+    {
+        // Production may still be on the pre-phone-first schema. Keeping this
+        // guard makes the API backwards-compatible while staging uses the
+        // normalized unique value required for phone-first stylist sign-in.
+        if (! Schema::hasColumn('users', 'phone_login')) {
+            return;
+        }
+
+        $normalized = preg_replace('/\D+/', '', $phone) ?: '';
+
+        if ($normalized === '') {
+            return;
+        }
+
+        $exists = User::query()
+            ->where('phone_login', $normalized)
+            ->when($user->exists, fn ($query) => $query->whereKeyNot($user->getKey()))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'phone' => ['This phone number is already linked to an account.'],
+            ]);
+        }
+
+        $user->phone_login = $normalized;
+    }
+
     private function redirectSocialSuccess(string $provider, string $token, User $user, array $meta): RedirectResponse
     {
         $userPayload = json_encode((new UserResource($user))->resolve());
@@ -520,7 +553,9 @@ class AuthController extends Controller
             'redirect' => $meta['redirect'] ?? '/',
         ]);
 
-        return redirect()->away($this->frontendSocialCallbackUrl() . '?' . $query);
+        // Keep the bearer token out of HTTP requests, referrer headers and
+        // server logs. The frontend callback already reads fragment parameters.
+        return redirect()->away($this->frontendSocialCallbackUrl() . '#' . $query);
     }
 
     private function redirectSocialError(string $provider, string $message): RedirectResponse
@@ -530,6 +565,6 @@ class AuthController extends Controller
             'provider' => $provider,
         ]);
 
-        return redirect()->away($this->frontendSocialCallbackUrl() . '?' . $query);
+        return redirect()->away($this->frontendSocialCallbackUrl() . '#' . $query);
     }
 }

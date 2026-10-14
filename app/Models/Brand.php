@@ -17,4 +17,14 @@ class Brand extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function productLines(): HasMany
+    {
+        return $this->hasMany(ProductLine::class);
+    }
+
+    public function productFamilies(): HasMany
+    {
+        return $this->hasMany(ProductFamily::class);
+    }
+
 }

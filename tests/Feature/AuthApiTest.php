@@ -19,6 +19,9 @@ class AuthApiTest extends TestCase
             'last_name' => 'Doe',
             'email' => 'john@example.com',
             'phone' => '+1234567890',
+            'address' => '1 Test Street',
+            'city' => 'Skopje',
+            'postcode' => '1000',
             'password' => 'password123',
         ];
 
@@ -37,6 +40,7 @@ class AuthApiTest extends TestCase
             'email' => 'john@example.com',
             'first_name' => 'John',
             'last_name' => 'Doe',
+            'phone_login' => '1234567890',
         ]);
     }
 
@@ -147,7 +151,31 @@ class AuthApiTest extends TestCase
             'first_name' => 'Jane',
             'last_name' => 'Smith',
             'phone' => '+9876543210',
+            'phone_login' => '9876543210',
         ]);
+    }
+
+    /** @test */
+    public function it_rejects_a_duplicate_normalized_phone_number(): void
+    {
+        User::factory()->create([
+            'phone' => '+389 70 111 222',
+            'phone_login' => '38970111222',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'email' => 'jane@example.com',
+            'phone' => '389-70-111-222',
+            'address' => '2 Test Street',
+            'city' => 'Skopje',
+            'postcode' => '1000',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['phone']);
     }
 
     /** @test */

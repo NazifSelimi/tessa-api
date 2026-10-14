@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Image;
 use App\Models\Product;
 use App\Services\CatalogImageCandidateDiscovery;
-use App\Services\CatalogImageCandidateInstaller;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -13,8 +12,8 @@ class ReplaceCatalogImages extends Command
 {
     protected $signature = 'catalog:replace-images
         {--dry-run : Generate review artifacts only (the default when --approved-only is absent)}
-        {--approved-only : Reserved installation gate; only validated approved manifest rows may be installed}
-        {--install-probable : Install validated probable candidates into this staging catalogue}
+        {--approved-only : Reserved for a future controlled installer that requires explicit human approval}
+        {--install-probable : Deprecated and refused; candidate images must never be bulk-installed}
         {--product=* : Limit the audit to one or more existing product IDs}
         {--limit= : Limit the number of products inspected}
         {--output= : Output directory relative to storage/app}';
@@ -23,8 +22,14 @@ class ReplaceCatalogImages extends Command
 
     public function handle(): int
     {
+        if ($this->option('install-probable')) {
+            $this->error('Refusing to install candidate images. This command is read-only; a future controlled installer must require an explicit review plus verified product, package, size and shade/range identity.');
+
+            return self::FAILURE;
+        }
+
         if ($this->option('approved-only')) {
-            $this->warn('No images were installed. This command will only install a future manifest row after it has an approved exact-match source image and validation result.');
+            $this->warn('No images were installed. This command is read-only; approved candidates require a separate controlled installer.');
         }
 
         $output = trim((string) $this->option('output'), '/');
@@ -157,18 +162,8 @@ class ReplaceCatalogImages extends Command
         $this->writeCsv($directory . '/image_conflicts.csv', $this->conflictRows($manifest, $sharedGroups));
         File::put($directory . '/README.md', $this->readme($manifest, $sharedGroups, $directory, $discovery->failures()));
 
-        $installed = 0;
-        if ($this->option('install-probable')) {
-            $installer = app(CatalogImageCandidateInstaller::class);
-            foreach ($manifest->filter(fn (array $row) => $row['candidate_rank'] === 1
-                && in_array($row['replacement_status'], ['approved_exact', 'needs_review', 'conflict'], true)
-                && filled($row['downloaded_path'])) as $candidate) {
-                $installed += $installer->install($candidate, $directory) ? 1 : 0;
-            }
-        }
-
         $this->info("Read-only image replacement review written to {$directory}");
-        $this->line("Products: {$products->count()}; candidate installations: {$installed}; existing image changes: {$installed}; database changes: {$installed}.");
+        $this->line("Products: {$products->count()}; candidate installations: 0; existing image changes: 0; database changes: 0.");
 
         return self::SUCCESS;
     }
