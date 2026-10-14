@@ -49,7 +49,7 @@ class AdminContentBlockController extends ContentBlockController
             'key' => [$required, 'string', 'max:120', 'regex:/^[a-z0-9._-]+$/', Rule::unique('content_blocks', 'key')->ignore($contentBlock?->id)],
             'page' => [$required, 'string', 'max:80'],
             'section' => [$required, 'string', 'max:80'],
-            'kind' => [$required, Rule::in(['hero', 'grid', 'rich_text', 'cta'])],
+            'kind' => [$required, Rule::in(['hero', 'grid', 'rich_text', 'cta', 'bundle_rail'])],
             'eyebrow' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['nullable', 'string', 'max:5000'],
