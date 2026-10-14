@@ -391,6 +391,9 @@ class ProductService
             'price_asc'  => $query->orderBy('products.price', 'asc'),
             'price_desc' => $query->orderBy('products.price', 'desc'),
             'newest'     => $query->orderBy('products.created_at', 'desc'),
+            // Older storefront clients use this value. Products have no
+            // featured column, so newest is the stable, honest fallback.
+            'featured'   => $query->orderBy('products.created_at', 'desc'),
             default      => $query->orderBy('products.name', 'asc'),
         };
     }

@@ -56,6 +56,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('/stylist-invitations/{token}/activate', [StylistInvitationController::class, 'activate'])
         ->middleware('throttle:5,1');
     Route::get('products', [ProductController::class, 'index']);
+    // This must appear before products/{product}; otherwise Laravel attempts
+    // to resolve the literal "quick-order" as a product and returns 404.
+    Route::get('products/quick-order', QuickOrderController::class)
+        ->middleware(['auth:sanctum', 'role:stylist,admin']);
     Route::get('product-collections', [ProductCollectionController::class, 'index']);
     Route::get('products/featured', [ProductController::class, 'featured']);
     Route::get('products/search', [ProductController::class, 'search']);
@@ -77,8 +81,6 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
-        Route::get('products/quick-order', QuickOrderController::class)
-            ->middleware('role:stylist,admin');
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
         Route::put('/auth/password', [AuthController::class, 'changePassword']);
 
