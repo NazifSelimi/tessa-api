@@ -163,23 +163,23 @@ class ImportSupplierCatalogue extends Command
     private function resolveGrouping(string $name): array
     {
         $brandName = match (true) {
-            str_contains(strtolower($name), 'fanola') || preg_match('/\b(no yellow|no orange|no red|fiber fix|fantouch|botugen|nutri|vitamins|wonder|caleido)\b/i', $name) => 'Fanola',
-            preg_match('/\b(rr|real|star|oro puro|oro therapy|serical)\b/i', $name) => 'Rr Line',
+            str_contains(strtolower($name), 'fanola') || preg_match('/\b(no yellow|no orange|no red|fiber fix|fantouch|botugen|nutri|vitamins|wonder|caleido)\b/i', $name) === 1 => 'Fanola',
+            preg_match('/\b(rr|real|star|oro puro|oro therapy|serical)\b/i', $name) === 1 => 'Rr Line',
             default => self::FALLBACK_BRAND,
         };
         $categoryName = match (true) {
-            preg_match('/\b(shampoo|shampon|sampon)\b/i', $name) => 'Shampoo',
-            preg_match('/\b(mask|maska)\b/i', $name) => 'Mask',
-            preg_match('/\b(toner|color|farba|boja)\b/i', $name) => 'Hair Color',
-            preg_match('/\b(activator|aktivator|oksidant|hydrogen|vol)\b/i', $name) => 'Activator',
-            preg_match('/\b(bleach|blansh|decolor|dekolor)\b/i', $name) => 'Bleach and De Color',
-            preg_match('/\b(spray|sprei|lak|mousse|gel|paste|vosok|wax)\b/i', $name) => 'Styling',
-            preg_match('/tester/i', $name) => 'Tester',
-            preg_match('/\b(conditioner|kondicioner|balsam)\b/i', $name) => 'Conditioner',
-            preg_match('/\b(lotion|losion|ampul)\b/i', $name) => 'Lotion',
-            preg_match('/\b(filler|filer)\b/i', $name) => 'Filler',
-            preg_match('/\b(fluid)\b/i', $name) => 'Fluid',
-            preg_match('/\b(set|komplet)\b/i', $name) => 'Sets',
+            preg_match('/\b(shampoo|shampon|sampon)\b/i', $name) === 1 => 'Shampoo',
+            preg_match('/\b(mask|maska)\b/i', $name) === 1 => 'Mask',
+            preg_match('/\b(toner|color|farba|boja)\b/i', $name) === 1 => 'Hair Color',
+            preg_match('/\b(activator|aktivator|oksidant|hydrogen|vol)\b/i', $name) === 1 => 'Activator',
+            preg_match('/\b(bleach|blansh|decolor|dekolor)\b/i', $name) === 1 => 'Bleach and De Color',
+            preg_match('/\b(spray|sprei|lak|mousse|gel|paste|vosok|wax)\b/i', $name) === 1 => 'Styling',
+            preg_match('/tester/i', $name) === 1 => 'Tester',
+            preg_match('/\b(conditioner|kondicioner|balsam)\b/i', $name) === 1 => 'Conditioner',
+            preg_match('/\b(lotion|losion|ampul)\b/i', $name) === 1 => 'Lotion',
+            preg_match('/\b(filler|filer)\b/i', $name) === 1 => 'Filler',
+            preg_match('/\b(fluid)\b/i', $name) === 1 => 'Fluid',
+            preg_match('/\b(set|komplet)\b/i', $name) === 1 => 'Sets',
             default => self::FALLBACK_CATEGORY,
         };
         return [
