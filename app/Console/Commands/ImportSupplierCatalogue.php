@@ -16,6 +16,7 @@ class ImportSupplierCatalogue extends Command
     protected $signature = 'catalog:import-supplier
         {source : CSV with code,description,retail,wholesale columns}
         {--apply : Write new rows; without this option the command only reports}
+        {--refresh-imported : Correct the Latin display names of rows imported by this command}
         {--batch= : Stable batch label stored with imported placeholder media}';
 
     protected $description = 'Import a supplier price list as reviewable catalogue products without changing existing products';
@@ -67,6 +68,9 @@ class ImportSupplierCatalogue extends Command
 
                 $existing = Product::query()->where('manufacturer_code', $row['code'])->lockForUpdate()->first();
                 if ($existing) {
+                    if ($this->option('refresh-imported') && $this->isSupplierImport($existing)) {
+                        $existing->update(['name' => $this->latinName($row['description'])]);
+                    }
                     $summary['existing']++;
                     continue;
                 }
@@ -175,7 +179,7 @@ class ImportSupplierCatalogue extends Command
 
     private function latinName(string $value): string
     {
-        $map = ['\u{0430}' => 'a', '\u{0431}' => 'b', '\u{0432}' => 'v', '\u{0433}' => 'g', '\u{0434}' => 'd', '\u{0453}' => 'gj', '\u{0435}' => 'e', '\u{0436}' => 'zh', '\u{0437}' => 'z', '\u{0455}' => 'dz', '\u{0438}' => 'i', '\u{0458}' => 'j', '\u{043a}' => 'k', '\u{043b}' => 'l', '\u{0459}' => 'lj', '\u{043c}' => 'm', '\u{043d}' => 'n', '\u{045a}' => 'nj', '\u{043e}' => 'o', '\u{043f}' => 'p', '\u{0440}' => 'r', '\u{0441}' => 's', '\u{0442}' => 't', '\u{045c}' => 'kj', '\u{0443}' => 'u', '\u{0444}' => 'f', '\u{0445}' => 'h', '\u{0446}' => 'c', '\u{0447}' => 'ch', '\u{045f}' => 'dzh', '\u{0448}' => 'sh'];
+        $map = ['а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'ѓ' => 'gj', 'е' => 'e', 'ж' => 'zh', 'з' => 'z', 'ѕ' => 'dz', 'и' => 'i', 'ј' => 'j', 'к' => 'k', 'л' => 'l', 'љ' => 'lj', 'м' => 'm', 'н' => 'n', 'њ' => 'nj', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'ќ' => 'kj', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'џ' => 'dzh', 'ш' => 'sh'];
         $upper = [];
         foreach ($map as $from => $to) $upper[mb_strtoupper($from)] = ucfirst($to);
         $value = strtr($value, $map + $upper);
@@ -191,5 +195,13 @@ class ImportSupplierCatalogue extends Command
             File::put($path, '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#f4f0eb"/><rect x="220" y="150" width="360" height="470" rx="28" fill="#fff" stroke="#c9b8b0" stroke-width="8"/><text x="400" y="365" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" fill="#463c39">TESSA</text><text x="400" y="415" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#7b6962">IMAGE PENDING</text><text x="400" y="455" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#7b6962">ADMIN REVIEW</text></svg>');
         }
         return $relative;
+    }
+
+    private function isSupplierImport(Product $product): bool
+    {
+        return $product->images()
+            ->where('name', 'catalog-placeholders/pdf-product.svg')
+            ->where('review_status', 'needs_review')
+            ->exists();
     }
 }
