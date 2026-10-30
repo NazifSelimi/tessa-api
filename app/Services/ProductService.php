@@ -74,11 +74,15 @@ class ProductService
      */
     public function canView(Product $product, ?User $viewer = null): bool
     {
-        if (!$product->stylist_only) {
+        if ($viewer?->isAdmin()) {
             return true;
         }
 
-        return $viewer?->isStylist() || $viewer?->isAdmin();
+        if (!$product->isPricedFor($viewer?->isStylist() ?? false)) {
+            return false;
+        }
+
+        return !$product->stylist_only || $viewer?->isStylist();
     }
 
     /* ===================================================== */
@@ -280,11 +284,16 @@ class ProductService
 
     private function applyVisibilityFilter(Builder $query, ?User $viewer = null): void
     {
-        if ($viewer?->isStylist() || $viewer?->isAdmin()) {
+        if ($viewer?->isAdmin()) {
             return;
         }
 
-        $query->where('stylist_only', false);
+        if ($viewer?->isStylist()) {
+            $query->pricedFor(true);
+            return;
+        }
+
+        $query->where('stylist_only', false)->pricedFor();
     }
 
     private function handleSale(Product $product, array $data): void

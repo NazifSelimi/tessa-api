@@ -29,6 +29,10 @@ class QuickOrderController extends Controller
             $query->where('stylist_only', false);
         }
 
+        if (!$viewer?->isAdmin()) {
+            $query->pricedFor($viewer?->isStylist() ?? false);
+        }
+
         if ($search = $request->query('search')) {
             $query->where('name', 'like', '%' . $search . '%');
         }

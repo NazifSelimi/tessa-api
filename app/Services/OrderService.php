@@ -67,6 +67,11 @@ class OrderService
                 }
 
                 $price = $product->resolvePrice($isStylist);
+                if ($price <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Product ID {$product->id} is not available for purchase."]
+                    ]);
+                }
                 $subtotal += $price * $qty;
                 $orderedQuantities[$product->id] = ($orderedQuantities[$product->id] ?? 0) + $qty;
                 $resolvedPrices[$product->id] = $price;

@@ -50,9 +50,11 @@ class RecommendationService
             $query->where('stylist_only', false);
         }
 
-        // Admins can exclude a product from the quiz, and an out-of-stock
-        // recommendation cannot be bought, so neither is offered.
-        $query->where('quiz_mode', '!=', 'hidden')->where('quantity', '>', 0);
+        // Admins can exclude a product from the quiz, and an out-of-stock or
+        // unpriced recommendation cannot be bought, so none of them is offered.
+        $query->where('quiz_mode', '!=', 'hidden')
+            ->where('quantity', '>', 0)
+            ->pricedFor($includeStylistOnly);
 
         // Optional budget filtering
         if ($budgetRange !== null) {
@@ -116,6 +118,7 @@ class RecommendationService
                 if (!$includeStylistOnly) {
                     $q->where('products.stylist_only', false);
                 }
+                $q->pricedFor($includeStylistOnly);
 
                 $q->where(function ($sub) use ($hairTypeId, $concerns) {
                     $sub->whereHas('hairTypes', fn ($ht) => $ht->where('hair_types.id', $hairTypeId));
@@ -129,6 +132,7 @@ class RecommendationService
                     if (!$includeStylistOnly) {
                         $q->where('products.stylist_only', false);
                     }
+                    $q->pricedFor($includeStylistOnly);
                 },
                 'products.images',
                 'products.brand',

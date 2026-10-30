@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -158,6 +159,21 @@ class Product extends Model
             ? $this->stylist_price
             : $this->price
         );
+    }
+
+    /**
+     * Imported rows can arrive without a price for one audience (for example a
+     * salon-only item with a stylist price but no retail price). Such a row must
+     * never be offered to that audience, or it could be ordered for free.
+     */
+    public function scopePricedFor(Builder $query, bool $isStylist = false): Builder
+    {
+        return $query->where($query->qualifyColumn($isStylist ? 'stylist_price' : 'price'), '>', 0);
+    }
+
+    public function isPricedFor(bool $isStylist = false): bool
+    {
+        return $this->resolvePrice($isStylist) > 0;
     }
 
     public function inStock(int $requestedQty = 1): bool

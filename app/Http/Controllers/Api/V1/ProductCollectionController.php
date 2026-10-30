@@ -20,9 +20,16 @@ class ProductCollectionController extends Controller
             ->where('is_active', true)
             ->withCount([
                 'products as products_count' => function (Builder $productQuery) use ($viewer): void {
-                    if (!$viewer?->isStylist() && !$viewer?->isAdmin()) {
-                        $productQuery->where('stylist_only', false);
+                    if ($viewer?->isAdmin()) {
+                        return;
                     }
+
+                    if ($viewer?->isStylist()) {
+                        $productQuery->pricedFor(true);
+                        return;
+                    }
+
+                    $productQuery->where('stylist_only', false)->pricedFor();
                 },
             ])
             ->orderBy('sort_priority')
