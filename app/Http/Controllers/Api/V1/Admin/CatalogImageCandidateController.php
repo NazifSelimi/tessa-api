@@ -15,6 +15,9 @@ class CatalogImageCandidateController extends Controller
         $data = $request->validate([
             'status' => ['nullable', 'in:missing,needs_review,legacy,approved'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'sort' => ['nullable', 'in:name_asc,name_desc,images_asc,images_desc,newest'],
         ]);
 
         $products = Product::query()->with(['brand', 'images'])->get();
@@ -46,6 +49,15 @@ class CatalogImageCandidateController extends Controller
             ->mapWithKeys(fn (string $status) => [$status => $rows->where('status', $status)->count()]);
         $status = $data['status'] ?? null;
         $limit = $data['limit'] ?? 24;
+        $page = $data['page'] ?? 1;
+        $filtered = $rows->when($status, fn ($items) => $items->where('status', $status));
+        if (!empty($data['search'])) {
+            $search = mb_strtolower($data['search']);
+            $filtered = $filtered->filter(fn ($row) => str_contains(mb_strtolower($row['name'].' '.$row['brand'].' '.$row['id']), $search));
+        }
+        $sort = $data['sort'] ?? 'name_asc';
+        $field = str_starts_with($sort, 'images') ? 'imageCount' : ($sort === 'newest' ? 'id' : 'name');
+        $filtered = ($sort === 'newest' || str_ends_with($sort, '_desc')) ? $filtered->sortByDesc($field) : $filtered->sortBy($field);
 
         return response()->json([
             'summary' => [
@@ -53,11 +65,8 @@ class CatalogImageCandidateController extends Controller
                 'with_image' => $products->count() - $counts['missing'],
                 ...$counts->all(),
             ],
-            'products' => $rows
-                ->when($status, fn ($collection) => $collection->where('status', $status))
-                ->sortBy('name')
-                ->take($limit)
-                ->values(),
+            'products' => $filtered->slice(($page - 1) * $limit, $limit)->values(),
+            'meta' => ['total' => $filtered->count(), 'page' => $page, 'per_page' => $limit],
         ]);
     }
 
@@ -82,15 +91,26 @@ class CatalogImageCandidateController extends Controller
 
     public function approve(Request $request, int $productId)
     {
+        $data = $request->validate(['rank' => ['required', 'integer', 'min:1'], 'status' => ['sometimes', 'in:approved,rejected,pending'], 'note' => ['nullable', 'string', 'max:2000'], 'audit' => ['nullable', 'string']]);
         $audit = $this->latestAudit();
         abort_unless($audit, 404, 'No image candidate audit is available.');
+        abort_if(isset($data['audit']) && $data['audit'] !== basename($audit), 409, 'The candidate audit changed. Refresh before reviewing.');
         $rank = max(1, (int) $request->input('rank', 1));
+        $rows = json_decode(File::get($audit . '/image_replacement_manifest.json'), true)['rows'] ?? [];
+        abort_unless(collect($rows)->contains(fn ($row) => (int) $row['product_id'] === $productId && (int) $row['candidate_rank'] === $rank), 404, 'Candidate not found.');
         $path = $audit . '/admin_reviews.json';
-        $reviews = is_file($path) ? json_decode(File::get($path), true) : [];
-        $reviews[$productId . ':' . $rank] = ['status' => 'approved', 'approved_at' => now()->toIso8601String(), 'approved_by' => $request->user()->id];
-        File::put($path, json_encode($reviews, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $file = fopen($path, 'c+');
+        abort_unless($file, 500, 'Could not open review storage.');
+        try {
+            if (!flock($file, LOCK_EX)) throw new \RuntimeException('Could not lock review storage');
+            $reviews = json_decode(stream_get_contents($file), true) ?: [];
+            $reviews[$productId . ':' . $rank] = ['status' => $data['status'] ?? 'approved', 'note' => $data['note'] ?? '', 'approved_at' => now()->toIso8601String(), 'approved_by' => $request->user()->id];
+            rewind($file); ftruncate($file, 0);
+            fwrite($file, json_encode($reviews, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            fflush($file); flock($file, LOCK_UN);
+        } finally { fclose($file); }
 
-        return response()->json(['message' => 'Candidate marked approved for the next controlled installation.']);
+        return response()->json(['message' => 'Review decision saved. Product images have not been replaced.']);
     }
 
     public function preview(Request $request, int $productId)

@@ -20,8 +20,13 @@ class AdminUserController extends Controller
      */
     public function index(Request $request)
     {
-        $filters = $request->only(['search', 'role']);
-        $perPage = $request->per_page ?? 20;
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'role' => ['nullable', 'in:admin,stylist,user'],
+            'sort' => ['nullable', 'in:newest,oldest,name_asc,name_desc,email_asc'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+        $perPage = $filters['per_page'] ?? 20;
 
         $users = $this->adminUserService->listFiltered($filters, $perPage);
 
