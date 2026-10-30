@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\BundleController;
 use App\Http\Controllers\Api\V1\HairProfileOptionController;
 use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
 use App\Http\Controllers\Api\V1\Admin\CatalogImageCandidateController;
+use App\Http\Controllers\Api\V1\Admin\HairQuizController;
 
 /*
  * HTTP-to-domain map: docs/UI_TO_DATA_FLOW_REVIEW.md is the review entry point.
@@ -128,6 +129,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::post('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'store']);
             Route::patch('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'update']);
             Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve']);
+            Route::get('/hair-quiz/products', [HairQuizController::class, 'index']);
+            Route::put('/hair-quiz/products/{product}', [HairQuizController::class, 'update']);
+            Route::post('/hair-quiz/preview', [HairQuizController::class, 'preview']);
             Route::get('/content-blocks', [AdminContentBlockController::class, 'index']);
             Route::post('/content-blocks', [AdminContentBlockController::class, 'store']);
             Route::put('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'update']);

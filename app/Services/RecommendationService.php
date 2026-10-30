@@ -8,6 +8,12 @@ use Illuminate\Support\Collection;
 
 class RecommendationService
 {
+    /** Values of products.quiz_mode, set by admins on the Hair quiz page. */
+    public const QUIZ_MODES = ['auto', 'featured', 'hidden'];
+
+    /** Large enough that a matching featured product always outranks profile-only matches. */
+    private const FEATURED_BOOST = 100;
+
     /**
      * Get product recommendations based on hair type, concerns, and optional budget.
      *
@@ -44,6 +50,10 @@ class RecommendationService
             $query->where('stylist_only', false);
         }
 
+        // Admins can exclude a product from the quiz, and an out-of-stock
+        // recommendation cannot be bought, so neither is offered.
+        $query->where('quiz_mode', '!=', 'hidden')->where('quantity', '>', 0);
+
         // Optional budget filtering
         if ($budgetRange !== null) {
             [$min, $max] = $this->parseBudgetRange($budgetRange);
@@ -77,6 +87,10 @@ class RecommendationService
                 if ($product->hairConcerns->contains('id', $concernId)) {
                     $score += 3;
                 }
+            }
+
+            if ($product->quiz_mode === 'featured') {
+                $score += self::FEATURED_BOOST;
             }
 
             $product->setAttribute('recommendation_score', $score);
