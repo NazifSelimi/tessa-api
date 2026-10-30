@@ -30,7 +30,7 @@ class QuickOrderController extends Controller
         }
 
         if (!$viewer?->isAdmin()) {
-            $query->pricedFor($viewer?->isStylist() ?? false);
+            $query->pricedFor($viewer?->isStylist() ?? false)->readyForSale();
         }
 
         if ($search = $request->query('search')) {

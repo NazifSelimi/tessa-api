@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -15,6 +16,15 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Product extends Model
 {
     use HasFactory;
+
+    /**
+     * Values the supplier importer gives products it could not match. Such a
+     * product stays in review (admin only) until it has a real photo, brand
+     * and category.
+     */
+    public const PLACEHOLDER_IMAGE_PATH = 'catalog-placeholders/';
+    public const REVIEW_BRAND_NAMES = ['supplier catalogue'];
+    public const REVIEW_CATEGORY_NAMES = ['catalogue review'];
 
     protected $fillable = [
         'name',
@@ -174,6 +184,76 @@ class Product extends Model
     public function isPricedFor(bool $isStylist = false): bool
     {
         return $this->resolvePrice($isStylist) > 0;
+    }
+
+    /**
+     * Products customers and stylists may see: a real photo, a real brand and
+     * a real category. Everything else is in review and visible to admins only.
+     */
+    public function scopeReadyForSale(Builder $query): Builder
+    {
+        $placeholder = '%' . self::PLACEHOLDER_IMAGE_PATH . '%';
+
+        return $query
+            ->whereHas('images', fn (Builder $images) => $images
+                ->where('name', 'not like', $placeholder)
+                ->where(fn (Builder $url) => $url->whereNull('url')->orWhere('url', 'not like', $placeholder)))
+            ->whereDoesntHave('brand', fn (Builder $brand) => $brand->whereIn('name', self::REVIEW_BRAND_NAMES))
+            ->whereDoesntHave('category', fn (Builder $category) => $category->whereIn('name', self::REVIEW_CATEGORY_NAMES));
+    }
+
+    /**
+     * Why the product is in review; empty when it is ready for sale.
+     *
+     * @return list<string>
+     */
+    public function reviewReasons(): array
+    {
+        $reasons = [];
+
+        if ($this->images->reject(fn (Image $image) => $image->isPlaceholder())->isEmpty()) {
+            $reasons[] = 'no_photo';
+        }
+        if (in_array(mb_strtolower((string) $this->brand?->name), self::REVIEW_BRAND_NAMES, true)) {
+            $reasons[] = 'no_brand';
+        }
+        if (in_array(mb_strtolower((string) $this->category?->name), self::REVIEW_CATEGORY_NAMES, true)) {
+            $reasons[] = 'no_category';
+        }
+
+        return $reasons;
+    }
+
+    public function isInReview(): bool
+    {
+        return $this->reviewReasons() !== [];
+    }
+
+    /**
+     * Images in display order. The 2026-09 catalogue audit matched generated
+     * images by product name and many show the wrong item (a bleach tub on a
+     * hair colour), so where an original photo exists those audit images are
+     * left out and the original photo is shown, as on tessa.mk.
+     */
+    public function storefrontImages(): Collection
+    {
+        $images = $this->images->reject(fn (Image $image) => $image->isPlaceholder());
+
+        if ($images->contains(fn (Image $image) => ($image->variant ?? 'legacy') === 'legacy')) {
+            $images = $images->reject(fn (Image $image) => $image->isFromCatalogAudit());
+        }
+
+        return $images->values();
+    }
+
+    public function primaryImage(): ?Image
+    {
+        $images = $this->storefrontImages();
+
+        return $images->firstWhere('variant', 'card')
+            ?? $images->firstWhere('variant', 'detail')
+            ?? $images->first()
+            ?? $this->images->first();
     }
 
     public function inStock(int $requestedQty = 1): bool

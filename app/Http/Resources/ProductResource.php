@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\ApiUserResolver;
 use App\Support\ProductCatalogGuidance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -12,17 +13,15 @@ class ProductResource extends JsonResource
     {
         $categoryName = $this->relationLoaded('category') ? $this->category?->name : null;
 
-        // Prefer a card asset for new products; legacy rows remain valid fallbacks.
+        // Customers get the curated photo set; admins see every attached image.
         $primaryImage = null;
         $media = null;
+        $isAdmin = (bool) ApiUserResolver::fromRequest($request)?->isAdmin();
 
         if ($this->relationLoaded('images')) {
-            $images = $this->images;
-            if ($images instanceof \Illuminate\Database\Eloquent\Collection && $images->isNotEmpty()) {
-                $primary = $images->firstWhere('variant', 'card')
-                    ?? $images->firstWhere('variant', 'detail')
-                    ?? $images->first();
-                $primaryImage = $this->imageUrl($primary);
+            $images = $isAdmin ? $this->images : $this->storefrontImages();
+            if ($images->isNotEmpty() || $this->images->isNotEmpty()) {
+                $primaryImage = $this->imageUrl($this->primaryImage());
                 $media = $images->map(fn ($image) => [
                     'url' => $this->imageUrl($image),
                     'alt' => $image->alt,
@@ -34,6 +33,10 @@ class ProductResource extends JsonResource
                 ])->values();
             }
         }
+
+        $reviewReasons = $this->relationLoaded('images') && $this->relationLoaded('brand') && $this->relationLoaded('category')
+            ? $this->reviewReasons()
+            : null;
 
         // Get description from translations (locale-aware)
         $description = null;
@@ -56,6 +59,9 @@ class ProductResource extends JsonResource
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
             'stylistOnly' => (bool) $this->stylist_only,
+            // Only admins ever receive products in review; see Product::scopeReadyForSale().
+            'inReview' => $reviewReasons === null ? null : $reviewReasons !== [],
+            'reviewReasons' => $reviewReasons,
             'hairTypeIds' => $this->whenLoaded('hairTypes', fn () => $this->hairTypes->pluck('id')->map(fn ($id) => (int) $id)->values()),
             'hairConcernIds' => $this->whenLoaded('hairConcerns', fn () => $this->hairConcerns->pluck('id')->map(fn ($id) => (int) $id)->values()),
             'catalogGuidance' => ProductCatalogGuidance::forProduct($categoryName, $this->name),

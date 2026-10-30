@@ -25,11 +25,11 @@ class ProductCollectionController extends Controller
                     }
 
                     if ($viewer?->isStylist()) {
-                        $productQuery->pricedFor(true);
+                        $productQuery->pricedFor(true)->readyForSale();
                         return;
                     }
 
-                    $productQuery->where('stylist_only', false)->pricedFor();
+                    $productQuery->where('stylist_only', false)->pricedFor()->readyForSale();
                 },
             ])
             ->orderBy('sort_priority')

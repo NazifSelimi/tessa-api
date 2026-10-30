@@ -13,8 +13,7 @@ class ProductImageController extends Controller
     public function index(Product $product)
     {
         $product->load(['images', 'brand']);
-        $primary = $product->images->firstWhere('variant', 'card')
-            ?? $product->images->firstWhere('variant', 'detail') ?? $product->images->first();
+        $primary = $product->primaryImage();
         return response()->json([
             'product' => ['id' => $product->id, 'name' => $product->name, 'brand' => $product->brand?->name],
             'images' => $product->images->map(fn ($image) => [

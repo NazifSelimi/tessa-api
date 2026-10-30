@@ -11,7 +11,7 @@ class RecommendedProductResource extends JsonResource
     {
         $primaryImage = null;
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
-            $primaryImage = asset('storage/images/' . $this->images->first()->name);
+            $primaryImage = asset('storage/images/' . $this->primaryImage()->name);
         }
 
         $description = null;

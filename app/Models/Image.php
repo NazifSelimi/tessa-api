@@ -52,6 +52,19 @@ class Image extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /** The shared "pending review" artwork the supplier importer attaches. */
+    public function isPlaceholder(): bool
+    {
+        return str_contains((string) $this->name, Product::PLACEHOLDER_IMAGE_PATH)
+            || str_contains((string) $this->url, Product::PLACEHOLDER_IMAGE_PATH);
+    }
+
+    /** Attached automatically by the 2026-09 catalogue audit, not by a person. */
+    public function isFromCatalogAudit(): bool
+    {
+        return isset($this->metadata['catalog_audit_source']);
+    }
+
     public function publicUrl(): ?string
     {
         if (!is_string($this->name) || $this->name === '') {

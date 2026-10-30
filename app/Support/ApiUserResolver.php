@@ -10,6 +10,19 @@ final class ApiUserResolver
 {
     public static function fromRequest(Request $request): ?User
     {
+        // Resources call this once per product; resolve the token once per request.
+        if ($request->attributes->has('api_user')) {
+            return $request->attributes->get('api_user');
+        }
+
+        $user = self::resolve($request);
+        $request->attributes->set('api_user', $user);
+
+        return $user;
+    }
+
+    private static function resolve(Request $request): ?User
+    {
         $token = $request->bearerToken();
 
         if (!$token) {

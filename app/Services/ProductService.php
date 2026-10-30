@@ -78,7 +78,7 @@ class ProductService
             return true;
         }
 
-        if (!$product->isPricedFor($viewer?->isStylist() ?? false)) {
+        if (!$product->isPricedFor($viewer?->isStylist() ?? false) || $product->isInReview()) {
             return false;
         }
 
@@ -289,11 +289,11 @@ class ProductService
         }
 
         if ($viewer?->isStylist()) {
-            $query->pricedFor(true);
+            $query->pricedFor(true)->readyForSale();
             return;
         }
 
-        $query->where('stylist_only', false)->pricedFor();
+        $query->where('stylist_only', false)->pricedFor()->readyForSale();
     }
 
     private function handleSale(Product $product, array $data): void
@@ -384,6 +384,13 @@ class ProductService
 
         if (!empty($filters['in_stock'])) {
             $query->where('products.quantity', '>', 0);
+        }
+
+        // Admin work queue; other viewers never receive products in review.
+        if (($filters['review'] ?? null) === 'in_review') {
+            $query->whereNot(fn (Builder $ready) => $ready->readyForSale());
+        } elseif (($filters['review'] ?? null) === 'ready') {
+            $query->readyForSale();
         }
 
         // Sorting — use database-driven sort_priority on categories

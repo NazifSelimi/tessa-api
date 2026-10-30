@@ -54,7 +54,8 @@ class RecommendationService
         // unpriced recommendation cannot be bought, so none of them is offered.
         $query->where('quiz_mode', '!=', 'hidden')
             ->where('quantity', '>', 0)
-            ->pricedFor($includeStylistOnly);
+            ->pricedFor($includeStylistOnly)
+            ->readyForSale();
 
         // Optional budget filtering
         if ($budgetRange !== null) {
@@ -118,7 +119,7 @@ class RecommendationService
                 if (!$includeStylistOnly) {
                     $q->where('products.stylist_only', false);
                 }
-                $q->pricedFor($includeStylistOnly);
+                $q->pricedFor($includeStylistOnly)->readyForSale();
 
                 $q->where(function ($sub) use ($hairTypeId, $concerns) {
                     $sub->whereHas('hairTypes', fn ($ht) => $ht->where('hair_types.id', $hairTypeId));
@@ -132,7 +133,7 @@ class RecommendationService
                     if (!$includeStylistOnly) {
                         $q->where('products.stylist_only', false);
                     }
-                    $q->pricedFor($includeStylistOnly);
+                    $q->pricedFor($includeStylistOnly)->readyForSale();
                 },
                 'products.images',
                 'products.brand',
