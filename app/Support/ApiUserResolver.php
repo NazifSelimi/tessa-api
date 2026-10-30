@@ -17,6 +17,12 @@ final class ApiUserResolver
         }
 
         $accessToken = PersonalAccessToken::findToken($token);
+        $expiration = config('sanctum.expiration');
+        if (!$accessToken
+            || ($accessToken->expires_at && $accessToken->expires_at->isPast())
+            || ($expiration && !$accessToken->created_at->gt(now()->subMinutes($expiration)))) {
+            return null;
+        }
         $tokenable = $accessToken?->tokenable;
 
         return $tokenable instanceof User ? $tokenable : null;

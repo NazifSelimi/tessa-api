@@ -249,7 +249,7 @@ class AuthController extends Controller
         }
 
         // Check if token is not older than 60 minutes
-        if (now()->diffInMinutes($resetRecord->created_at) > 60) {
+        if (!$resetRecord->created_at || \Illuminate\Support\Carbon::parse($resetRecord->created_at)->lte(now()->subMinutes(60))) {
             return ApiResponse::error('Reset token has expired', 422);
         }
 
