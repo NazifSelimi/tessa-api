@@ -73,9 +73,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('recommendations', RecommendationController::class);
     Route::get('bundles', [BundleController::class, 'index']);
     Route::get('content-blocks', [ContentBlockController::class, 'index']);
-    // Candidate files are review-only assets; the candidate list and review
-    // actions remain protected below. Images need a browser-loadable URL.
-    Route::get('admin/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview']);
+    // Candidate files are review-only assets. <img> cannot send the admin bearer
+    // token, so the protected candidate list hands out short-lived signed URLs.
+    Route::get('admin/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview'])
+        ->middleware('signed')
+        ->name('admin.catalog-image-candidates.preview');
     Route::post('/checkout', [CheckoutController::class, 'checkout']);
 
     Route::middleware('auth:sanctum')->group(function () {

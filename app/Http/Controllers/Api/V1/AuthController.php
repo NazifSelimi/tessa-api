@@ -261,6 +261,9 @@ class AuthController extends Controller
         $user->password = Hash::make($request->password);
         $user->save();
 
+        // Sign out every existing session: whoever knew the old password may hold one.
+        $user->tokens()->delete();
+
         // Delete the reset token
         DB::table('password_reset_tokens')
             ->where('email', $request->email)
@@ -371,6 +374,7 @@ class AuthController extends Controller
             'last_name' => (string) ($profile['family_name'] ?? ''),
             'name' => (string) ($profile['name'] ?? ''),
             'avatar' => (string) ($profile['picture'] ?? ''),
+            'email_verified' => filter_var($profile['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
         ];
     }
 
@@ -418,6 +422,8 @@ class AuthController extends Controller
             'last_name' => (string) ($profile['last_name'] ?? ''),
             'name' => (string) ($profile['name'] ?? ''),
             'avatar' => (string) data_get($profile, 'picture.data.url', ''),
+            // The Graph API does not say whether the email was verified.
+            'email_verified' => false,
         ];
     }
 
@@ -436,15 +442,29 @@ class AuthController extends Controller
 
         $providerField = $provider . '_id';
 
-        $user = User::withTrashed()
-            ->where($providerField, $providerId)
-            ->orWhere('email', $email)
-            ->first();
+        $emailVerified = (bool) ($profile['email_verified'] ?? false);
+
+        $user = User::withTrashed()->where($providerField, $providerId)->first();
 
         $isNewUser = false;
 
-        if ($user && filled($user->{$providerField}) && $user->{$providerField} !== $providerId) {
-            throw new \RuntimeException('This email is already linked to another ' . ucfirst($provider) . ' account.');
+        if (!$user && ($existing = User::withTrashed()->where('email', $email)->first())) {
+            // Linking by email alone would hand the account to whoever controls that
+            // address at the provider, so only link verified emails to non-admins.
+            if (filled($existing->{$providerField})) {
+                throw new \RuntimeException('This email is already linked to another ' . ucfirst($provider) . ' account.');
+            }
+
+            if (!$emailVerified || $existing->isAdmin()) {
+                throw new \RuntimeException('An account with this email already exists. Please sign in with your email or phone and password.');
+            }
+
+            $user = $existing;
+        }
+
+        // A soft-deleted user was removed by an admin; social sign-in must not undo that.
+        if ($user && $user->trashed()) {
+            throw new \RuntimeException('This account is no longer active. Please contact Tessa.');
         }
 
         if (!$user) {
@@ -457,10 +477,6 @@ class AuthController extends Controller
             $user->password = Hash::make(Str::random(40));
             $user->role = User::ROLE_USER;
             $isNewUser = true;
-        }
-
-        if ($user->trashed()) {
-            $user->restore();
         }
 
         $name = trim((string) ($profile['name'] ?? ''));
@@ -486,8 +502,7 @@ class AuthController extends Controller
         }
 
         $user->{$providerField} = $providerId;
-        $user->email = $email;
-        $user->email_verified_at = $user->email_verified_at ?? now();
+        $user->email_verified_at = $user->email_verified_at ?? ($emailVerified ? now() : null);
 
         $avatar = trim((string) ($profile['avatar'] ?? ''));
         if ($avatar !== '') {
