@@ -39,6 +39,7 @@ class ProductShadesTest extends TestCase
             'brand_id' => $this->family->brand_id,
             'category_id' => $this->family->category_id,
             'product_family_id' => $this->family->id,
+            'name' => "{$code} - Shade {$code} 100ml",
             'shade_code' => $code,
             'shade_name' => "Shade {$code}",
             'shade_sort_order' => $sort,
@@ -76,5 +77,28 @@ class ProductShadesTest extends TestCase
         $this->assertNotContains((string) $hiddenInReview->id, array_column($response->json('data.shades'), 'id'));
         $this->flushHeaders();
         $this->assertArrayNotHasKey('shades', $this->getJson("/api/v1/products/{$otherLine->id}")->json('data'));
+    }
+
+    #[Test]
+    public function the_shop_lists_a_colour_line_once_but_search_and_admins_still_see_each_shade(): void
+    {
+        $first = $this->shade('1.0', 10);
+        $second = $this->shade('3.0', 30);
+        $this->shade('4.0', 40, ['stylist_only' => true]);
+        $single = Product::factory()->create(['category_id' => $this->family->category_id, 'price' => 500, 'stylist_only' => false]);
+        $list = fn (string $query = '') => collect($this->getJson("/api/v1/products?category_id={$this->family->category_id}{$query}")->assertOk()->json('data'))->keyBy('id');
+
+        $cards = $list();
+        $this->assertEqualsCanonicalizing([(string) $first->id, (string) $single->id], $cards->pluck('id')->all());
+        $this->assertSame(2, $cards[$first->id]['shadeCount']);
+        $this->assertSame('Colour Cream', $cards[$first->id]['shadeFamily']['name']);
+        $this->assertCount(2, $cards[$first->id]['shadePreview']);
+        $this->assertArrayNotHasKey('shadeCount', $cards[$single->id]);
+
+        $this->assertSame([(string) $second->id], $list('&search=3.0')->pluck('id')->all());
+        $this->assertCount(3, $list('&shades=all'));
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('test')->plainTextToken;
+        $this->assertCount(4, $this->withToken($admin)->getJson("/api/v1/products?category_id={$this->family->category_id}")->json('data'));
     }
 }

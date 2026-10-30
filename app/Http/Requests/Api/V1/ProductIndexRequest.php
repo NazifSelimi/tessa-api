@@ -23,6 +23,8 @@ class ProductIndexRequest extends FormRequest
             'on_sale'     => ['nullable', 'boolean'],
             'in_stock'    => ['nullable', 'boolean'],
             'review'      => ['nullable', 'string', 'in:in_review,ready'],
+            // 'all' lists every shade of a colour line separately (e.g. for prerendering).
+            'shades'      => ['nullable', 'string', 'in:all'],
             'sort'        => ['nullable', 'string', 'in:name_asc,name_desc,price_asc,price_desc,newest,featured'],
             'per_page'    => ['nullable', 'integer', 'min:1', 'max:500'],
             'perPage'     => ['nullable', 'integer', 'min:1', 'max:500'],

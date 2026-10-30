@@ -43,7 +43,54 @@ class ProductService
         $this->applyVisibilityFilter($query, $viewer);
         $this->applyFilters($query, $filters);
 
-        return $query->paginate($perPage);
+        // Shop browsing shows a colour line once; a search still finds single shades
+        // and admins keep seeing every product.
+        $lines = !$viewer?->isAdmin() && empty($filters['search']) && ($filters['shades'] ?? null) !== 'all'
+            ? $this->colourLineSummaries($filters, $viewer)
+            : collect();
+
+        if ($lines->isNotEmpty()) {
+            $query->where(fn (Builder $card) => $card
+                ->whereNull('products.product_family_id')
+                ->orWhereIn('products.id', $lines->pluck('id')));
+            $query->with('productFamily');
+        }
+
+        $page = $query->paginate($perPage);
+
+        foreach ($page->items() as $product) {
+            if ($line = $lines->get($product->product_family_id)) {
+                $product->setAttribute('shade_count', $line['count']);
+                $product->setAttribute('shade_preview', $line['preview']);
+            }
+        }
+
+        return $page;
+    }
+
+    /**
+     * For each colour line with shades matching the listing: the first shade
+     * (the line's card), how many shades match and a few swatches to preview.
+     */
+    private function colourLineSummaries(array $filters, ?User $viewer): \Illuminate\Support\Collection
+    {
+        $query = Product::query()->whereNotNull('products.product_family_id');
+        $this->applyVisibilityFilter($query, $viewer);
+        $this->applyFilters($query, $filters);
+
+        return $query->reorder()
+            ->select(['products.id', 'products.product_family_id', 'products.shade_sort_order', 'products.swatch_image'])
+            ->get()
+            ->groupBy('product_family_id')
+            ->map(function ($shades) {
+                $shades = $shades->sortBy([['shade_sort_order', 'asc'], ['id', 'asc']])->values();
+
+                return [
+                    'id' => $shades->first()->id,
+                    'count' => $shades->count(),
+                    'preview' => $shades->map(fn (Product $shade) => $shade->swatchUrl())->filter()->take(5)->values()->all(),
+                ];
+            });
     }
 
     /* ===================================================== */

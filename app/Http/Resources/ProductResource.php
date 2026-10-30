@@ -86,6 +86,9 @@ class ProductResource extends JsonResource
                 'id' => (string) $this->productFamily->id,
                 'name' => $this->productFamily->name,
             ] : null),
+            // Shop cards for a colour line (see ProductService::paginate).
+            'shadeCount' => $this->when($this->shade_count !== null, fn () => (int) $this->shade_count),
+            'shadePreview' => $this->when($this->shade_preview !== null, fn () => $this->shade_preview),
             'shades' => $this->whenLoaded('shades', fn () => $this->shades->map(fn ($shade) => [
                 'id' => (string) $shade->id,
                 'name' => $shade->name,
