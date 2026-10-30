@@ -79,6 +79,22 @@ class ProductResource extends JsonResource
                 'name' => $this->category->name,
             ] : null),
 
+            'shadeCode' => $this->shade_code,
+            'shadeName' => $this->shade_name,
+            'swatch' => $this->swatchUrl(),
+            'shadeFamily' => $this->whenLoaded('productFamily', fn () => $this->productFamily ? [
+                'id' => (string) $this->productFamily->id,
+                'name' => $this->productFamily->name,
+            ] : null),
+            'shades' => $this->whenLoaded('shades', fn () => $this->shades->map(fn ($shade) => [
+                'id' => (string) $shade->id,
+                'name' => $shade->name,
+                'shadeCode' => $shade->shade_code,
+                'shadeName' => $shade->shade_name,
+                'swatch' => $shade->swatchUrl(),
+                'inStock' => $shade->quantity > 0,
+            ])->values()),
+
             'image' => $primaryImage,
             'media' => $media,
             'collections' => $this->whenLoaded('catalogCollections', fn () => $this->catalogCollections

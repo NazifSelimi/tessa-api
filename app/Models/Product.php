@@ -246,6 +246,12 @@ class Product extends Model
         return $images->values();
     }
 
+    /** Public URL of the hair-swatch photo used in the shade picker. */
+    public function swatchUrl(): ?string
+    {
+        return $this->swatch_image ? asset('storage/' . ltrim($this->swatch_image, '/')) : null;
+    }
+
     public function primaryImage(): ?Image
     {
         $images = $this->storefrontImages();

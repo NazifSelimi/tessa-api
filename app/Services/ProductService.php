@@ -54,9 +54,9 @@ class ProductService
      * Hydrates the detail-screen aggregate with the same relations expected by
      * ProductResource. Visibility is intentionally checked by the caller.
      */
-    public function find(Product $product): Product
+    public function find(Product $product, ?User $viewer = null): Product
     {
-        return $product->load([
+        $product->load([
             'brand',
             'category',
             'translations',
@@ -65,7 +65,23 @@ class ProductService
             'hairTypes',
             'hairConcerns',
             'catalogCollections',
+            'productFamily',
         ]);
+
+        // Other shades of the same colour line, limited to what this viewer may buy.
+        if ($product->product_family_id) {
+            $query = Product::query()->where('product_family_id', $product->product_family_id);
+            $this->applyVisibilityFilter($query, $viewer);
+
+            $shades = $query
+                ->orderByRaw('shade_sort_order IS NULL, shade_sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'shade_code', 'shade_name', 'swatch_image', 'quantity', 'product_family_id']);
+
+            $product->setRelation('shades', $shades);
+        }
+
+        return $product;
     }
 
     /**

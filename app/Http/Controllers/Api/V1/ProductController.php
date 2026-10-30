@@ -62,7 +62,7 @@ class ProductController extends Controller
 
         return ApiResponse::ok(
             new ProductResource(
-                $this->productService->find($product)
+                $this->productService->find($product, $viewer)
             )
         );
     }
