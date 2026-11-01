@@ -101,4 +101,36 @@ class ProductShadesTest extends TestCase
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('test')->plainTextToken;
         $this->assertCount(4, $this->withToken($admin)->getJson("/api/v1/products?category_id={$this->family->category_id}")->json('data'));
     }
+
+    #[Test]
+    public function the_product_page_includes_the_line_catalogue_with_shades_linked_to_products(): void
+    {
+        $this->family->update(['catalogue' => [
+            'title' => 'Colour chart',
+            'pages' => [
+                ['image' => 'catalogues/test/p1.webp', 'width' => 1600, 'height' => 1600, 'spots' => []],
+                ['image' => 'catalogues/test/p2.webp', 'width' => 1600, 'height' => 3200, 'spots' => [
+                    ['code' => '7.0', 'x' => 0.1, 'y' => 0.2, 'w' => 0.12, 'h' => 0.03],
+                    ['code' => '6.0', 'x' => 0.1, 'y' => 0.3, 'w' => 0.12, 'h' => 0.03],
+                    ['code' => '9.9', 'x' => 0.1, 'y' => 0.4, 'w' => 0.12, 'h' => 0.03],
+                ]],
+            ],
+        ]]);
+        $blonde = $this->shade('7.0', 70, ['quantity' => 0]);
+        $this->shade('6.0', 60, ['stylist_only' => true]);
+
+        $catalogue = $this->getJson("/api/v1/products/{$blonde->id}")->assertOk()->json('data.shadeFamily.catalogue');
+
+        $this->assertSame('Colour chart', $catalogue['title']);
+        $this->assertCount(2, $catalogue['pages']);
+        $this->assertStringEndsWith('storage/catalogues/test/p2.webp', $catalogue['pages'][1]['image']);
+        $spots = collect($catalogue['pages'][1]['spots'])->keyBy('code');
+        $this->assertSame((string) $blonde->id, $spots['7.0']['productId']);
+        $this->assertFalse($spots['7.0']['inStock']);
+        $this->assertNull($spots['6.0']['productId']); // stylist-only: not for this guest
+        $this->assertNull($spots['9.9']['productId']); // not sold by Tessa
+
+        $card = collect($this->getJson("/api/v1/products?category_id={$this->family->category_id}")->json('data'))->firstWhere('id', (string) $blonde->id);
+        $this->assertArrayNotHasKey('catalogue', $card['shadeFamily']);
+    }
 }

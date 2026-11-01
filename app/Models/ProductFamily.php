@@ -21,11 +21,13 @@ class ProductFamily extends Model
         'description',
         'is_active',
         'sort_order',
+        'catalogue',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'catalogue' => 'array',
     ];
 
     public function brand(): BelongsTo

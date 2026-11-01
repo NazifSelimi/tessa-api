@@ -85,6 +85,8 @@ class ProductResource extends JsonResource
             'shadeFamily' => $this->whenLoaded('productFamily', fn () => $this->productFamily ? [
                 'id' => (string) $this->productFamily->id,
                 'name' => $this->productFamily->name,
+                // Product page only: the brand catalogue with each shade linked to the product the viewer may buy.
+                'catalogue' => $this->when($this->relationLoaded('shades'), fn () => $this->catalogue()),
             ] : null),
             // Shop cards for a colour line (see ProductService::paginate).
             'shadeCount' => $this->when($this->shade_count !== null, fn () => (int) $this->shade_count),
@@ -126,6 +128,43 @@ class ProductResource extends JsonResource
 
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
+        ];
+    }
+
+    /**
+     * The line's catalogue pages with spots resolved to products. A spot whose
+     * shade this viewer cannot buy keeps no productId (shown, not clickable).
+     */
+    private function catalogue(): ?array
+    {
+        $catalogue = $this->productFamily?->catalogue;
+        if (!is_array($catalogue) || empty($catalogue['pages'])) {
+            return null;
+        }
+
+        $byCode = $this->shades->filter(fn ($shade) => filled($shade->shade_code))->keyBy('shade_code');
+
+        return [
+            'title' => $catalogue['title'] ?? $this->productFamily->name,
+            'pages' => collect($catalogue['pages'])->map(fn (array $page) => [
+                'image' => asset('storage/' . ltrim($page['image'], '/')),
+                'width' => (int) $page['width'],
+                'height' => (int) $page['height'],
+                'spots' => collect($page['spots'] ?? [])->map(function (array $spot) use ($byCode) {
+                    $shade = $byCode->get($spot['code']);
+
+                    return [
+                        'code' => $spot['code'],
+                        'x' => (float) $spot['x'],
+                        'y' => (float) $spot['y'],
+                        'w' => (float) $spot['w'],
+                        'h' => (float) $spot['h'],
+                        'productId' => $shade ? (string) $shade->id : null,
+                        'name' => $shade?->shade_name,
+                        'inStock' => $shade ? $shade->quantity > 0 : null,
+                    ];
+                })->values(),
+            ])->values(),
         ];
     }
 
