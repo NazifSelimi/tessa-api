@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ProductIndexRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\ProductFamily;
 use App\Services\ImageService;
 use App\Services\ProductService;
 use App\Support\ApiResponse;
@@ -124,6 +125,13 @@ class AdminProductController extends Controller
             'translations.en' => ['nullable', 'string'],
             'translations.mk' => ['nullable', 'string'],
             'translations.shq' => ['nullable', 'string'],
+            // Colour lines: which line the product belongs to and its shade in that line.
+            'product_family_id' => ['sometimes', 'nullable', 'integer', 'exists:product_families,id'],
+            'shade_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'shade_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'shade_sort_order' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'swatch' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'remove_swatch' => ['sometimes', 'boolean'],
         ])->validate();
 
         // Auto-update stylist_price if price changed and stylist_price not provided
@@ -133,6 +141,19 @@ class AdminProductController extends Controller
 
         $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product->update($productData);
+
+        $shadeData = collect($validated)->only(['product_family_id', 'shade_code', 'shade_name', 'shade_sort_order'])
+            ->map(fn ($value) => $value === '' ? null : $value)
+            ->all();
+        if ($request->hasFile('swatch')) {
+            $shadeData['swatch_image'] = $request->file('swatch')->store('swatches/uploads', 'public');
+        } elseif (filter_var($validated['remove_swatch'] ?? false, FILTER_VALIDATE_BOOL)) {
+            $shadeData['swatch_image'] = null;
+        }
+        unset($validated['swatch'], $validated['remove_swatch']);
+        if ($shadeData) {
+            $product->forceFill($shadeData)->save();
+        }
 
         // Persist an original plus derived assets; existing products are untouched until replaced.
         if ($request->hasFile('image')) {
@@ -158,6 +179,24 @@ class AdminProductController extends Controller
             [],
             'Product updated successfully'
         );
+    }
+
+    /**
+     * Colour lines a product can be assigned to.
+     */
+    public function families()
+    {
+        $families = ProductFamily::query()
+            ->withCount('products')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (ProductFamily $family) => [
+                'id' => (string) $family->id,
+                'name' => $family->name,
+                'shadeCount' => $family->products_count,
+            ]);
+
+        return ApiResponse::ok($families);
     }
 
     /**

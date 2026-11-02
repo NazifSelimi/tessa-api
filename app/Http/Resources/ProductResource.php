@@ -81,6 +81,8 @@ class ProductResource extends JsonResource
 
             'shadeCode' => $this->shade_code,
             'shadeName' => $this->shade_name,
+            'shadeSortOrder' => $this->shade_sort_order,
+            'shadeFamilyId' => $this->product_family_id ? (string) $this->product_family_id : null,
             'swatch' => $this->swatchUrl(),
             'shadeFamily' => $this->whenLoaded('productFamily', fn () => $this->productFamily ? [
                 'id' => (string) $this->productFamily->id,

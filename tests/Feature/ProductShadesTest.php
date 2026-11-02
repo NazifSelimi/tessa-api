@@ -8,6 +8,9 @@ use App\Models\Product;
 use App\Models\ProductFamily;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -132,5 +135,49 @@ class ProductShadesTest extends TestCase
 
         $card = collect($this->getJson("/api/v1/products?category_id={$this->family->category_id}")->json('data'))->firstWhere('id', (string) $blonde->id);
         $this->assertArrayNotHasKey('catalogue', $card['shadeFamily']);
+    }
+    #[Test]
+    public function admin_can_assign_a_product_to_a_colour_line_and_set_its_shade(): void
+    {
+        Storage::fake('public');
+        $product = Product::factory()->create(['brand_id' => $this->family->brand_id, 'category_id' => $this->family->category_id]);
+        Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]));
+
+        $this->getJson('/api/v1/admin/product-families')
+            ->assertOk()
+            ->assertJsonFragment(['id' => (string) $this->family->id, 'name' => 'Colour Cream']);
+
+        $this->put("/api/v1/admin/products/{$product->id}", [
+            'product_family_id' => $this->family->id,
+            'shade_code' => '7.43',
+            'shade_name' => 'Copper Gold Blonde',
+            'shade_sort_order' => 743,
+            // A real 1x1 PNG: the test server has no GD to draw a fake image.
+            'swatch' => UploadedFile::fake()->createWithContent('swatch.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.shadeCode', '7.43')
+            ->assertJsonPath('data.shadeName', 'Copper Gold Blonde')
+            ->assertJsonPath('data.shadeSortOrder', 743)
+            ->assertJsonPath('data.shadeFamilyId', (string) $this->family->id);
+
+        $product->refresh();
+        $this->assertSame($this->family->id, $product->product_family_id);
+        Storage::disk('public')->assertExists($product->swatch_image);
+
+        $this->put("/api/v1/admin/products/{$product->id}", ['product_family_id' => '', 'remove_swatch' => '1'], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.shadeFamilyId', null)
+            ->assertJsonPath('data.swatch', null);
+    }
+
+    #[Test]
+    public function customers_cannot_edit_shade_fields(): void
+    {
+        $product = $this->shade('9.0', 90);
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->putJson("/api/v1/admin/products/{$product->id}", ['shade_code' => '1.0'])->assertForbidden();
+        $this->assertSame('9.0', $product->fresh()->shade_code);
     }
 }
