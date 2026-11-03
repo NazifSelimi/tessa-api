@@ -96,11 +96,11 @@ class OrderService
 
             // A coupon the profit floor cut to nothing is not used up.
             if ($coupon?->isReferral()) {
-                // Unlimited uses; the stylist is credited even if the floor cut the discount.
+                // Unlimited uses; the credit is what the profit floor leaves room for.
                 $couponId = $coupon->id;
                 $appliedCouponCode = $coupon->code;
                 $order->referral_stylist_id = $coupon->stylist_id;
-                $order->referral_commission = $this->referrals->commission($coupon, $quote['subtotal'] - $quote['discount']);
+                $order->referral_commission = $quote['referralCommission'];
             } elseif ($coupon && $quote['couponDiscount'] > 0) {
                 $coupon->decrement('quantity');
                 $couponId = $coupon->id;

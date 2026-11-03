@@ -251,6 +251,8 @@ class ReferralService
     /** Every referral code with its results, for the admin page. */
     public function adminList(): array
     {
+        $this->ensureCodesForAllStylists();
+
         $coupons = Coupon::query()->whereNotNull('stylist_id')->with('stylist')->orderBy('code')->get();
         $orderStats = Order::query()
             ->whereIn('referral_stylist_id', $coupons->pluck('stylist_id'))
@@ -279,7 +281,19 @@ class ReferralService
         ])->values()->all();
     }
 
-    public function codeData(Coupon $coupon): array
+    /** Give every stylist a code, so admins can print salon cards before they log in. */
+    public function ensureCodesForAllStylists(): int
+    {
+        $missing = User::query()
+            ->where('role', User::ROLE_STYLIST)
+            ->whereNotIn('id', Coupon::query()->whereNotNull('stylist_id')->select('stylist_id'))
+            ->get();
+        $missing->each(fn (User $stylist) => $this->codeFor($stylist));
+
+        return $missing->count();
+    }
+
+        public function codeData(Coupon $coupon): array
     {
         return [
             'id' => (string) $coupon->id,

@@ -21,6 +21,10 @@ class PricingService
     public const FREE_SHIPPING_FROM = 3000.0;
     public const SHIPPING_COST = 150.0;
 
+    public function __construct(
+        private readonly ReferralService $referrals
+    ) {}
+
     public function settings(): array
     {
         return [
@@ -138,10 +142,20 @@ class PricingService
         // discount down also keeps it inside the profit floor.
         $bundleDiscount = $this->wholeDenars($bundleDiscount);
         $couponDiscount = $this->wholeDenars($couponDiscount);
+
+        // A stylist's referral credit is a cost too, so discount plus credit
+        // stay inside the floor: the client discount gives way first, then the credit.
+        $referralCommission = 0.0;
+        if ($coupon?->isReferral()) {
+            ['discount' => $couponDiscount, 'commission' => $referralCommission, 'limited' => $cut]
+                = $this->fitReferral($coupon, $subtotal - $bundleDiscount, $couponDiscount, max(0, $maxDiscount - $bundleDiscount));
+            $limited = $limited || $cut;
+        }
+
         $discount = $bundleDiscount + $couponDiscount;
         $shipping = $subtotal >= self::FREE_SHIPPING_FROM ? 0.0 : self::SHIPPING_COST;
         $revenue = $subtotal - $discount;
-        $profit = $revenue - $cost;
+        $profit = $revenue - $referralCommission - $cost;
 
         return [
             'lines' => $quotedLines,
@@ -157,6 +171,7 @@ class PricingService
             'amountToFreeShipping' => round(max(0, self::FREE_SHIPPING_FROM - $subtotal), 2),
             'total' => round($revenue + $shipping, 2),
             // Admin-only figures; strip before sending to customers.
+            'referralCommission' => $referralCommission,
             'cost' => round($cost, 2),
             'profit' => round($profit, 2),
             'marginPercentage' => $revenue > 0 ? round($profit / $revenue * 100, 1) : null,
@@ -166,7 +181,7 @@ class PricingService
     /** Remove the figures customers must never see. */
     public function forCustomer(array $quote): array
     {
-        unset($quote['cost'], $quote['profit'], $quote['marginPercentage']);
+        unset($quote['cost'], $quote['profit'], $quote['marginPercentage'], $quote['referralCommission']);
         $quote['lines'] = array_map(function (array $line) {
             unset($line['unitCost']);
             return $line;
@@ -248,6 +263,41 @@ class PricingService
     }
 
     /** Round a discount down to whole MKD (the epsilon absorbs float noise like 99.99999). */
+    /**
+     * Largest whole-denar referral discount whose discount plus stylist credit
+     * fits in $room; the credit is cut only when even no discount does not fit.
+     *
+     * @return array{discount: float, commission: float, limited: bool}
+     */
+    private function fitReferral(Coupon $coupon, float $goods, float $discount, float $room): array
+    {
+        $commissionAt = fn (float $d) => $this->referrals->commission($coupon, $goods - $d);
+        $wanted = $discount;
+
+        if ($discount + $commissionAt($discount) > $room + 0.004) {
+            // Uncapped: d + p(goods - d) <= room. Capped: d + cap <= room.
+            $rate = min((float) $coupon->commission_percentage / 100, 0.99);
+            $cap = $this->referrals->settings()['maxCommission'];
+            $fit = ($room - $rate * $goods) / (1 - $rate);
+            if ($cap > 0) {
+                $fit = max($fit, $room - $cap);
+            }
+            $discount = $this->wholeDenars(max(0, min($discount, $fit)));
+            // Commission rounds to whole denars; step down if that tipped it over.
+            while ($discount > 0 && $discount + $commissionAt($discount) > $room + 0.004) {
+                $discount--;
+            }
+        }
+
+        $commission = min($commissionAt($discount), $this->wholeDenars(max(0, $room - $discount)));
+
+        return [
+            'discount' => $discount,
+            'commission' => $commission,
+            'limited' => $discount < $wanted || $commission < $commissionAt($discount),
+        ];
+    }
+
     private function wholeDenars(float $amount): float
     {
         return (float) floor($amount + 0.0001);

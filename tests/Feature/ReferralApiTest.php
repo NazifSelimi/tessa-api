@@ -290,6 +290,50 @@ class ReferralApiTest extends TestCase
     }
 
     #[Test]
+    public function the_stylist_credit_counts_inside_the_profit_floor()
+    {
+        $this->code();
+        // Cost 1600 on a 2000 product: the floor is 1882.35, so only 117.65 may go.
+        Setting::put('pricing.cost_percentage', 80);
+
+        $response = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $order = Order::findOrFail($response->json('data.id'));
+
+        // The discount gives way first (18 instead of 200), the credit stays 5% of 1982.
+        $this->assertEqualsWithDelta(18, (float) $order->discount, 0.01);
+        $this->assertEqualsWithDelta(99, (float) $order->referral_commission, 0.01);
+        $this->assertLessThanOrEqual(117.65, (float) $order->discount + (float) $order->referral_commission);
+    }
+
+    #[Test]
+    public function no_credit_is_earned_on_a_product_with_no_room_above_the_floor()
+    {
+        $this->code();
+        Setting::put('pricing.cost_percentage', 90);
+
+        $response = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $order = Order::findOrFail($response->json('data.id'));
+
+        $this->assertEqualsWithDelta(0, (float) $order->discount, 0.01);
+        $this->assertEqualsWithDelta(0, (float) $order->referral_commission, 0.01);
+        $this->assertSame($this->stylist->id, $order->referral_stylist_id);
+    }
+
+    #[Test]
+    public function the_admin_page_gives_every_stylist_a_code()
+    {
+        $other = User::factory()->create(['role' => User::ROLE_STYLIST, 'first_name' => 'Elena']);
+
+        $codes = $this->withToken($this->admin->createToken('t')->plainTextToken)
+            ->getJson('/api/v1/admin/referrals')->assertOk()->json('data.codes');
+
+        $stylistIds = array_column(array_column($codes, 'stylist'), 'id');
+        $this->assertContains((string) $this->stylist->id, $stylistIds);
+        $this->assertContains((string) $other->id, $stylistIds);
+        $this->assertSame(0, app(ReferralService::class)->ensureCodesForAllStylists());
+    }
+
+    #[Test]
     public function customers_cannot_open_the_stylist_or_admin_referral_pages()
     {
         $customer = User::factory()->create();

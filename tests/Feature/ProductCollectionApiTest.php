@@ -60,7 +60,8 @@ class ProductCollectionApiTest extends TestCase
         ]);
         $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
 
-        $response = $this->actingAs($stylist, 'sanctum')
+        // The public catalogue reads the bearer token itself (ApiUserResolver).
+        $response = $this->withToken($stylist->createToken('t')->plainTextToken)
             ->getJson('/api/v1/products?collection=' . $collection->slug);
 
         $response->assertOk();

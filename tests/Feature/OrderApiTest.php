@@ -74,7 +74,7 @@ class OrderApiTest extends TestCase
         // Check database
         $this->assertDatabaseHas('orders', [
             'user_id' => $user->id,
-            'total' => 250.00, // (100 * 2) + (50 * 1)
+            'total' => 400.00, // (100 * 2) + (50 * 1) + 150 shipping under 3000 MKD
             'status' => Order::STATUS_PENDING,
         ]);
 
@@ -266,10 +266,10 @@ class OrderApiTest extends TestCase
 
         $response->assertStatus(201);
 
-        // Should use stylist price (80.00) instead of regular price (100.00)
+        // Should use stylist price (80.00) instead of regular price (100.00), plus 150 shipping
         $this->assertDatabaseHas('orders', [
             'user_id' => $user->id,
-            'total' => 80.00,
+            'total' => 230.00,
         ]);
 
         $this->assertDatabaseHas('items', [

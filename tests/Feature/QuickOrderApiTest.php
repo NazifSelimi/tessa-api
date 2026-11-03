@@ -6,12 +6,19 @@ use PHPUnit\Framework\Attributes\Test;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class QuickOrderApiTest extends TestCase
 {
     use DatabaseTransactions;
+
+    /** Quick order is a salon tool: only stylists and admins may use it. */
+    private function asStylist(): static
+    {
+        return $this->withToken(User::factory()->create(['role' => User::ROLE_STYLIST])->createToken('t')->plainTextToken);
+    }
 
     private function seedProducts(): array
     {
@@ -32,7 +39,7 @@ class QuickOrderApiTest extends TestCase
         $data = $this->seedProducts();
 
         // Filter by the known category so existing DB rows don't interfere
-        $response = $this->getJson('/api/v1/products/quick-order?category_id=' . $data['category']->id);
+        $response = $this->asStylist()->getJson('/api/v1/products/quick-order?category_id=' . $data['category']->id);
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
@@ -66,7 +73,7 @@ class QuickOrderApiTest extends TestCase
             'name' => 'Straight Serum', 'brand_id' => $brand->id, 'category_id' => $category->id,
         ]);
 
-        $response = $this->getJson('/api/v1/products/quick-order?search=' . urlencode($uniqueName));
+        $response = $this->asStylist()->getJson('/api/v1/products/quick-order?search=' . urlencode($uniqueName));
 
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
@@ -83,7 +90,7 @@ class QuickOrderApiTest extends TestCase
         Product::factory()->count(3)->create(['brand_id' => $brand->id, 'category_id' => $cat1->id]);
         Product::factory()->count(2)->create(['brand_id' => $brand->id, 'category_id' => $cat2->id]);
 
-        $response = $this->getJson('/api/v1/products/quick-order?category_id=' . $cat2->id);
+        $response = $this->asStylist()->getJson('/api/v1/products/quick-order?category_id=' . $cat2->id);
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
@@ -99,7 +106,7 @@ class QuickOrderApiTest extends TestCase
         Product::factory()->create(['name' => 'Color shade', 'brand_id' => $brand->id, 'category_id' => $colorCategory->id]);
         Product::factory()->create(['name' => 'Daily shampoo', 'brand_id' => $brand->id, 'category_id' => $otherCategory->id]);
 
-        $response = $this->getJson('/api/v1/products/quick-order?color_restock=1');
+        $response = $this->asStylist()->getJson('/api/v1/products/quick-order?color_restock=1');
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
@@ -109,8 +116,17 @@ class QuickOrderApiTest extends TestCase
     #[Test]
     public function it_validates_category_id_exists()
     {
-        $response = $this->getJson('/api/v1/products/quick-order?category_id=9999');
+        $response = $this->asStylist()->getJson('/api/v1/products/quick-order?category_id=9999');
 
         $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function customers_cannot_use_quick_order()
+    {
+        $this->getJson('/api/v1/products/quick-order')->assertStatus(401);
+        $customer = User::factory()->create(['role' => User::ROLE_USER]);
+        $this->withToken($customer->createToken('t')->plainTextToken)
+            ->getJson('/api/v1/products/quick-order')->assertStatus(403);
     }
 }
