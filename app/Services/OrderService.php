@@ -14,7 +14,8 @@ use Illuminate\Validation\ValidationException;
 class OrderService
 {
     public function __construct(
-        private readonly PricingService $pricing
+        private readonly PricingService $pricing,
+        private readonly ReferralService $referrals
     ) {}
 
     public function userOrders(User $user)
@@ -72,6 +73,9 @@ class OrderService
             }
 
             $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
+            if ($coupon) {
+                $this->referrals->assertUsable($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
+            }
 
             // Prices, offers and the coupon are recomputed on the server, so a client
             // cannot claim a deal it does not qualify for.
@@ -91,7 +95,13 @@ class OrderService
             $appliedCouponCode = null;
 
             // A coupon the profit floor cut to nothing is not used up.
-            if ($coupon && $quote['couponDiscount'] > 0) {
+            if ($coupon?->isReferral()) {
+                // Unlimited uses; the stylist is credited even if the floor cut the discount.
+                $couponId = $coupon->id;
+                $appliedCouponCode = $coupon->code;
+                $order->referral_stylist_id = $coupon->stylist_id;
+                $order->referral_commission = $this->referrals->commission($coupon, $quote['subtotal'] - $quote['discount']);
+            } elseif ($coupon && $quote['couponDiscount'] > 0) {
                 $coupon->decrement('quantity');
                 $couponId = $coupon->id;
                 $appliedCouponCode = $coupon->code;
@@ -109,12 +119,22 @@ class OrderService
             $shippingCost = $quote['shipping'];
 
             $order->total = $subtotal - $discount + $shippingCost;
+
+            // Store credit pays part of the order; the user row lock keeps two
+            // checkouts from spending the same balance.
+            if ($user && !empty($payload['use_store_credit'])) {
+                User::query()->whereKey($user->id)->lockForUpdate()->first();
+                $order->store_credit_used = min($this->referrals->balance($user), (float) $order->total);
+                $order->total -= $order->store_credit_used;
+            }
+
             $order->discount = $discount;
             $order->shipping = $shippingCost;
             $order->coupon_id = $couponId;
             $order->coupon_code = $appliedCouponCode;
             $order->status = Order::STATUS_PENDING;
             $order->save();
+            $this->referrals->syncOrder($order);
 
             // Snapshot shipping details into order_infos table
             $order->info()->create([
@@ -147,6 +167,7 @@ class OrderService
     public function updateStatus(Order $order, int $status): Order
     {
         $order->update(['status' => $status]);
+        $this->referrals->syncOrder($order);
         return $order;
     }
 
@@ -166,6 +187,7 @@ class OrderService
         return DB::transaction(function () use ($order) {
             $order->status = Order::STATUS_CANCELLED;
             $order->save();
+            $this->referrals->syncOrder($order);
 
             $order->load('items.product');
 

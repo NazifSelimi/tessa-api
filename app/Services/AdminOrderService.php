@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 class AdminOrderService
 {
+    public function __construct(
+        private readonly ReferralService $referrals
+    ) {}
+
     /**
      * Map string status names to the Order model integer constants.
      */
@@ -75,6 +79,7 @@ class AdminOrderService
 
         $previousStatus = $order->status;
         $order->update(['status' => $statusInt]);
+        $this->referrals->syncOrder($order);
 
         try {
             OrderStatusUpdated::dispatch($order, $previousStatus);

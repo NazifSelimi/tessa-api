@@ -66,6 +66,7 @@ class OrderResource extends JsonResource
             'discount' => (float) ($this->discount ?? 0),
             'shipping' => (float) ($this->shipping ?? 0),
             'tax' => (float) ($this->tax ?? 0),
+            'storeCreditUsed' => (float) ($this->store_credit_used ?? 0),
             'total' => (float) $this->total,
             'status' => $status,
             'paymentMethod' => $this->payment_method ?? 'cod',

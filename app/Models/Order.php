@@ -34,6 +34,9 @@ class Order extends Model
         'payment_method',
         'payment_status',
         'tracking_number',
+        'referral_stylist_id',
+        'referral_commission',
+        'store_credit_used',
     ];
 
     protected $casts = [
@@ -42,6 +45,8 @@ class Order extends Model
         'shipping' => 'decimal:2',
         'tax' => 'decimal:2',
         'status' => 'integer',
+        'referral_commission' => 'decimal:2',
+        'store_credit_used' => 'decimal:2',
     ];
 
 
@@ -57,6 +62,11 @@ class Order extends Model
     public function coupon()
     {
         return $this->belongsTo(Coupon::class, 'coupon_id');
+    }
+
+    public function referralStylist()
+    {
+        return $this->belongsTo(User::class, 'referral_stylist_id');
     }
 
     public function info(): HasOne

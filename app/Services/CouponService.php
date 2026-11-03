@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Coupon;
+use Illuminate\Validation\ValidationException;
 
 class CouponService
 {
@@ -11,7 +12,8 @@ class CouponService
      */
     public function listFiltered(array $filters, int $perPage = 20)
     {
-        $query = Coupon::query();
+        // Stylist referral codes have their own admin page.
+        $query = Coupon::query()->whereNull('stylist_id');
 
         if (!empty($filters['search'])) {
             $query->where('code', 'like', '%' . $filters['search'] . '%');
@@ -107,6 +109,16 @@ class CouponService
             return [
                 'valid' => false,
                 'error' => 'Coupon is expired or has been fully used',
+                'errorCode' => 422,
+            ];
+        }
+
+        try {
+            app(ReferralService::class)->assertUsable($coupon, $user);
+        } catch (ValidationException $e) {
+            return [
+                'valid' => false,
+                'error' => $e->errors()['coupon_code'][0],
                 'errorCode' => 422,
             ];
         }

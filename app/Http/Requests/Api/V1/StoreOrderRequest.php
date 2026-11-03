@@ -22,6 +22,7 @@ class StoreOrderRequest extends FormRequest
 
             'custom_message' => ['nullable', 'string', 'max:1000'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
+            'use_store_credit' => ['nullable', 'boolean'],
             'bundle_ids' => ['nullable', 'array'],
             'bundle_ids.*' => ['integer', 'distinct', 'exists:bundles,id'],
 

@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\V1\Admin\AdminReportController;
 use App\Http\Controllers\Api\V1\Stylist\StylistCodeController;
 use App\Http\Controllers\Api\V1\Stylist\StylistDashboardController;
 use App\Http\Controllers\Api\V1\Stylist\StylistOrderController;
+use App\Http\Controllers\Api\V1\Stylist\StylistReferralController;
+use App\Http\Controllers\Api\V1\Admin\AdminReferralController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -180,6 +182,13 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/reports/sales', [AdminReportController::class, 'sales']);
             Route::get('/reports/products', [AdminReportController::class, 'products']);
             
+            // Stylist referral codes and store credit
+            Route::get('/referrals', [AdminReferralController::class, 'index']);
+            Route::post('/referrals', [AdminReferralController::class, 'store']);
+            Route::put('/referrals/settings', [AdminReferralController::class, 'updateSettings']);
+            Route::put('/referrals/{coupon}', [AdminReferralController::class, 'update']);
+            Route::post('/users/{user}/store-credit', [AdminReferralController::class, 'adjustCredit']);
+
             // Distributor Codes
             Route::get('/distributor-codes', [AdminDistributorController::class, 'index']);
             Route::get('/distributor-codes/stats', [AdminDistributorController::class, 'stats']);
@@ -198,6 +207,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             
             // Orders
             Route::get('/orders', [StylistOrderController::class, 'index']);
+
+            // Referral code for clients and the store credit it earns
+            Route::get('/referral', [StylistReferralController::class, 'show']);
+            Route::put('/referral', [StylistReferralController::class, 'update']);
         });
     });
 });
