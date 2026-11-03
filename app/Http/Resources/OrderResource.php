@@ -82,6 +82,12 @@ class OrderResource extends JsonResource
             ],
             'customMessage' => $this->message,
             'couponCode' => $this->coupon?->code ?? $this->coupon_code,
+            // Only the admin order queries load the stylist, so customers never see this.
+            'referral' => $this->referral_stylist_id && $this->relationLoaded('referralStylist') ? [
+                'stylistId' => (string) $this->referral_stylist_id,
+                'stylistName' => trim(($this->referralStylist?->first_name ?? '') . ' ' . ($this->referralStylist?->last_name ?? '')),
+                'commission' => (float) $this->referral_commission,
+            ] : null,
             'trackingNumber' => $this->tracking_number,
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),

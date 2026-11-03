@@ -45,11 +45,11 @@ class PricingApiTest extends TestCase
         $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'quantity' => 10]);
         $coupon = $this->coupon(['code' => 'HALF', 'type' => 'percentage', 'value' => 50]);
 
-        // Cost 650, floor 650 / 0.85 = 764.71, so at most 235.29 off.
+        // Cost 650, floor 650 / 0.85 = 764.71, so at most 235.29 off, rounded down to whole MKD.
         $response = $this->checkout(['items' => [['product_id' => $product->id, 'qty' => 1]], 'coupon_code' => 'HALF']);
 
         $response->assertStatus(201);
-        $this->assertEqualsWithDelta(235.29, (float) $response->json('data.discount'), 0.01);
+        $this->assertSame(235.0, (float) $response->json('data.discount'));
         $this->assertSame(4, $coupon->fresh()->quantity);
     }
 
@@ -117,9 +117,9 @@ class PricingApiTest extends TestCase
             'coupon_code' => 'HALF',
         ])->assertOk()->json('data');
 
-        $this->assertEqualsWithDelta(235.29, $quote['discount'], 0.01);
+        $this->assertSame(235.0, (float) $quote['discount']);
         $this->assertTrue($quote['discountLimited']);
-        $this->assertEqualsWithDelta(1000 - 235.29 + 150, $quote['total'], 0.01);
+        $this->assertSame(1000.0 - 235 + 150, (float) $quote['total']);
         $this->assertSame(2000.0, (float) $quote['amountToFreeShipping']);
         $this->assertArrayNotHasKey('cost', $quote);
         $this->assertArrayNotHasKey('profit', $quote);
@@ -163,7 +163,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(1050.0, (float) $retail['offerPrice']);
         $this->assertSame(975.0, (float) $retail['cost']);
         $this->assertTrue($retail['limitedByProfitFloor']);
-        $this->assertEqualsWithDelta(352.94, $retail['appliedSaving'], 0.01); // 1500 - 975 / 0.85
+        $this->assertSame(352.0, (float) $retail['appliedSaving']); // 1500 - 975 / 0.85, whole MKD
         $this->assertSame(0.0, (float) $result['salon']['appliedSaving']);
     }
 

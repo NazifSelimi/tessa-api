@@ -93,6 +93,11 @@ class ReferralApiTest extends TestCase
         $this->assertSame(0.0, $this->balance($this->stylist));
 
         $this->setStatus($order->id, 'confirmed');
+        $this->withToken($this->admin->createToken('t')->plainTextToken)
+            ->getJson('/api/v1/admin/orders')
+            ->assertJsonPath('data.0.couponCode', 'ANA10')
+            ->assertJsonPath('data.0.referral.stylistName', trim($this->stylist->first_name . ' ' . $this->stylist->last_name))
+            ->assertJsonPath('data.0.referral.commission', 90);
         $this->setStatus($order->id, 'shipped');
         $this->assertEqualsWithDelta(90, $this->balance($this->stylist), 0.01);
 

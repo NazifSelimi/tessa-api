@@ -27,7 +27,7 @@ class AdminOrderService
      */
     public function listFiltered(array $filters, int $perPage = 20)
     {
-        $query = Order::with(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon']);
+        $query = Order::with(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
 
         if (!empty($filters['status'])) {
             $statusInt = self::STATUS_MAP[$filters['status']] ?? null;
@@ -90,6 +90,6 @@ class AdminOrderService
             ]);
         }
 
-        return $order->load(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon']);
+        return $order->load(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
     }
 }

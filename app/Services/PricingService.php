@@ -134,8 +134,10 @@ class PricingService
             $couponDiscount = max(0, min($couponDiscount, $maxDiscount - $bundleDiscount));
         }
 
-        $bundleDiscount = round($bundleDiscount, 2);
-        $couponDiscount = round($couponDiscount, 2);
+        // Whole denars: prices are whole, so totals stay whole too. Rounding the
+        // discount down also keeps it inside the profit floor.
+        $bundleDiscount = $this->wholeDenars($bundleDiscount);
+        $couponDiscount = $this->wholeDenars($couponDiscount);
         $discount = $bundleDiscount + $couponDiscount;
         $shipping = $subtotal >= self::FREE_SHIPPING_FROM ? 0.0 : self::SHIPPING_COST;
         $revenue = $subtotal - $discount;
@@ -228,11 +230,11 @@ class PricingService
                 'unpricedProducts' => $unpriced,
                 'regularPrice' => round($regular, 2),
                 'offerPrice' => round($regular - $saving, 2),
-                'saving' => round($saving, 2),
+                'saving' => $this->wholeDenars($saving),
                 'savingPercentage' => $regular > 0 ? round($saving / $regular * 100, 1) : 0,
                 'cost' => round($cost, 2),
                 'lowestAllowedPrice' => round($floor, 2),
-                'appliedSaving' => round($applied, 2),
+                'appliedSaving' => $this->wholeDenars($applied),
                 'limitedByProfitFloor' => $saving > $applied + 0.004,
                 'profitBefore' => round($profitBefore, 2),
                 'profitAfter' => round($profitAfter, 2),
@@ -243,6 +245,12 @@ class PricingService
         }
 
         return $result;
+    }
+
+    /** Round a discount down to whole MKD (the epsilon absorbs float noise like 99.99999). */
+    private function wholeDenars(float $amount): float
+    {
+        return (float) floor($amount + 0.0001);
     }
 
     private function bundleDiscount(array $bundleIds, array $quantities, array $prices, ?User $user, bool $strict): array

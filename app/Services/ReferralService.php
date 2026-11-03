@@ -141,10 +141,10 @@ class ReferralService
         }
     }
 
-    /** Commission on what the client pays for the goods (after discounts, without shipping). */
+    /** Commission in whole MKD on what the client pays for the goods (after discounts, without shipping). */
     public function commission(Coupon $coupon, float $goodsTotal): float
     {
-        return round(max(0, $goodsTotal) * (float) $coupon->commission_percentage / 100, 2);
+        return round(max(0, $goodsTotal) * (float) $coupon->commission_percentage / 100);
     }
 
     public function balance(User $user): float
