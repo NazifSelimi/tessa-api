@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Events\StylistRequestApproved;
 use App\Events\StylistRequestRejected;
 use App\Events\StylistRequestSubmitted;
@@ -21,7 +22,7 @@ class StylistRequestEmailTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function submitting_a_stylist_request_dispatches_event_and_sends_admin_and_user_emails()
     {
         Mail::fake();
@@ -66,7 +67,7 @@ class StylistRequestEmailTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function approving_a_stylist_request_dispatches_event_and_sends_status_email()
     {
         Mail::fake();
@@ -104,7 +105,7 @@ class StylistRequestEmailTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function rejecting_a_stylist_request_dispatches_event_and_sends_status_email()
     {
         Mail::fake();

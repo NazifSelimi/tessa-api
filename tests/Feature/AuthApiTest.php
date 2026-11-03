@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
@@ -11,7 +12,7 @@ class AuthApiTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function it_registers_a_new_user()
     {
         $data = [
@@ -44,7 +45,7 @@ class AuthApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_registration_data()
     {
         $response = $this->postJson('/api/v1/auth/register', [
@@ -57,7 +58,7 @@ class AuthApiTest extends TestCase
         $response->assertJsonValidationErrors(['email', 'password']);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_in_a_user()
     {
         $user = User::factory()->create([
@@ -80,7 +81,7 @@ class AuthApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_fails_login_with_invalid_credentials()
     {
         User::factory()->create([
@@ -96,7 +97,7 @@ class AuthApiTest extends TestCase
         $response->assertStatus(422);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_authenticated_user_details()
     {
         $user = User::factory()->create();
@@ -109,7 +110,7 @@ class AuthApiTest extends TestCase
         $response->assertJsonPath('data.email', $user->email);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_out_a_user()
     {
         $user = User::factory()->create();
@@ -127,7 +128,7 @@ class AuthApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_user_profile()
     {
         $user = User::factory()->create([
@@ -155,7 +156,7 @@ class AuthApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_a_duplicate_normalized_phone_number(): void
     {
         User::factory()->create([
@@ -178,7 +179,7 @@ class AuthApiTest extends TestCase
         $response->assertJsonValidationErrors(['phone']);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_password_when_the_current_password_is_valid()
     {
         $user = User::factory()->create([
@@ -196,7 +197,7 @@ class AuthApiTest extends TestCase
         $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_password_changes_with_an_invalid_current_password()
     {
         $user = User::factory()->create([

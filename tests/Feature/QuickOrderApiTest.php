@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -25,7 +26,7 @@ class QuickOrderApiTest extends TestCase
         return compact('brand', 'category', 'products');
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_paginated_minimal_product_payload()
     {
         $data = $this->seedProducts();
@@ -51,7 +52,7 @@ class QuickOrderApiTest extends TestCase
         $this->assertArrayNotHasKey('category', $firstItem);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_by_search()
     {
         $brand    = Brand::factory()->create();
@@ -72,7 +73,7 @@ class QuickOrderApiTest extends TestCase
         $this->assertEquals($uniqueName, $response->json('data.0.name'));
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_by_category_id()
     {
         $brand = Brand::factory()->create();
@@ -88,7 +89,7 @@ class QuickOrderApiTest extends TestCase
         $this->assertCount(2, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_quick_restock_to_color_categories()
     {
         $brand = Brand::factory()->create();
@@ -105,7 +106,7 @@ class QuickOrderApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'Color shade');
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_category_id_exists()
     {
         $response = $this->getJson('/api/v1/products/quick-order?category_id=9999');

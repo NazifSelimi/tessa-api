@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Brand;
@@ -13,7 +14,7 @@ class ProductApiTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function it_lists_products_with_pagination()
     {
         $brand = Brand::factory()->create(['name' => 'TestBrand']);
@@ -39,7 +40,7 @@ class ProductApiTest extends TestCase
         $this->assertGreaterThanOrEqual(25, $response->json('meta.total'));
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_products_by_category()
     {
         $category1 = Category::factory()->create();
@@ -61,7 +62,7 @@ class ProductApiTest extends TestCase
         $this->assertCount(5, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_searches_products_by_name()
     {
         $brand = Brand::factory()->create();
@@ -85,7 +86,7 @@ class ProductApiTest extends TestCase
         $this->assertCount(1, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_single_product_details()
     {
         $brand = Brand::factory()->create();
@@ -106,7 +107,7 @@ class ProductApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_featured_products()
     {
         $brand = Brand::factory()->create();

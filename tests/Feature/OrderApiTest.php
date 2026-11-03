@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Order;
@@ -14,7 +15,7 @@ class OrderApiTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function it_creates_an_order_for_authenticated_user()
     {
         $user = User::factory()->create();
@@ -95,7 +96,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_order_creation_data()
     {
         $user = User::factory()->create();
@@ -110,7 +111,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['items', 'shipping_address']);
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_order_with_insufficient_stock()
     {
         $user = User::factory()->create();
@@ -147,7 +148,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['items']);
     }
 
-    /** @test */
+    #[Test]
     public function it_lists_user_orders()
     {
         $user = User::factory()->create();
@@ -168,7 +169,7 @@ class OrderApiTest extends TestCase
         $this->assertCount(3, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_single_order_details()
     {
         $user = User::factory()->create();
@@ -186,7 +187,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_cancels_pending_order()
     {
         $user = User::factory()->create();
@@ -208,7 +209,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_cannot_cancel_non_pending_order()
     {
         $user = User::factory()->create();
@@ -225,7 +226,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['order']);
     }
 
-    /** @test */
+    #[Test]
     public function it_applies_stylist_pricing_for_stylist_users()
     {
         $user = User::factory()->create([

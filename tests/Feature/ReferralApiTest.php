@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
@@ -66,7 +67,7 @@ class ReferralApiTest extends TestCase
         return app(ReferralService::class)->balance($user);
     }
 
-    /** @test */
+    #[Test]
     public function a_stylist_gets_a_code_from_their_first_name()
     {
         $code = $this->code();
@@ -77,7 +78,7 @@ class ReferralApiTest extends TestCase
         $this->assertSame($code->id, $this->code()->id);
     }
 
-    /** @test */
+    #[Test]
     public function a_client_gets_the_discount_and_the_stylist_earns_credit_once_the_order_is_confirmed()
     {
         $this->code();
@@ -106,7 +107,7 @@ class ReferralApiTest extends TestCase
         $this->assertSame(2, StoreCreditTransaction::where('order_id', $order->id)->count());
     }
 
-    /** @test */
+    #[Test]
     public function a_first_order_code_is_refused_for_a_returning_client_by_email_or_phone()
     {
         $this->code();
@@ -122,7 +123,7 @@ class ReferralApiTest extends TestCase
             ->assertStatus(201);
     }
 
-    /** @test */
+    #[Test]
     public function a_code_can_be_used_on_every_order_when_it_is_not_first_order_only()
     {
         $this->code()->update(['first_order_only' => false]);
@@ -133,7 +134,7 @@ class ReferralApiTest extends TestCase
         $this->assertSame(2, Order::where('referral_stylist_id', $this->stylist->id)->count());
     }
 
-    /** @test */
+    #[Test]
     public function salon_accounts_cannot_use_a_referral_code()
     {
         $this->code();
@@ -143,7 +144,7 @@ class ReferralApiTest extends TestCase
         $this->checkout(['coupon_code' => 'ANA10'], $other)->assertStatus(422);
     }
 
-    /** @test */
+    #[Test]
     public function a_switched_off_code_is_refused()
     {
         $this->code()->update(['is_active' => false]);
@@ -151,7 +152,7 @@ class ReferralApiTest extends TestCase
         $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(422);
     }
 
-    /** @test */
+    #[Test]
     public function a_stylist_pays_with_store_credit_and_gets_it_back_if_the_order_is_cancelled()
     {
         app(ReferralService::class)->adjust($this->stylist, 500, 'Welcome credit', $this->admin);
@@ -170,7 +171,7 @@ class ReferralApiTest extends TestCase
         $this->assertEqualsWithDelta(500, $this->balance($this->stylist), 0.01);
     }
 
-    /** @test */
+    #[Test]
     public function store_credit_never_pays_more_than_the_order()
     {
         app(ReferralService::class)->adjust($this->stylist, 5000, 'Payout', $this->admin);
@@ -181,7 +182,7 @@ class ReferralApiTest extends TestCase
         $this->assertEqualsWithDelta(3650, $this->balance($this->stylist), 0.01);
     }
 
-    /** @test */
+    #[Test]
     public function a_negative_balance_never_raises_what_the_stylist_pays()
     {
         $this->code();
@@ -200,7 +201,7 @@ class ReferralApiTest extends TestCase
         $this->assertEqualsWithDelta(1350, (float) $response->json('data.total'), 0.01);
     }
 
-    /** @test */
+    #[Test]
     public function the_cart_preview_shows_credit_and_explains_a_refused_code()
     {
         $this->code();
@@ -219,7 +220,7 @@ class ReferralApiTest extends TestCase
         $this->assertEqualsWithDelta(1050, (float) $response->json('data.totalToPay'), 0.01);
     }
 
-    /** @test */
+    #[Test]
     public function the_stylist_page_shows_results_and_lets_them_rename_the_code()
     {
         $this->code();
@@ -241,7 +242,7 @@ class ReferralApiTest extends TestCase
             ->assertOk()->assertJsonPath('data.code.code', 'ANA-SALON');
     }
 
-    /** @test */
+    #[Test]
     public function admins_change_the_terms_for_new_codes_or_for_every_code()
     {
         $code = $this->code();
@@ -260,7 +261,7 @@ class ReferralApiTest extends TestCase
         $this->assertFalse($code->first_order_only);
     }
 
-    /** @test */
+    #[Test]
     public function customers_cannot_open_the_stylist_or_admin_referral_pages()
     {
         $customer = User::factory()->create();

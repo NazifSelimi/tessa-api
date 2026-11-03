@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Bundle;
 use App\Models\Coupon;
 use App\Models\Product;
@@ -39,7 +40,7 @@ class PricingApiTest extends TestCase
         return Coupon::factory()->create($attributes + ['quantity' => 5, 'expiration_date' => now()->addMonth()]);
     }
 
-    /** @test */
+    #[Test]
     public function a_coupon_cannot_take_a_retail_order_below_cost_plus_margin()
     {
         $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'quantity' => 10]);
@@ -53,7 +54,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(4, $coupon->fresh()->quantity);
     }
 
-    /** @test */
+    #[Test]
     public function a_known_purchase_cost_allows_a_bigger_discount()
     {
         $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'cost_price' => 400, 'quantity' => 10]);
@@ -65,7 +66,7 @@ class PricingApiTest extends TestCase
         $this->assertEqualsWithDelta(500, (float) $response->json('data.discount'), 0.01);
     }
 
-    /** @test */
+    #[Test]
     public function a_coupon_cut_to_nothing_is_not_used_up()
     {
         $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
@@ -80,7 +81,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(5, $coupon->fresh()->quantity);
     }
 
-    /** @test */
+    #[Test]
     public function a_sale_above_the_salon_price_is_not_charged_to_salons()
     {
         $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
@@ -93,7 +94,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(750.0, (float) $response->json('data.total')); // 600 + 150 shipping
     }
 
-    /** @test */
+    #[Test]
     public function repeated_lines_of_one_product_cannot_oversell()
     {
         $product = Product::factory()->create(['price' => 100, 'stylist_price' => 60, 'quantity' => 3]);
@@ -106,7 +107,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(3, $product->fresh()->quantity);
     }
 
-    /** @test */
+    #[Test]
     public function the_cart_quote_matches_checkout_and_hides_costs_from_customers()
     {
         $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'quantity' => 10]);
@@ -126,7 +127,7 @@ class PricingApiTest extends TestCase
         $this->assertArrayNotHasKey('unitCost', $quote['lines'][0]);
     }
 
-    /** @test */
+    #[Test]
     public function the_cart_quote_reports_a_bad_coupon_and_an_unmet_offer_without_failing()
     {
         $product = Product::factory()->create(['price' => 100, 'stylist_price' => 60, 'quantity' => 10]);
@@ -145,7 +146,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(0.0, (float) $quote['discount']);
     }
 
-    /** @test */
+    #[Test]
     public function admins_see_the_profit_of_an_offer_before_saving_it()
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
@@ -167,7 +168,7 @@ class PricingApiTest extends TestCase
         $this->assertSame(0.0, (float) $result['salon']['appliedSaving']);
     }
 
-    /** @test */
+    #[Test]
     public function only_admins_can_use_the_offer_calculator_and_settings()
     {
         $this->postJson('/api/v1/admin/bundles/simulate', [])->assertStatus(401);

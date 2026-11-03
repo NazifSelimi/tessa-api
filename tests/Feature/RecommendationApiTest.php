@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Brand;
 use App\Models\Bundle;
 use App\Models\Category;
@@ -37,7 +38,7 @@ class RecommendationApiTest extends TestCase
     /* TESTS – scoring logic                             */
     /* ------------------------------------------------- */
 
-    /** @test */
+    #[Test]
     public function it_returns_products_sorted_by_recommendation_score_descending()
     {
         $d = $this->seedHairData();
@@ -78,7 +79,7 @@ class RecommendationApiTest extends TestCase
         $this->assertEquals(['Product A', 'Product B', 'Product C'], $names);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_empty_products_when_no_matches()
     {
         $hairType = HairType::factory()->create(['name' => 'Straight']);
@@ -99,7 +100,7 @@ class RecommendationApiTest extends TestCase
     /* TESTS – bundle inclusion                          */
     /* ------------------------------------------------- */
 
-    /** @test */
+    #[Test]
     public function it_includes_matching_static_bundles()
     {
         $d = $this->seedHairData();
@@ -126,7 +127,7 @@ class RecommendationApiTest extends TestCase
             ->assertJsonPath('data.bundles.0.name', 'Curly Care Bundle');
     }
 
-    /** @test */
+    #[Test]
     public function it_generates_dynamic_bundle_when_no_static_bundles_exist()
     {
         $d = $this->seedHairData();
@@ -155,7 +156,7 @@ class RecommendationApiTest extends TestCase
     /* TESTS – validation failures                       */
     /* ------------------------------------------------- */
 
-    /** @test */
+    #[Test]
     public function it_validates_required_fields()
     {
         $response = $this->postJson('/api/v1/recommendations', []);
@@ -164,7 +165,7 @@ class RecommendationApiTest extends TestCase
             ->assertJsonValidationErrors(['hair_type_id', 'concerns']);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_hair_type_exists()
     {
         $concern = HairConcern::factory()->create();
@@ -178,7 +179,7 @@ class RecommendationApiTest extends TestCase
             ->assertJsonValidationErrors(['hair_type_id']);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_budget_range_format()
     {
         $hairType = HairType::factory()->create();
@@ -194,7 +195,7 @@ class RecommendationApiTest extends TestCase
             ->assertJsonValidationErrors(['budget_range']);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_products_by_budget_range()
     {
         $d = $this->seedHairData();
