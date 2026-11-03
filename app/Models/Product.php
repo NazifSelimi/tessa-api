@@ -159,16 +159,16 @@ class Product extends Model
 
     public function resolvePrice(bool $isStylist = false): float
     {
-        // Sale overrides everything
-        if ($this->hasActiveSale()) {
-            return (float) $this->sale->sale_price;
+        $regular = (float) ($isStylist ? $this->stylist_price : $this->price);
+
+        // A sale may only lower the price. Salons keep their own price when it
+        // is already below the sale, and a sale never makes an unpriced row
+        // purchasable for that audience.
+        if ($regular > 0 && $this->hasActiveSale() && (float) $this->sale->sale_price > 0) {
+            return min($regular, (float) $this->sale->sale_price);
         }
 
-        return (float) (
-        $isStylist
-            ? $this->stylist_price
-            : $this->price
-        );
+        return $regular;
     }
 
     /**
