@@ -39,8 +39,12 @@ class ReferralService
         ];
     }
 
-    /** Defaults for codes created from now on; existing codes keep their own values. */
-    public function updateSettings(array $values): array
+    /**
+     * Defaults for codes created from now on. With $applyToExisting every
+     * stylist's code takes the new terms too (orders already placed keep the
+     * commission they were placed with).
+     */
+    public function updateSettings(array $values, bool $applyToExisting = false): array
     {
         if (array_key_exists('discountPercentage', $values)) {
             Setting::put('referral.discount_percentage', (float) $values['discountPercentage']);
@@ -50,6 +54,15 @@ class ReferralService
         }
         if (array_key_exists('firstOrderOnly', $values)) {
             Setting::put('referral.first_order_only', $values['firstOrderOnly'] ? 1 : 0);
+        }
+
+        if ($applyToExisting) {
+            $settings = $this->settings();
+            Coupon::query()->whereNotNull('stylist_id')->update([
+                'value' => (int) round($settings['discountPercentage']),
+                'commission_percentage' => $settings['commissionPercentage'],
+                'first_order_only' => $settings['firstOrderOnly'],
+            ]);
         }
 
         return $this->settings();

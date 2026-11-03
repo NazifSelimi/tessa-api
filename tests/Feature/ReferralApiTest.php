@@ -237,6 +237,25 @@ class ReferralApiTest extends TestCase
     }
 
     /** @test */
+    public function admins_change_the_terms_for_new_codes_or_for_every_code()
+    {
+        $code = $this->code();
+        $token = $this->admin->createToken('t')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['discountPercentage' => 15, 'commissionPercentage' => 7])
+            ->assertOk()->assertJsonPath('data.discountPercentage', 15);
+        $this->assertSame(10, $code->fresh()->value);
+
+        $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', [
+            'discountPercentage' => 12, 'commissionPercentage' => 6, 'firstOrderOnly' => false, 'applyToExisting' => true,
+        ])->assertOk();
+        $code->refresh();
+        $this->assertSame(12, $code->value);
+        $this->assertEqualsWithDelta(6, (float) $code->commission_percentage, 0.001);
+        $this->assertFalse($code->first_order_only);
+    }
+
+    /** @test */
     public function customers_cannot_open_the_stylist_or_admin_referral_pages()
     {
         $customer = User::factory()->create();

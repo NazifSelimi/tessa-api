@@ -30,9 +30,13 @@ class AdminReferralController extends Controller
             'discountPercentage' => ['sometimes', 'numeric', 'min:0', 'max:50'],
             'commissionPercentage' => ['sometimes', 'numeric', 'min:0', 'max:30'],
             'firstOrderOnly' => ['sometimes', 'boolean'],
+            'applyToExisting' => ['sometimes', 'boolean'],
         ]);
 
-        return ApiResponse::ok($this->referrals->updateSettings($validated));
+        return ApiResponse::ok($this->referrals->updateSettings(
+            $validated,
+            (bool) ($validated['applyToExisting'] ?? false)
+        ));
     }
 
     /** Create a stylist's code ahead of time, e.g. to print their salon card. */
