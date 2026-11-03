@@ -69,7 +69,7 @@ class CartQuoteController extends Controller
         // Store credit is a way to pay, not a discount: it does not touch the profit floor.
         $quote['storeCreditAvailable'] = $user ? $this->referrals->balance($user) : 0.0;
         $quote['storeCreditUsed'] = !empty($validated['use_store_credit'])
-            ? round(min($quote['storeCreditAvailable'], $quote['total']), 2)
+            ? round(max(0, min($quote['storeCreditAvailable'], $quote['total'])), 2)
             : 0.0;
         $quote['totalToPay'] = round($quote['total'] - $quote['storeCreditUsed'], 2);
 

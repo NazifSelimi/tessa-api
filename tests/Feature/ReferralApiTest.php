@@ -177,6 +177,25 @@ class ReferralApiTest extends TestCase
     }
 
     /** @test */
+    public function a_negative_balance_never_raises_what_the_stylist_pays()
+    {
+        $this->code();
+        $orderId = $this->checkout(['coupon_code' => 'ANA10'])->json('data.id');
+        $this->setStatus($orderId, 'confirmed');
+        $this->app['auth']->forgetGuards();
+        $this->checkout(['use_store_credit' => true], $this->stylist)->assertStatus(201);
+        $this->app['auth']->forgetGuards();
+        $this->setStatus($orderId, 'cancelled');
+        $this->assertEqualsWithDelta(-90, $this->balance($this->stylist), 0.01);
+
+        $this->app['auth']->forgetGuards();
+        $response = $this->checkout(['use_store_credit' => true], $this->stylist);
+
+        $this->assertSame(0.0, (float) $response->json('data.storeCreditUsed'));
+        $this->assertEqualsWithDelta(1350, (float) $response->json('data.total'), 0.01);
+    }
+
+    /** @test */
     public function the_cart_preview_shows_credit_and_explains_a_refused_code()
     {
         $this->code();

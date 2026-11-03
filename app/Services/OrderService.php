@@ -124,7 +124,9 @@ class OrderService
             // checkouts from spending the same balance.
             if ($user && !empty($payload['use_store_credit'])) {
                 User::query()->whereKey($user->id)->lockForUpdate()->first();
-                $order->store_credit_used = min($this->referrals->balance($user), (float) $order->total);
+                // A negative balance (credit spent, then the client order was cancelled) is a
+                // debt future commission pays off; it never adds to what the stylist pays.
+                $order->store_credit_used = max(0, min($this->referrals->balance($user), (float) $order->total));
                 $order->total -= $order->store_credit_used;
             }
 
