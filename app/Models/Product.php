@@ -33,12 +33,17 @@ class Product extends Model
         'quantity',
         'price',
         'stylist_price',
+        'cost_price',
         'stylist_only',
     ];
+
+    // Purchase cost is admin-only; ProductResource adds it for admins.
+    protected $hidden = ['cost_price'];
 
     protected $casts = [
         'price' => 'decimal:2',
         'stylist_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'quantity' => 'integer',
         'stylist_only' => 'boolean',
     ];

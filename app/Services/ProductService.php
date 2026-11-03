@@ -303,6 +303,7 @@ class ProductService
             'quantity',
             'price',
             'stylist_price',
+            'cost_price',
             'stylist_only',
         ])->toArray();
     }

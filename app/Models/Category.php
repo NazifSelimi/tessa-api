@@ -13,10 +13,14 @@ class Category extends Model
     protected $fillable = [
         'name',
         'sort_priority',
+        'cost_percentage',
     ];
+
+    protected $hidden = ['cost_percentage'];
 
     protected $casts = [
         'sort_priority' => 'integer',
+        'cost_percentage' => 'decimal:2',
     ];
 
     public function products(): HasMany

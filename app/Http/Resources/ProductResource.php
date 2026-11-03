@@ -59,6 +59,7 @@ class ProductResource extends JsonResource
             'price' => (float) $this->price,
             'stylistPrice' => (float) $this->stylist_price,
             'stylistOnly' => (bool) $this->stylist_only,
+            'costPrice' => $this->when($isAdmin, fn () => $this->cost_price === null ? null : (float) $this->cost_price),
             // Only admins ever receive products in review; see Product::scopeReadyForSale().
             'inReview' => $reviewReasons === null ? null : $reviewReasons !== [],
             'reviewReasons' => $reviewReasons,

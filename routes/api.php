@@ -33,6 +33,8 @@ use App\Http\Controllers\Api\V1\Admin\AdminContentBlockController;
 use App\Http\Controllers\Api\V1\BundleController;
 use App\Http\Controllers\Api\V1\HairProfileOptionController;
 use App\Http\Controllers\Api\V1\Admin\AdminBundleController;
+use App\Http\Controllers\Api\V1\Admin\AdminPricingController;
+use App\Http\Controllers\Api\V1\CartQuoteController;
 use App\Http\Controllers\Api\V1\Admin\CatalogImageCandidateController;
 use App\Http\Controllers\Api\V1\Admin\HairQuizController;
 
@@ -80,6 +82,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         ->middleware('signed')
         ->name('admin.catalog-image-candidates.preview');
     Route::post('/checkout', [CheckoutController::class, 'checkout']);
+    Route::post('/cart/quote', CartQuoteController::class);
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -142,6 +145,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::post('/bundles', [AdminBundleController::class, 'store']);
             Route::put('/bundles/{bundle}', [AdminBundleController::class, 'update']);
             Route::delete('/bundles/{bundle}', [AdminBundleController::class, 'destroy']);
+            Route::post('/bundles/simulate', [AdminPricingController::class, 'simulateOffer']);
+            Route::get('/pricing-settings', [AdminPricingController::class, 'settings']);
+            Route::put('/pricing-settings', [AdminPricingController::class, 'updateSettings']);
             
             // Coupon Management
             Route::get('/coupons', [AdminCouponController::class, 'index']);

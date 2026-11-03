@@ -53,6 +53,7 @@ class AdminProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'min:0'],
             'stylist_price' => ['nullable', 'numeric', 'min:0'],
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
             'quantity' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
@@ -111,6 +112,7 @@ class AdminProductController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'stylist_price' => ['sometimes', 'numeric', 'min:0'],
+            'cost_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
@@ -134,12 +136,13 @@ class AdminProductController extends Controller
             'remove_swatch' => ['sometimes', 'boolean'],
         ])->validate();
 
-        // Auto-update stylist_price if price changed and stylist_price not provided
-        if (isset($validated['price']) && !isset($validated['stylist_price'])) {
+        // Fill a missing salon price from the new retail price, but never overwrite
+        // a salon price that is already set.
+        if (isset($validated['price']) && !isset($validated['stylist_price']) && (float) $product->stylist_price <= 0) {
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
+        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'cost_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
         $product->update($productData);
 
         $shadeData = collect($validated)->only(['product_family_id', 'shade_code', 'shade_name', 'shade_sort_order'])
@@ -302,6 +305,7 @@ class AdminProductController extends Controller
             'categoryId' => 'category_id',
             'brandId' => 'brand_id',
             'stylistPrice' => 'stylist_price',
+            'costPrice' => 'cost_price',
             'stylistOnly' => 'stylist_only',
             'normalizeCatalogBackground' => 'normalize_catalog_background',
         ];

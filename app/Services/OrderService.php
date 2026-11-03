@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Events\OrderPlaced;
 use App\Models\Coupon;
-use App\Models\Bundle;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -14,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    public function __construct(
+        private readonly PricingService $pricing
+    ) {}
+
     public function userOrders(User $user)
     {
         return $user->orders()
@@ -26,7 +29,6 @@ class OrderService
     {
         $order = DB::transaction(function () use ($user, $payload) {
             $shipping = $payload['shipping_address'] ?? [];
-            $isStylist = $user?->isStylist() ?? false;
 
             if ($user) {
                 // Keep the saved profile in sync for authenticated customers.
@@ -51,69 +53,45 @@ class OrderService
                 'coupon_code' => null,
             ]);
 
-            $subtotal = 0;
-            $orderedQuantities = [];
-            $resolvedPrices = [];
-
+            $lines = [];
+            $requested = [];
             foreach ($payload['items'] as $item) {
                 // Lock the product row to prevent overselling under concurrent requests
-                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->with('category')->findOrFail($item['product_id']);
                 $qty = (int) $item['qty'];
+                // Stock is taken after pricing, so count repeated lines of one product together.
+                $requested[$product->id] = ($requested[$product->id] ?? 0) + $qty;
 
-                if (!$product->inStock($qty)) {
+                if (!$product->inStock($requested[$product->id])) {
                     throw ValidationException::withMessages([
                         'items' => ["Insufficient stock for product ID {$product->id}."]
                     ]);
                 }
 
-                $price = $product->resolvePrice($isStylist);
-                if ($price <= 0) {
-                    throw ValidationException::withMessages([
-                        'items' => ["Product ID {$product->id} is not available for purchase."]
-                    ]);
-                }
-                $subtotal += $price * $qty;
-                $orderedQuantities[$product->id] = ($orderedQuantities[$product->id] ?? 0) + $qty;
-                $resolvedPrices[$product->id] = $price;
+                $lines[] = ['product' => $product, 'qty' => $qty];
+            }
 
+            $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
+
+            // Prices, offers and the coupon are recomputed on the server, so a client
+            // cannot claim a deal it does not qualify for.
+            $quote = $this->pricing->quote($user, $lines, $payload['bundle_ids'] ?? [], $coupon);
+
+            foreach ($lines as $index => ['product' => $product, 'qty' => $qty]) {
                 $order->items()->create([
                     'product_id' => $product->id,
                     'quantity' => $qty,
-                    'price' => $price,
+                    'price' => $quote['lines'][$index]['unitPrice'],
                 ]);
 
                 $product->decrement('quantity', $qty);
             }
 
-            // Bundle promotions are recomputed from server-side product prices.
-            // This prevents a client from claiming a deal it did not actually qualify for.
-            $discount = $this->resolveBundleDiscount(
-                $payload['bundle_ids'] ?? [],
-                $orderedQuantities,
-                $resolvedPrices,
-                $user
-            );
             $couponId = null;
             $appliedCouponCode = null;
 
-            if (!empty($payload['coupon_code'])) {
-                $coupon = Coupon::lockForUpdate()
-                    ->where('code', $payload['coupon_code'])
-                    ->first();
-
-                if (!$coupon) {
-                    throw ValidationException::withMessages([
-                        'coupon_code' => ['Coupon not found.'],
-                    ]);
-                }
-
-                if (!$coupon->isValid()) {
-                    throw ValidationException::withMessages([
-                        'coupon_code' => ['Coupon is expired or has been fully used.'],
-                    ]);
-                }
-
-                $discount += $coupon->calculateDiscount(max(0, $subtotal - $discount));
+            // A coupon the profit floor cut to nothing is not used up.
+            if ($coupon && $quote['couponDiscount'] > 0) {
                 $coupon->decrement('quantity');
                 $couponId = $coupon->id;
                 $appliedCouponCode = $coupon->code;
@@ -126,7 +104,9 @@ class OrderService
                 }
             }
 
-            $shippingCost = $this->resolveShippingCost($subtotal);
+            $discount = $quote['discount'];
+            $subtotal = $quote['subtotal'];
+            $shippingCost = $quote['shipping'];
 
             $order->total = $subtotal - $discount + $shippingCost;
             $order->discount = $discount;
@@ -199,51 +179,23 @@ class OrderService
         });
     }
 
-    private function resolveShippingCost(float $subtotal): float
+    public function validCoupon(string $code, bool $lock = false): Coupon
     {
-        return $subtotal >= 3000 ? 0.0 : 150.0;
-    }
+        $query = Coupon::query()->where('code', $code);
+        $coupon = ($lock ? $query->lockForUpdate() : $query)->first();
 
-    private function resolveBundleDiscount(array $bundleIds, array $orderedQuantities, array $resolvedPrices, ?User $user): float
-    {
-        if (empty($bundleIds)) {
-            return 0;
+        if (!$coupon) {
+            throw ValidationException::withMessages([
+                'coupon_code' => ['Coupon not found.'],
+            ]);
         }
 
-        $remaining = $orderedQuantities;
-        $discount = 0;
-        $bundles = Bundle::query()->with('products')->lockForUpdate()->findMany($bundleIds);
-
-        if ($bundles->count() !== count($bundleIds)) {
-            throw ValidationException::withMessages(['bundle_ids' => ['One or more selected offers are unavailable.']]);
+        if (!$coupon->isValid()) {
+            throw ValidationException::withMessages([
+                'coupon_code' => ['Coupon is expired or has been fully used.'],
+            ]);
         }
 
-        foreach ($bundles as $bundle) {
-            if (!$bundle->isAvailableFor($user)) {
-                throw ValidationException::withMessages(['bundle_ids' => ["{$bundle->name} is not available for this account."]]);
-            }
-
-            $regularTotal = 0;
-            foreach ($bundle->products as $product) {
-                $required = (int) $product->pivot->quantity;
-                if (($remaining[$product->id] ?? 0) < $required) {
-                    throw ValidationException::withMessages(['bundle_ids' => ["Add all items from {$bundle->name} to use this offer."]]);
-                }
-
-                $remaining[$product->id] -= $required;
-                $regularTotal += ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $required;
-            }
-
-            $bundleDiscount = match ($bundle->promotion_type) {
-                'fixed_price' => max(0, $regularTotal - (float) $bundle->bundle_price),
-                'bonus_items' => $bundle->products
-                    ->sum(fn ($product) => ($resolvedPrices[$product->id] ?? $product->resolvePrice($user?->isStylist() ?? false)) * $product->pivot->bonus_quantity),
-                default => $regularTotal * ((float) $bundle->discount_percentage / 100),
-            };
-
-            $discount += min($regularTotal, $bundleDiscount);
-        }
-
-        return $discount;
+        return $coupon;
     }
 }
