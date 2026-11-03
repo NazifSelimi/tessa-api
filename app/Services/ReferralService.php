@@ -29,6 +29,8 @@ class ReferralService
     public const DEFAULT_DISCOUNT_PERCENTAGE = 10.0;
     public const DEFAULT_COMMISSION_PERCENTAGE = 5.0;
     public const DEFAULT_FIRST_ORDER_ONLY = true;
+    /** Most a stylist earns from one client order, in MKD; 0 means no cap. */
+    public const DEFAULT_MAX_COMMISSION = 150.0;
 
     public function settings(): array
     {
@@ -36,6 +38,7 @@ class ReferralService
             'discountPercentage' => (float) Setting::get('referral.discount_percentage', self::DEFAULT_DISCOUNT_PERCENTAGE),
             'commissionPercentage' => (float) Setting::get('referral.commission_percentage', self::DEFAULT_COMMISSION_PERCENTAGE),
             'firstOrderOnly' => (bool) (int) Setting::get('referral.first_order_only', self::DEFAULT_FIRST_ORDER_ONLY ? 1 : 0),
+            'maxCommission' => (float) Setting::get('referral.max_commission', self::DEFAULT_MAX_COMMISSION),
         ];
     }
 
@@ -54,6 +57,10 @@ class ReferralService
         }
         if (array_key_exists('firstOrderOnly', $values)) {
             Setting::put('referral.first_order_only', $values['firstOrderOnly'] ? 1 : 0);
+        }
+        // The cap is one value for every code, so it needs no "apply to existing".
+        if (array_key_exists('maxCommission', $values)) {
+            Setting::put('referral.max_commission', round((float) $values['maxCommission']));
         }
 
         if ($applyToExisting) {
@@ -141,10 +148,16 @@ class ReferralService
         }
     }
 
-    /** Commission in whole MKD on what the client pays for the goods (after discounts, without shipping). */
+    /**
+     * Commission in whole MKD on what the client pays for the goods (after
+     * discounts, without shipping), never more than the admin's cap.
+     */
     public function commission(Coupon $coupon, float $goodsTotal): float
     {
-        return round(max(0, $goodsTotal) * (float) $coupon->commission_percentage / 100);
+        $commission = round(max(0, $goodsTotal) * (float) $coupon->commission_percentage / 100);
+        $cap = $this->settings()['maxCommission'];
+
+        return $cap > 0 ? min($commission, $cap) : $commission;
     }
 
     public function balance(User $user): float
@@ -275,6 +288,7 @@ class ReferralService
             'commissionPercentage' => (float) $coupon->commission_percentage,
             'firstOrderOnly' => (bool) $coupon->first_order_only,
             'isActive' => $coupon->is_active !== false,
+            'maxCommission' => $this->settings()['maxCommission'],
         ];
     }
 

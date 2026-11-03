@@ -30,6 +30,7 @@ class AdminReferralController extends Controller
             'discountPercentage' => ['sometimes', 'numeric', 'min:0', 'max:50'],
             'commissionPercentage' => ['sometimes', 'numeric', 'min:0', 'max:30'],
             'firstOrderOnly' => ['sometimes', 'boolean'],
+            'maxCommission' => ['sometimes', 'numeric', 'min:0', 'max:100000'],
             'applyToExisting' => ['sometimes', 'boolean'],
         ]);
 

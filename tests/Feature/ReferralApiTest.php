@@ -29,6 +29,7 @@ class ReferralApiTest extends TestCase
         Setting::put('referral.discount_percentage', 10);
         Setting::put('referral.commission_percentage', 5);
         Setting::put('referral.first_order_only', 1);
+        Setting::put('referral.max_commission', 150);
 
         $this->stylist = User::factory()->create(['role' => User::ROLE_STYLIST, 'first_name' => 'Ана']);
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
@@ -259,6 +260,33 @@ class ReferralApiTest extends TestCase
         $this->assertSame(12, $code->value);
         $this->assertEqualsWithDelta(6, (float) $code->commission_percentage, 0.001);
         $this->assertFalse($code->first_order_only);
+    }
+
+    #[Test]
+    public function the_admin_caps_what_a_stylist_earns_per_order()
+    {
+        $this->code();
+        $token = $this->admin->createToken('t')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['maxCommission' => 50])
+            ->assertOk()->assertJsonPath('data.maxCommission', 50);
+        $this->withToken($token)->getJson('/api/v1/admin/referrals')
+            ->assertJsonPath('data.settings.maxCommission', 50)
+            ->assertJsonPath('data.codes.0.maxCommission', 50);
+
+        // 5% of 1800 is 90, capped at 50.
+        $this->withoutToken()->app['auth']->forgetGuards();
+        $capped = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $this->assertEqualsWithDelta(50, (float) Order::findOrFail($capped->json('data.id'))->referral_commission, 0.01);
+
+        // 0 removes the cap.
+        $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['maxCommission' => 0])->assertOk();
+        $this->code()->update(['first_order_only' => false]);
+        $this->withoutToken()->app['auth']->forgetGuards();
+        $open = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $this->assertEqualsWithDelta(90, (float) Order::findOrFail($open->json('data.id'))->referral_commission, 0.01);
+
+        $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['maxCommission' => -1])->assertStatus(422);
     }
 
     #[Test]
