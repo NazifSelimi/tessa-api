@@ -252,14 +252,28 @@ class Product extends Model
         return $this->swatch_image ? asset('storage/' . ltrim($this->swatch_image, '/')) : null;
     }
 
+    /**
+     * The main photo, as its small card copy when one was made from it. A photo
+     * an admin uploaded wins; extra angles (metadata.angle) never do, so a
+     * tessa.mk photo stays first when angles are added after it.
+     */
     public function primaryImage(): ?Image
     {
         $images = $this->storefrontImages();
+        $photos = $images->filter(fn (Image $image) => in_array($image->variant ?? 'legacy', ['legacy', 'detail'], true));
+        $main = $photos->first(fn (Image $image) => $image->variant === 'detail' && empty($image->metadata['angle']))
+            ?? $photos->first();
 
-        return $images->firstWhere('variant', 'card')
-            ?? $images->firstWhere('variant', 'detail')
-            ?? $images->first()
-            ?? $this->images->first();
+        if (!$main) {
+            return $images->firstWhere('variant', 'card') ?? $images->first() ?? $this->images->first();
+        }
+
+        $cards = $images->where('variant', 'card');
+        $ownCard = $cards->first(fn (Image $image) => (string) ($image->metadata['derived_from'] ?? '') === (string) $main->id);
+        // Cards made at upload time are not linked by id; use one only when no card points at a specific photo.
+        $unlinkedCard = $cards->every(fn (Image $image) => !is_numeric($image->metadata['derived_from'] ?? null)) ? $cards->first() : null;
+
+        return $ownCard ?? $unlinkedCard ?? $main;
     }
 
     public function inStock(int $requestedQty = 1): bool
