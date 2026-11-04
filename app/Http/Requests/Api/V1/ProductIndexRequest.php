@@ -23,6 +23,8 @@ class ProductIndexRequest extends FormRequest
             'on_sale'     => ['nullable', 'boolean'],
             'in_stock'    => ['nullable', 'boolean'],
             'review'      => ['nullable', 'string', 'in:in_review,ready'],
+            // Admin: 'hidden' (nobody), 'limited' (not everyone), or one audience it is shown to.
+            'visibility'  => ['nullable', 'string', 'in:hidden,limited,everyone,guests,customers,stylists'],
             // 'all' lists every shade of a colour line separately (e.g. for prerendering).
             'shades'      => ['nullable', 'string', 'in:all'],
             'sort'        => ['nullable', 'string', 'in:name_asc,name_desc,price_asc,price_desc,newest,featured'],

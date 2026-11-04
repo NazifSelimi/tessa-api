@@ -137,15 +137,7 @@ class ProductService
      */
     public function canView(Product $product, ?User $viewer = null): bool
     {
-        if ($viewer?->isAdmin()) {
-            return true;
-        }
-
-        if (!$product->isPricedFor($viewer?->isStylist() ?? false) || $product->isInReview()) {
-            return false;
-        }
-
-        return !$product->stylist_only || $viewer?->isStylist();
+        return $product->isAvailableTo($viewer);
     }
 
     /* ===================================================== */
@@ -305,6 +297,9 @@ class ProductService
             'stylist_price',
             'cost_price',
             'stylist_only',
+            'visible_to_guests',
+            'visible_to_customers',
+            'visible_to_stylists',
         ])->toArray();
     }
 
@@ -348,16 +343,7 @@ class ProductService
 
     private function applyVisibilityFilter(Builder $query, ?User $viewer = null): void
     {
-        if ($viewer?->isAdmin()) {
-            return;
-        }
-
-        if ($viewer?->isStylist()) {
-            $query->pricedFor(true)->readyForSale();
-            return;
-        }
-
-        $query->where('stylist_only', false)->pricedFor()->readyForSale();
+        $query->availableTo($viewer);
     }
 
     private function handleSale(Product $product, array $data): void
@@ -456,6 +442,21 @@ class ProductService
         } elseif (($filters['review'] ?? null) === 'ready') {
             $query->readyForSale();
         }
+
+        // Admin filter on who a product is shown to.
+        match ($filters['visibility'] ?? null) {
+            'hidden' => $query->where('products.visible_to_guests', false)
+                ->where('products.visible_to_customers', false)
+                ->where('products.visible_to_stylists', false),
+            'limited' => $query->where(fn (Builder $q) => $q->where('products.visible_to_guests', false)
+                ->orWhere('products.visible_to_customers', false)
+                ->orWhere('products.visible_to_stylists', false)),
+            'everyone' => $query->where('products.visible_to_guests', true)
+                ->where('products.visible_to_customers', true)
+                ->where('products.visible_to_stylists', true),
+            'guests', 'customers', 'stylists' => $query->where('products.visible_to_' . $filters['visibility'], true),
+            default => null,
+        };
 
         // Sorting — use database-driven sort_priority on categories
         $sort = $filters['sort'] ?? 'name_asc';

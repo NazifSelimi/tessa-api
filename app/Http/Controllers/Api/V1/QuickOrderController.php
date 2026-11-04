@@ -25,13 +25,7 @@ class QuickOrderController extends Controller
             ->select(['id', 'name', 'price', 'stylist_price', 'quantity', 'category_id'])
             ->with(['images' => fn ($q) => $q->limit(1)]);
 
-        if (!ApiUserResolver::canAccessStylistOnlyProducts($viewer)) {
-            $query->where('stylist_only', false);
-        }
-
-        if (!$viewer?->isAdmin()) {
-            $query->pricedFor($viewer?->isStylist() ?? false)->readyForSale();
-        }
+        $query->availableTo($viewer);
 
         if ($search = $request->query('search')) {
             $query->where('name', 'like', '%' . $search . '%');

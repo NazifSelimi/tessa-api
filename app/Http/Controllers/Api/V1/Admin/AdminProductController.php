@@ -11,6 +11,7 @@ use App\Services\ImageService;
 use App\Services\ProductService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AdminProductController extends Controller
 {
@@ -58,6 +59,8 @@ class AdminProductController extends Controller
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
             'stylist_only' => ['nullable', 'boolean'],
+            'visible_to' => ['nullable', 'array'],
+            'visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
             'hair_type_ids' => ['nullable', 'array'],
             'hair_type_ids.*' => ['integer', 'distinct', 'exists:hair_types,id'],
             'hair_concern_ids' => ['nullable', 'array'],
@@ -88,6 +91,7 @@ class AdminProductController extends Controller
         }
 
         $validated['translations'] = $this->normalizeTranslations($validated['translations'] ?? []);
+        $validated = $this->audienceColumns($validated);
 
         $product = $this->productService->create($validated);
 
@@ -117,6 +121,8 @@ class AdminProductController extends Controller
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
             'stylist_only' => ['sometimes', 'boolean'],
+            'visible_to' => ['sometimes', 'nullable', 'array'],
+            'visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
             'hair_type_ids' => ['sometimes', 'array'],
             'hair_type_ids.*' => ['integer', 'distinct', 'exists:hair_types,id'],
             'hair_concern_ids' => ['sometimes', 'array'],
@@ -142,7 +148,11 @@ class AdminProductController extends Controller
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'cost_price', 'stylist_only', 'quantity', 'category_id', 'brand_id'])->toArray();
+        $validated = $this->audienceColumns($validated);
+        $productData = collect($validated)->only([
+            'name', 'price', 'stylist_price', 'cost_price', 'stylist_only', 'quantity', 'category_id', 'brand_id',
+            'visible_to_guests', 'visible_to_customers', 'visible_to_stylists',
+        ])->toArray();
         $product->update($productData);
 
         $shadeData = collect($validated)->only(['product_family_id', 'shade_code', 'shade_name', 'shade_sort_order'])
@@ -270,7 +280,10 @@ class AdminProductController extends Controller
             'updates' => ['required', 'array'],
             'updates.category_id' => ['sometimes', 'exists:categories,id'],
             'updates.brand_id' => ['sometimes', 'exists:brands,id'],
+            'updates.visible_to' => ['sometimes', 'nullable', 'array'],
+            'updates.visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
         ]);
+        $validated['updates'] = $this->audienceColumns($validated['updates']);
 
         $updated = 0;
         $failed = 0;
@@ -297,9 +310,37 @@ class AdminProductController extends Controller
         );
     }
 
+    /**
+     * visible_to (the audiences ticked; empty = hidden) becomes the three
+     * visible_to_* columns. It takes over from the old stylist_only switch.
+     */
+    private function audienceColumns(array $validated): array
+    {
+        if (!array_key_exists('visible_to', $validated)) {
+            return $validated;
+        }
+
+        $audiences = $validated['visible_to'] ?? [];
+        unset($validated['visible_to'], $validated['stylist_only']);
+
+        foreach (Product::AUDIENCES as $audience) {
+            $validated['visible_to_' . $audience] = in_array($audience, $audiences, true);
+        }
+
+        return $validated;
+    }
+
     private function normalizeRequestData(Request $request): array
     {
         $data = $request->all();
+
+        // Form posts cannot send an empty array, so 'none' (or '') means hidden.
+        foreach (['visibleTo', 'visible_to'] as $key) {
+            if (array_key_exists($key, $data) && !is_array($data[$key])) {
+                $value = trim((string) $data[$key]);
+                $data[$key] = in_array($value, ['', 'none'], true) ? [] : array_map('trim', explode(',', $value));
+            }
+        }
 
         $fieldMap = [
             'categoryId' => 'category_id',
@@ -307,6 +348,7 @@ class AdminProductController extends Controller
             'stylistPrice' => 'stylist_price',
             'costPrice' => 'cost_price',
             'stylistOnly' => 'stylist_only',
+            'visibleTo' => 'visible_to',
             'normalizeCatalogBackground' => 'normalize_catalog_background',
         ];
 

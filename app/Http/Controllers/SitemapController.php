@@ -37,9 +37,7 @@ class SitemapController extends Controller
             )));
 
         Product::query()
-            ->where('stylist_only', false)
-            ->pricedFor()
-            ->readyForSale()
+            ->availableTo(null)
             ->select(['id', 'updated_at'])
             ->orderBy('id')
             ->chunkById(500, function ($products) use ($paths, $today) {

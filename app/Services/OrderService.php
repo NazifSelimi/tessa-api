@@ -59,6 +59,12 @@ class OrderService
             foreach ($payload['items'] as $item) {
                 // Lock the product row to prevent overselling under concurrent requests
                 $product = Product::lockForUpdate()->with('category')->findOrFail($item['product_id']);
+                // The admin may have hidden it from this buyer (or it is in review / unpriced for them).
+                if (!$product->loadMissing(['images', 'brand'])->isAvailableTo($user)) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Product ID {$product->id} is not available."]
+                    ]);
+                }
                 $qty = (int) $item['qty'];
                 // Stock is taken after pricing, so count repeated lines of one product together.
                 $requested[$product->id] = ($requested[$product->id] ?? 0) + $qty;

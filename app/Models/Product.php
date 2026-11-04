@@ -35,7 +35,13 @@ class Product extends Model
         'stylist_price',
         'cost_price',
         'stylist_only',
+        'visible_to_guests',
+        'visible_to_customers',
+        'visible_to_stylists',
     ];
+
+    /** Who an admin can show a product to; each maps to a visible_to_* column. */
+    public const AUDIENCES = ['guests', 'customers', 'stylists'];
 
     // Purchase cost is admin-only; ProductResource adds it for admins.
     protected $hidden = ['cost_price'];
@@ -46,7 +52,108 @@ class Product extends Model
         'cost_price' => 'decimal:2',
         'quantity' => 'integer',
         'stylist_only' => 'boolean',
+        'visible_to_guests' => 'boolean',
+        'visible_to_customers' => 'boolean',
+        'visible_to_stylists' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        // stylist_only is the old single switch (still set by importers and the
+        // classifier). Keep it and the audience columns describing the same thing.
+        static::saving(function (Product $product) {
+            $audienceChanged = $product->isDirty(['visible_to_guests', 'visible_to_customers']);
+
+            if (!$audienceChanged && $product->isDirty('stylist_only')) {
+                $public = !$product->stylist_only;
+                $product->visible_to_guests = $public;
+                $product->visible_to_customers = $public;
+                if ($product->stylist_only) {
+                    $product->visible_to_stylists = true;
+                }
+                return;
+            }
+
+            $guests = $product->visible_to_guests ?? true;
+            $customers = $product->visible_to_customers ?? true;
+            $product->stylist_only = !$guests && !$customers;
+        });
+    }
+
+    /* ========================================= */
+    /* AUDIENCE VISIBILITY                       */
+    /* ========================================= */
+
+    /** 'admin', 'stylists', 'customers' or 'guests' for the person browsing. */
+    public static function audienceOf(?User $viewer): string
+    {
+        return match (true) {
+            $viewer === null => 'guests',
+            $viewer->isAdmin() => 'admin',
+            $viewer->isStylist() => 'stylists',
+            default => 'customers',
+        };
+    }
+
+    /** @return list<string> the audiences ticked for this product; empty = hidden. */
+    public function visibleTo(): array
+    {
+        return array_values(array_filter(
+            self::AUDIENCES,
+            fn (string $audience) => (bool) ($this->{'visible_to_' . $audience} ?? true)
+        ));
+    }
+
+    /** @param list<string> $audiences */
+    public function setVisibleTo(array $audiences): static
+    {
+        foreach (self::AUDIENCES as $audience) {
+            $this->{'visible_to_' . $audience} = in_array($audience, $audiences, true);
+        }
+
+        return $this;
+    }
+
+    /** Only the products the admin has opened to this viewer's audience. */
+    public function scopeVisibleTo(Builder $query, ?User $viewer): Builder
+    {
+        $audience = self::audienceOf($viewer);
+
+        return $audience === 'admin'
+            ? $query
+            : $query->where($query->qualifyColumn('visible_to_' . $audience), true);
+    }
+
+    /**
+     * What this viewer may see and buy: opened to their audience, priced for
+     * them and ready for sale. Admins see everything.
+     */
+    public function scopeAvailableTo(Builder $query, ?User $viewer): Builder
+    {
+        if ($viewer?->isAdmin()) {
+            return $query;
+        }
+
+        return $query->visibleTo($viewer)->pricedFor($viewer?->isStylist() ?? false)->readyForSale();
+    }
+
+    public function isVisibleTo(?User $viewer): bool
+    {
+        $audience = self::audienceOf($viewer);
+
+        return $audience === 'admin' || (bool) ($this->{'visible_to_' . $audience} ?? true);
+    }
+
+    public function isAvailableTo(?User $viewer): bool
+    {
+        if ($viewer?->isAdmin()) {
+            return true;
+        }
+
+        return $this->isVisibleTo($viewer)
+            && $this->isPricedFor($viewer?->isStylist() ?? false)
+            && !$this->isInReview();
+    }
 
     /* ========================================= */
     /* RELATIONSHIPS                             */
