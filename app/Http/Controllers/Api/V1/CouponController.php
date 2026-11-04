@@ -29,7 +29,11 @@ class CouponController extends Controller
         );
 
         if (!$result['valid']) {
-            return ApiResponse::error($result['error'], $result['errorCode']);
+            return ApiResponse::error(
+                $result['error'],
+                $result['errorCode'],
+                !empty($result['requiresLogin']) ? ['requires_login' => true] : null
+            );
         }
 
         return ApiResponse::ok([

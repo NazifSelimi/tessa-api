@@ -19,6 +19,8 @@ class ReferralApiTest extends TestCase
 
     private User $stylist;
     private User $admin;
+    /** Stylist codes need a signed-in client. */
+    private User $client;
     private Product $product;
 
     protected function setUp(): void
@@ -33,6 +35,7 @@ class ReferralApiTest extends TestCase
 
         $this->stylist = User::factory()->create(['role' => User::ROLE_STYLIST, 'first_name' => 'Ана']);
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->client = User::factory()->create(['role' => User::ROLE_USER, 'phone' => '075 555 111']);
         $this->product = Product::factory()->create(['price' => 2000, 'stylist_price' => 1200, 'quantity' => 50]);
     }
 
@@ -51,9 +54,12 @@ class ReferralApiTest extends TestCase
             ],
         ];
 
+        // Each call stands alone: never reuse a user the guard cached from an earlier request.
+        $this->app['auth']->forgetGuards();
+
         return $user
             ? $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/checkout', $payload)
-            : $this->postJson('/api/v1/checkout', $payload);
+            : $this->withoutToken()->postJson('/api/v1/checkout', $payload);
     }
 
     private function setStatus(string $orderId, string $status): void
@@ -66,6 +72,38 @@ class ReferralApiTest extends TestCase
     private function balance(User $user): float
     {
         return app(ReferralService::class)->balance($user);
+    }
+
+    #[Test]
+    public function guests_must_sign_in_or_register_to_use_a_stylist_code()
+    {
+        $this->code();
+
+        $this->checkout(['coupon_code' => 'ANA10'])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.coupon_code.0', ReferralService::GUEST_ERROR);
+        $this->assertSame(0, Order::count());
+
+        $this->withoutToken()->postJson('/api/v1/coupons/validate', ['code' => 'ANA10', 'subtotal' => 2000])
+            ->assertStatus(422)
+            ->assertJsonPath('message', ReferralService::GUEST_ERROR)
+            ->assertJsonPath('errors.requires_login', true);
+
+        $this->withoutToken()->postJson('/api/v1/cart/quote', [
+            'items' => [['product_id' => $this->product->id, 'qty' => 1]],
+            'coupon_code' => 'ANA10',
+        ])->assertOk()
+            ->assertJsonPath('data.couponRequiresLogin', true)
+            ->assertJsonPath('data.couponDiscount', 0);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($this->client->createToken('t')->plainTextToken)
+            ->postJson('/api/v1/coupons/validate', ['code' => 'ANA10', 'subtotal' => 2000])
+            ->assertOk()->assertJsonPath('data.valid', true);
+
+        // Ordinary shop coupons still work without an account.
+        Coupon::create(['code' => 'SHOP5', 'type' => 'percentage', 'value' => 5, 'quantity' => 10, 'is_active' => true]);
+        $this->checkout(['coupon_code' => 'SHOP5'])->assertStatus(201);
     }
 
     #[Test]
@@ -84,7 +122,7 @@ class ReferralApiTest extends TestCase
     {
         $this->code();
 
-        $response = $this->checkout(['coupon_code' => 'ANA10']);
+        $response = $this->checkout(['coupon_code' => 'ANA10'], $this->client);
 
         $response->assertStatus(201);
         $this->assertEqualsWithDelta(200, (float) $response->json('data.discount'), 0.01);
@@ -114,13 +152,13 @@ class ReferralApiTest extends TestCase
         $this->code();
         $this->checkout([])->assertStatus(201);
 
-        $this->checkout(['coupon_code' => 'ANA10'])
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)
             ->assertStatus(422)->assertJsonValidationErrors('coupon_code');
 
-        $this->checkout(['coupon_code' => 'ANA10'], null, ['email' => 'other@example.com', 'phone' => '+389 70 123 456'])
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client, ['email' => 'other@example.com', 'phone' => '+389 70 123 456'])
             ->assertStatus(422);
 
-        $this->checkout(['coupon_code' => 'ANA10'], null, ['email' => 'new@example.com', 'phone' => '071 999 888'])
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client, ['email' => 'new@example.com', 'phone' => '071 999 888'])
             ->assertStatus(201);
     }
 
@@ -129,8 +167,8 @@ class ReferralApiTest extends TestCase
     {
         $this->code()->update(['first_order_only' => false]);
 
-        $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
-        $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
 
         $this->assertSame(2, Order::where('referral_stylist_id', $this->stylist->id)->count());
     }
@@ -150,7 +188,7 @@ class ReferralApiTest extends TestCase
     {
         $this->code()->update(['is_active' => false]);
 
-        $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(422);
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(422);
     }
 
     #[Test]
@@ -187,7 +225,7 @@ class ReferralApiTest extends TestCase
     public function a_negative_balance_never_raises_what_the_stylist_pays()
     {
         $this->code();
-        $orderId = $this->checkout(['coupon_code' => 'ANA10'])->json('data.id');
+        $orderId = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->json('data.id');
         $this->setStatus($orderId, 'confirmed');
         $this->app['auth']->forgetGuards();
         $this->checkout(['use_store_credit' => true], $this->stylist)->assertStatus(201);
@@ -225,7 +263,7 @@ class ReferralApiTest extends TestCase
     public function the_stylist_page_shows_results_and_lets_them_rename_the_code()
     {
         $this->code();
-        $orderId = $this->checkout(['coupon_code' => 'ANA10'])->json('data.id');
+        $orderId = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->json('data.id');
         $this->setStatus($orderId, 'confirmed');
         // Sanctum keeps the first user it resolved (the admin) for the rest of the test.
         $this->app['auth']->forgetGuards();
@@ -276,16 +314,18 @@ class ReferralApiTest extends TestCase
 
         // 5% of 1800 is 90, capped at 50.
         $this->withoutToken()->app['auth']->forgetGuards();
-        $capped = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $capped = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
         $this->assertEqualsWithDelta(50, (float) Order::findOrFail($capped->json('data.id'))->referral_commission, 0.01);
 
         // 0 removes the cap.
+        $this->app['auth']->forgetGuards();
         $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['maxCommission' => 0])->assertOk();
         $this->code()->update(['first_order_only' => false]);
         $this->withoutToken()->app['auth']->forgetGuards();
-        $open = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $open = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
         $this->assertEqualsWithDelta(90, (float) Order::findOrFail($open->json('data.id'))->referral_commission, 0.01);
 
+        $this->app['auth']->forgetGuards();
         $this->withToken($token)->putJson('/api/v1/admin/referrals/settings', ['maxCommission' => -1])->assertStatus(422);
     }
 
@@ -296,7 +336,7 @@ class ReferralApiTest extends TestCase
         // Cost 1600 on a 2000 product: the floor is 1882.35, so only 117.65 may go.
         Setting::put('pricing.cost_percentage', 80);
 
-        $response = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $response = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
         $order = Order::findOrFail($response->json('data.id'));
 
         // The discount gives way first (18 instead of 200), the credit stays 5% of 1982.
@@ -311,7 +351,7 @@ class ReferralApiTest extends TestCase
         $this->code();
         Setting::put('pricing.cost_percentage', 90);
 
-        $response = $this->checkout(['coupon_code' => 'ANA10'])->assertStatus(201);
+        $response = $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(201);
         $order = Order::findOrFail($response->json('data.id'));
 
         $this->assertEqualsWithDelta(0, (float) $order->discount, 0.01);

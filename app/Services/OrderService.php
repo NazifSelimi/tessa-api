@@ -43,6 +43,13 @@ class OrderService
                 ]);
             }
 
+            // Check the code before this order exists, or a signed-in client's
+            // new order would count as "ordered before" for first-order codes.
+            $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
+            if ($coupon) {
+                $this->referrals->assertUsable($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
+            }
+
             $order = Order::create([
                 'user_id' => $user?->id,
                 'total' => 0,
@@ -76,11 +83,6 @@ class OrderService
                 }
 
                 $lines[] = ['product' => $product, 'qty' => $qty];
-            }
-
-            $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
-            if ($coupon) {
-                $this->referrals->assertUsable($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
             }
 
             // Prices, offers and the coupon are recomputed on the server, so a client

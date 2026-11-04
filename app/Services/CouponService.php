@@ -116,10 +116,13 @@ class CouponService
         try {
             app(ReferralService::class)->assertUsable($coupon, $user);
         } catch (ValidationException $e) {
+            $error = $e->errors()['coupon_code'][0];
+
             return [
                 'valid' => false,
-                'error' => $e->errors()['coupon_code'][0],
+                'error' => $error,
                 'errorCode' => 422,
+                'requiresLogin' => $error === ReferralService::GUEST_ERROR,
             ];
         }
 

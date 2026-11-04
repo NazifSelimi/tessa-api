@@ -31,6 +31,8 @@ class ReferralService
     public const DEFAULT_FIRST_ORDER_ONLY = true;
     /** Most a stylist earns from one client order, in MKD; 0 means no cap. */
     public const DEFAULT_MAX_COMMISSION = 150.0;
+    /** Shown when a guest tries a stylist's code; the UI offers sign in / register. */
+    public const GUEST_ERROR = 'Sign in or create an account to use this stylist code.';
 
     public function settings(): array
     {
@@ -126,8 +128,9 @@ class ReferralService
     }
 
     /**
-     * Throws when this buyer may not use the referral code. Email and phone are
-     * known at checkout only, so the cart preview checks the account alone.
+     * Throws when this buyer may not use the referral code: guests must sign in
+     * or register first. Email and phone are known at checkout only, so the
+     * cart preview checks the account alone.
      */
     public function assertUsable(Coupon $coupon, ?User $buyer, ?string $email = null, ?string $phone = null): void
     {
@@ -135,7 +138,13 @@ class ReferralService
             return;
         }
 
-        if ($buyer && ($buyer->isStylist() || $buyer->isAdmin())) {
+        // Codes are tied to a client account, so first-order checks and the
+        // stylist's commission always point at a real customer.
+        if (!$buyer) {
+            throw ValidationException::withMessages(['coupon_code' => [self::GUEST_ERROR]]);
+        }
+
+        if ($buyer->isStylist() || $buyer->isAdmin()) {
             throw ValidationException::withMessages([
                 'coupon_code' => ['Referral codes are for clients; salon accounts already get salon prices.'],
             ]);
