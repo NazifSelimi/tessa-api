@@ -11,6 +11,8 @@ use Exception;
 
 class ProductService
 {
+    public const LOW_STOCK_THRESHOLD = 3;
+
     /* ===================================================== */
     /* INDEX (WITH FILTERING SUPPORT)                        */
     /* ===================================================== */
@@ -442,6 +444,19 @@ class ProductService
         } elseif (($filters['review'] ?? null) === 'ready') {
             $query->readyForSale();
         }
+
+        if (($filters['price_status'] ?? null) === 'missing') {
+            $query->where(fn (Builder $q) => $q->where('products.price', '<=', 0)
+                ->orWhereNull('products.price')
+                ->orWhere('products.stylist_price', '<=', 0)
+                ->orWhereNull('products.stylist_price'));
+        }
+
+        match ($filters['stock'] ?? null) {
+            'low' => $query->whereBetween('products.quantity', [1, self::LOW_STOCK_THRESHOLD]),
+            'out' => $query->where('products.quantity', '<=', 0),
+            default => null,
+        };
 
         // Admin filter on who a product is shown to.
         match ($filters['visibility'] ?? null) {
