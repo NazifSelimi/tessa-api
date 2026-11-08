@@ -310,7 +310,10 @@ class PricingService
             return $result;
         }
 
-        $bundles = Bundle::query()->with('products')->findMany($bundleIds);
+        // Offers switched off on /admin/features never discount a cart.
+        $bundles = app(FeatureService::class)->enabled('bundles')
+            ? Bundle::query()->with('products')->findMany($bundleIds)
+            : collect();
         $fail = function (string $id, string $message) use ($strict, &$result) {
             if ($strict) {
                 throw ValidationException::withMessages(['bundle_ids' => [$message]]);

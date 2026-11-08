@@ -29,6 +29,10 @@ class AdminOrderService
     {
         $query = Order::with(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
 
+        if (($filters['trashed'] ?? null) === 'only') {
+            $query->onlyTrashed();
+        }
+
         if (!empty($filters['status'])) {
             $statusInt = self::STATUS_MAP[$filters['status']] ?? null;
             if ($statusInt !== null) {

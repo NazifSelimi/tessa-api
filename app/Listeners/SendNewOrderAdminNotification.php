@@ -4,9 +4,10 @@ namespace App\Listeners;
 
 use App\Events\OrderPlaced;
 use App\Mail\NewOrderAdminMail;
+use App\Services\Mail\EmailService;
+use App\Services\Mail\MailSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendNewOrderAdminNotification implements ShouldQueue
 {
@@ -14,15 +15,24 @@ class SendNewOrderAdminNotification implements ShouldQueue
 
     public function handle(OrderPlaced $event): void
     {
-        $adminEmail = config('tessa.admin_email');
+        $settings = app(MailSettings::class);
+        if (! $settings->autoEnabled('admin_new_order')) {
+            return;
+        }
+        $recipients = $settings->adminRecipients();
+        if ($recipients === []) {
+            Log::warning('NewOrderAdminNotification skipped: no shop alert address set (Admin → Emails → Settings)');
 
-        if (! $adminEmail) {
-            Log::warning('NewOrderAdminNotification skipped: TESSA_ADMIN_EMAIL not configured');
             return;
         }
 
         $order = $event->order->loadMissing(['items.product', 'info', 'user']);
-
-        Mail::to($adminEmail)->send(new NewOrderAdminMail($order));
+        foreach ($recipients as $email) {
+            app(EmailService::class)->send($email, new NewOrderAdminMail($order), [
+                'type' => 'admin-new-order',
+                'order_id' => $order->id,
+                'locale' => 'en',
+            ]);
+        }
     }
 }

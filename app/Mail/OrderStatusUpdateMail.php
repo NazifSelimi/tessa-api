@@ -24,7 +24,10 @@ class OrderStatusUpdateMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Order #' . $this->order->id . ' — ' . $this->statusLabel,
+            subject: __('emails.order_status.subject', [
+                'id' => $this->order->id,
+                'status' => __('emails.status.' . strtolower($this->statusLabel)),
+            ]),
         );
     }
 

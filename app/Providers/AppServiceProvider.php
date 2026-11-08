@@ -14,7 +14,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Per request (and per queued job), so a switch flipped by an admin applies straight away.
+        $this->app->scoped(\App\Services\FeatureService::class);
     }
 
     /**

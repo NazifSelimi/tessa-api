@@ -44,6 +44,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'request_submitted' => 'boolean',
         'role' => 'integer',
+        'email_opt_out_at' => 'datetime',
     ];
 
     public function isStylist(): bool

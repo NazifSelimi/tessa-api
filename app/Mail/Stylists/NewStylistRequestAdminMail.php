@@ -23,7 +23,7 @@ class NewStylistRequestAdminMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Stylist Application — ' . trim($this->user->first_name . ' ' . $this->user->last_name),
+            subject: 'New business account application — ' . trim($this->user->first_name . ' ' . $this->user->last_name),
         );
     }
 

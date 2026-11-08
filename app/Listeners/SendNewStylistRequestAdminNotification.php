@@ -4,9 +4,10 @@ namespace App\Listeners;
 
 use App\Events\StylistRequestSubmitted;
 use App\Mail\Stylists\NewStylistRequestAdminMail;
+use App\Services\Mail\EmailService;
+use App\Services\Mail\MailSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendNewStylistRequestAdminNotification implements ShouldQueue
 {
@@ -14,26 +15,21 @@ class SendNewStylistRequestAdminNotification implements ShouldQueue
 
     public function handle(StylistRequestSubmitted $event): void
     {
-        $adminEmail = config('tessa.admin_email');
-
-        if (! $adminEmail) {
-            Log::warning('NewStylistRequestAdminNotification skipped: TESSA_ADMIN_EMAIL not configured');
+        $settings = app(MailSettings::class);
+        if (! $settings->autoEnabled('admin_stylist_request')) {
             return;
         }
+        $recipients = $settings->adminRecipients();
+        if ($recipients === []) {
+            Log::warning('NewStylistRequestAdminNotification skipped: no shop alert address set');
 
-        try {
-            Mail::to($adminEmail)->send(new NewStylistRequestAdminMail(
+            return;
+        }
+        foreach ($recipients as $email) {
+            app(EmailService::class)->send($email, new NewStylistRequestAdminMail(
                 requestStylist: $event->request,
                 user: $event->user,
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('NewStylistRequestAdminNotification failed', [
-                'request_id' => $event->request->id,
-                'user_id' => $event->user->id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+            ), ['type' => 'admin-stylist-request', 'user_id' => $event->user->id, 'locale' => 'en']);
         }
     }
 }
-

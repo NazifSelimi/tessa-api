@@ -226,7 +226,12 @@ class AuthController extends Controller
                 ]
             );
 
-            Mail::to($user->email)->send(new PasswordResetMail($user, $token));
+            // Always sent (not switchable); logged in the outbox like every email.
+            app(\App\Services\Mail\EmailService::class)->send($user->email, new PasswordResetMail($user, $token), [
+                'type' => 'password-reset',
+                'user_id' => $user->id,
+                'locale' => \App\Listeners\EmailLocale::forUser($user),
+            ]);
         }
 
         // Always return success to prevent email enumeration

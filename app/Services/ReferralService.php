@@ -138,6 +138,10 @@ class ReferralService
             return;
         }
 
+        if (!app(FeatureService::class)->enabled('referrals')) {
+            throw ValidationException::withMessages(['coupon_code' => ['Stylist codes are not available right now.']]);
+        }
+
         // Codes are tied to a client account, so first-order checks and the
         // stylist's commission always point at a real customer.
         if (!$buyer) {
@@ -181,7 +185,9 @@ class ReferralService
     public function syncOrder(Order $order): void
     {
         DB::transaction(function () use ($order) {
-            $earning = in_array($order->status, [Order::STATUS_PAID, Order::STATUS_SHIPPED], true);
+            // A trashed order counts like a cancelled one until it is restored.
+            $active = ! $order->trashed();
+            $earning = $active && in_array($order->status, [Order::STATUS_PAID, Order::STATUS_SHIPPED], true);
             if ($order->referral_stylist_id) {
                 $this->settle(
                     $order->referral_stylist_id,
@@ -196,7 +202,7 @@ class ReferralService
                     $order->user_id,
                     $order,
                     StoreCreditTransaction::TYPE_SPENT,
-                    $order->status === Order::STATUS_CANCELLED ? 0.0 : -(float) $order->store_credit_used
+                    (! $active || $order->status === Order::STATUS_CANCELLED) ? 0.0 : -(float) $order->store_credit_used
                 );
             }
         });

@@ -67,6 +67,7 @@ class DashboardService
             'outOfStock' => Product::query()->readyForSale()->where('quantity', '<=', 0)->count(),
             'pendingOrders' => Order::where('status', Order::STATUS_PENDING)->count(),
             'pendingStylistRequests' => RequestStylist::where('status', RequestStylist::STATUS_PENDING)->count(),
+            'failedEmails' => \App\Models\EmailLog::where('status', \App\Models\EmailLog::STATUS_FAILED)->count(),
         ];
     }
 }

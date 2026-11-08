@@ -89,6 +89,7 @@ class OrderResource extends JsonResource
                 'commission' => (float) $this->referral_commission,
             ] : null,
             'trackingNumber' => $this->tracking_number,
+            'deletedAt' => $this->deleted_at?->toISOString(),
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];

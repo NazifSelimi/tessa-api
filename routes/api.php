@@ -65,6 +65,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // This must appear before products/{product}; otherwise Laravel attempts
     // to resolve the literal "quick-order" as a product and returns 404.
     Route::get('products/quick-order', QuickOrderController::class)
+        ->middleware('feature:quick_order')
         ->middleware(['auth:sanctum', 'role:stylist,admin']);
     Route::get('product-collections', [ProductCollectionController::class, 'index']);
     Route::get('products/featured', [ProductController::class, 'featured']);
@@ -75,8 +76,17 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('brands', [BrandController::class, 'index']);
     Route::get('hair-profile-options', HairProfileOptionController::class);
     Route::post('coupons/validate', [CouponController::class, 'validate']);
-    Route::post('recommendations', RecommendationController::class);
-    Route::get('bundles', [BundleController::class, 'index']);
+    Route::post('recommendations', RecommendationController::class)->middleware('feature:hair_quiz');
+    Route::get('bundles', [BundleController::class, 'index'])->middleware('feature:bundles,empty');
+    Route::get('features', \App\Http\Controllers\Api\V1\FeatureController::class);
+    Route::get('business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'publicProfile']);
+
+    // One-click unsubscribe links in emails (signed, no login).
+    Route::middleware('signed')->group(function () {
+        Route::get('email/unsubscribe/{user}', [\App\Http\Controllers\Api\V1\EmailSubscriptionController::class, 'unsubscribe'])->name('email.unsubscribe');
+        Route::post('email/unsubscribe/{user}', [\App\Http\Controllers\Api\V1\EmailSubscriptionController::class, 'oneClick'])->name('email.unsubscribe.one-click');
+        Route::get('email/resubscribe/{user}', [\App\Http\Controllers\Api\V1\EmailSubscriptionController::class, 'resubscribe'])->name('email.resubscribe');
+    });
     Route::get('content-blocks', [ContentBlockController::class, 'index']);
     // Candidate files are review-only assets. <img> cannot send the admin bearer
     // token, so the protected candidate list hands out short-lived signed URLs.
@@ -112,10 +122,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/users/{id}', [AdminUserController::class, 'show']);
             Route::put('/users/{id}', [AdminUserController::class, 'update']);
             Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
-            Route::get('/stylist-invitations', [StylistInvitationController::class, 'index']);
-            Route::post('/stylist-invitations', [StylistInvitationController::class, 'create']);
-            Route::post('/stylist-invitations/{id}/reissue', [StylistInvitationController::class, 'reissue']);
-            Route::post('/stylist-invitations/{id}/revoke', [StylistInvitationController::class, 'revoke']);
+            Route::get('/stylist-invitations', [StylistInvitationController::class, 'index'])->middleware('feature:stylist_invitations');
+            Route::post('/stylist-invitations', [StylistInvitationController::class, 'create'])->middleware('feature:stylist_invitations');
+            Route::post('/stylist-invitations/{id}/reissue', [StylistInvitationController::class, 'reissue'])->middleware('feature:stylist_invitations');
+            Route::post('/stylist-invitations/{id}/revoke', [StylistInvitationController::class, 'revoke'])->middleware('feature:stylist_invitations');
             
             // Product Management
             Route::get('/products', [AdminProductController::class, 'index']);
@@ -125,29 +135,29 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
             Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
             Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate']);
-            Route::get('/catalogue-review', [CatalogueReviewController::class, 'index']);
-            Route::post('/catalogue-review/{itemKey}/confirm-match', [CatalogueReviewController::class, 'confirmMatch']);
-            Route::post('/catalogue-review/{itemKey}/create-product', [CatalogueReviewController::class, 'createMissing']);
-            Route::post('/catalogue-review/{itemKey}/dismiss', [CatalogueReviewController::class, 'dismiss']);
-            Route::get('/catalog-image-candidates', [CatalogImageCandidateController::class, 'index']);
-            Route::get('/catalog-image-health', [CatalogImageCandidateController::class, 'health']);
-            Route::get('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'index']);
-            Route::post('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'store']);
-            Route::patch('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'update']);
-            Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve']);
-            Route::get('/hair-quiz/products', [HairQuizController::class, 'index']);
-            Route::put('/hair-quiz/products/{product}', [HairQuizController::class, 'update']);
-            Route::post('/hair-quiz/preview', [HairQuizController::class, 'preview']);
-            Route::get('/content-blocks', [AdminContentBlockController::class, 'index']);
-            Route::post('/content-blocks', [AdminContentBlockController::class, 'store']);
-            Route::put('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'update']);
-            Route::delete('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'destroy']);
+            Route::get('/catalogue-review', [CatalogueReviewController::class, 'index'])->middleware('feature:supplier_list');
+            Route::post('/catalogue-review/{itemKey}/confirm-match', [CatalogueReviewController::class, 'confirmMatch'])->middleware('feature:supplier_list');
+            Route::post('/catalogue-review/{itemKey}/create-product', [CatalogueReviewController::class, 'createMissing'])->middleware('feature:supplier_list');
+            Route::post('/catalogue-review/{itemKey}/dismiss', [CatalogueReviewController::class, 'dismiss'])->middleware('feature:supplier_list');
+            Route::get('/catalog-image-candidates', [CatalogImageCandidateController::class, 'index'])->middleware('feature:image_review');
+            Route::get('/catalog-image-health', [CatalogImageCandidateController::class, 'health'])->middleware('feature:image_review');
+            Route::get('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'index'])->middleware('feature:image_review');
+            Route::post('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'store'])->middleware('feature:image_review');
+            Route::patch('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'update'])->middleware('feature:image_review');
+            Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve'])->middleware('feature:image_review');
+            Route::get('/hair-quiz/products', [HairQuizController::class, 'index'])->middleware('feature:hair_quiz');
+            Route::put('/hair-quiz/products/{product}', [HairQuizController::class, 'update'])->middleware('feature:hair_quiz');
+            Route::post('/hair-quiz/preview', [HairQuizController::class, 'preview'])->middleware('feature:hair_quiz');
+            Route::get('/content-blocks', [AdminContentBlockController::class, 'index'])->middleware('feature:content_blocks');
+            Route::post('/content-blocks', [AdminContentBlockController::class, 'store'])->middleware('feature:content_blocks');
+            Route::put('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'update'])->middleware('feature:content_blocks');
+            Route::delete('/content-blocks/{contentBlock}', [AdminContentBlockController::class, 'destroy'])->middleware('feature:content_blocks');
 
-            Route::get('/bundles', [AdminBundleController::class, 'index']);
-            Route::post('/bundles', [AdminBundleController::class, 'store']);
-            Route::put('/bundles/{bundle}', [AdminBundleController::class, 'update']);
-            Route::delete('/bundles/{bundle}', [AdminBundleController::class, 'destroy']);
-            Route::post('/bundles/simulate', [AdminPricingController::class, 'simulateOffer']);
+            Route::get('/bundles', [AdminBundleController::class, 'index'])->middleware('feature:bundles');
+            Route::post('/bundles', [AdminBundleController::class, 'store'])->middleware('feature:bundles');
+            Route::put('/bundles/{bundle}', [AdminBundleController::class, 'update'])->middleware('feature:bundles');
+            Route::delete('/bundles/{bundle}', [AdminBundleController::class, 'destroy'])->middleware('feature:bundles');
+            Route::post('/bundles/simulate', [AdminPricingController::class, 'simulateOffer'])->middleware('feature:bundles');
             Route::get('/pricing-settings', [AdminPricingController::class, 'settings']);
             Route::put('/pricing-settings', [AdminPricingController::class, 'updateSettings']);
             
@@ -171,6 +181,41 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Order Management
             Route::get('/orders', [AdminOrderController::class, 'index']);
             Route::put('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+            Route::middleware('feature:order_delete')->group(function () {
+                Route::delete('/orders/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'trash'])->whereNumber('id');
+                Route::post('/orders/{id}/restore', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'restore'])->whereNumber('id');
+                Route::delete('/orders/{id}/force', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'forceDelete'])->whereNumber('id');
+            });
+
+            // Switchable features and the shop's identity
+            Route::get('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'index']);
+            Route::get('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'index']);
+            Route::post('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'store'])->middleware('feature:ai_assistant');
+            Route::delete('/ai-tokens/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'destroy'])->whereNumber('id');
+            Route::put('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'update']);
+            Route::get('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'show']);
+            Route::put('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'update']);
+            Route::post('/business/logo', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'uploadLogo']);
+
+            // Email: mailbox settings are always reachable; writing emails and the outbox can be switched off.
+            Route::get('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'settings']);
+            Route::put('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'updateSettings']);
+            Route::post('/email-settings/test', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'test']);
+            Route::get('/email-templates', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templates']);
+            Route::get('/email-templates/{key}/preview', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templatePreview']);
+            Route::prefix('emails')->middleware('feature:admin_emails')->controller(\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class)->group(function () {
+                Route::get('/overview', 'overview');
+                Route::get('/logs', 'logs');
+                Route::get('/logs/{log}', 'showLog');
+                Route::post('/logs/{log}/retry', 'retry');
+                Route::delete('/logs/{log}', 'destroyLog');
+                Route::post('/retry-failed', 'retryAll');
+                Route::post('/import-legacy', 'importLegacy');
+                Route::post('/audience', 'audience');
+                Route::post('/preview', 'preview');
+                Route::post('/send', 'send');
+                Route::get('/campaigns', 'campaigns');
+            });
             
             // Stylist Request Management
             Route::get('/stylist-requests', [StylistRequestAdminController::class, 'index']);
@@ -183,15 +228,15 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/reports/products', [AdminReportController::class, 'products']);
             
             // Stylist referral codes and store credit
-            Route::get('/referrals', [AdminReferralController::class, 'index']);
-            Route::post('/referrals', [AdminReferralController::class, 'store']);
-            Route::put('/referrals/settings', [AdminReferralController::class, 'updateSettings']);
-            Route::put('/referrals/{coupon}', [AdminReferralController::class, 'update']);
-            Route::post('/users/{user}/store-credit', [AdminReferralController::class, 'adjustCredit']);
+            Route::get('/referrals', [AdminReferralController::class, 'index'])->middleware('feature:referrals');
+            Route::post('/referrals', [AdminReferralController::class, 'store'])->middleware('feature:referrals');
+            Route::put('/referrals/settings', [AdminReferralController::class, 'updateSettings'])->middleware('feature:referrals');
+            Route::put('/referrals/{coupon}', [AdminReferralController::class, 'update'])->middleware('feature:referrals');
+            Route::post('/users/{user}/store-credit', [AdminReferralController::class, 'adjustCredit'])->middleware('feature:referrals');
 
             // Distributor Codes
-            Route::get('/distributor-codes', [AdminDistributorController::class, 'index']);
-            Route::get('/distributor-codes/stats', [AdminDistributorController::class, 'stats']);
+            Route::get('/distributor-codes', [AdminDistributorController::class, 'index'])->middleware('feature:distributors');
+            Route::get('/distributor-codes/stats', [AdminDistributorController::class, 'stats'])->middleware('feature:distributors');
         });
         
         // Stylist Routes
@@ -209,8 +254,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/orders', [StylistOrderController::class, 'index']);
 
             // Referral code for clients and the store credit it earns
-            Route::get('/referral', [StylistReferralController::class, 'show']);
-            Route::put('/referral', [StylistReferralController::class, 'update']);
+            Route::get('/referral', [StylistReferralController::class, 'show'])->middleware('feature:referrals');
+            Route::put('/referral', [StylistReferralController::class, 'update'])->middleware('feature:referrals');
         });
     });
 });

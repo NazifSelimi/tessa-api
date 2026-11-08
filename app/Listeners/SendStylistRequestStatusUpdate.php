@@ -6,9 +6,10 @@ use App\Events\StylistRequestApproved;
 use App\Events\StylistRequestRejected;
 use App\Events\StylistRequestSubmitted;
 use App\Mail\Stylists\StylistRequestStatusMail;
+use App\Services\Mail\EmailService;
+use App\Services\Mail\MailSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendStylistRequestStatusUpdate implements ShouldQueue
 {
@@ -16,37 +17,33 @@ class SendStylistRequestStatusUpdate implements ShouldQueue
 
     public function handle(StylistRequestApproved|StylistRequestRejected|StylistRequestSubmitted $event): void
     {
+        if (! app(MailSettings::class)->autoEnabled('stylist_status')) {
+            return;
+        }
         $user = $event->user;
 
         if (! $user->email) {
-            Log::warning('StylistRequestStatusUpdate skipped: no recipient email', [
-                'user_id' => $user->id,
-                'request_id' => $event->request->id ?? null,
-            ]);
+            Log::warning('StylistRequestStatusUpdate skipped: no recipient email', ['user_id' => $user->id]);
+
             return;
         }
 
-        $statusLabel = match (true) {
-            $event instanceof StylistRequestSubmitted => 'Submitted',
-            $event instanceof StylistRequestApproved => 'Approved',
-            default => 'Rejected',
+        $statusKey = match (true) {
+            $event instanceof StylistRequestSubmitted => 'submitted',
+            $event instanceof StylistRequestApproved => 'approved',
+            default => 'rejected',
         };
 
-        try {
-            Mail::to($user->email)->send(new StylistRequestStatusMail(
-                user: $user,
-                statusLabel: $statusLabel,
-                requestStylist: $event->request,
-                reason: $event instanceof StylistRequestRejected ? $event->reason : null,
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('StylistRequestStatusUpdate failed', [
-                'user_id' => $user->id,
-                'request_id' => $event->request->id ?? null,
-                'status' => $statusLabel,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
+        app(EmailService::class)->send($user->email, new StylistRequestStatusMail(
+            user: $user,
+            statusLabel: $statusKey,
+            requestStylist: $event->request,
+            reason: $event instanceof StylistRequestRejected ? $event->reason : null,
+        ), [
+            'type' => 'stylist-status',
+            'user_id' => $user->id,
+            'name' => trim($user->first_name . ' ' . $user->last_name) ?: null,
+            'locale' => EmailLocale::forUser($user),
+        ]);
     }
 }
