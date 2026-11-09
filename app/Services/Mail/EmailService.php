@@ -72,10 +72,20 @@ class EmailService
         try {
             $mail = unserialize($log->payload);
 
-            return $mail instanceof Mailable ? $mail->render() : null;
+            return $mail instanceof Mailable ? self::prepare($mail)->render() : null;
         } catch (\Throwable $e) {
             return '<p style="font-family:sans-serif;color:#b42318">This email can no longer be shown: ' . e($e->getMessage()) . '</p>';
         }
+    }
+
+    /** Fixes older saved emails: shop alerts are always English. */
+    public static function prepare(Mailable $mail): Mailable
+    {
+        if (! $mail->locale && ($mail instanceof \App\Mail\NewOrderAdminMail || $mail instanceof \App\Mail\Stylists\NewStylistRequestAdminMail)) {
+            $mail->locale('en');
+        }
+
+        return $mail;
     }
 
     public function subjectOf(Mailable $mail): ?string

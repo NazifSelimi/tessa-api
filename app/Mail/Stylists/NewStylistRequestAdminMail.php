@@ -18,7 +18,9 @@ class NewStylistRequestAdminMail extends Mailable
     public function __construct(
         public readonly RequestStylist $requestStylist,
         public readonly User $user,
-    ) {}
+    ) {
+        $this->locale('en');
+    }
 
     public function envelope(): Envelope
     {
