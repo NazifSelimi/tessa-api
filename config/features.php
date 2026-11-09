@@ -92,4 +92,10 @@ return [
         'area' => 'admin',
         'default' => true,
     ],
+    'messaging' => [
+        'label' => 'Viber & WhatsApp messages',
+        'description' => 'Message templates, send-to-a-list and the optional automatic WhatsApp on /admin/messages.',
+        'area' => 'admin',
+        'default' => true,
+    ],
 ];
