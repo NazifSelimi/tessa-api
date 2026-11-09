@@ -17,7 +17,7 @@ class EmailService
     /**
      * @param  array{type?: string, order_id?: int|null, user_id?: int|null, campaign_id?: int|null, created_by?: int|null, name?: string|null, locale?: string|null}  $context
      */
-    public function send(string $to, Mailable $mail, array $context = []): EmailLog
+    public function send(string $to, Mailable $mail, array $context = [], ?\DateTimeInterface $sendAt = null): EmailLog
     {
         $to = trim($to);
         if (! empty($context['locale'])) {
@@ -43,7 +43,10 @@ class EmailService
             return $log;
         }
 
-        SendLoggedEmail::dispatch($log->id);
+        // Group emails can be spread over time to stay inside the mailbox's daily limit.
+        $sendAt && $sendAt > now()
+            ? SendLoggedEmail::dispatch($log->id)->delay($sendAt)
+            : SendLoggedEmail::dispatch($log->id);
 
         return $log->refresh();
     }

@@ -190,7 +190,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Switchable features and the shop's identity
             Route::get('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'index']);
             Route::get('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'index']);
-            Route::post('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'store'])->middleware('feature:ai_assistant');
+            Route::post('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'store'])->middleware('feature:mcp');
             Route::delete('/ai-tokens/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'destroy'])->whereNumber('id');
             Route::put('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'update']);
             Route::get('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'show']);
@@ -201,6 +201,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'settings']);
             Route::put('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'updateSettings']);
             Route::post('/email-settings/test', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'test']);
+            Route::get('/email-settings/deliverability', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'deliverability']);
             Route::get('/email-templates', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templates']);
             Route::get('/email-templates/{key}/preview', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templatePreview']);
             Route::prefix('emails')->middleware('feature:admin_emails')->controller(\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class)->group(function () {
