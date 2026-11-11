@@ -235,8 +235,9 @@ class ProductService
     {
         $builder = Product::query()
             ->with(['brand', 'category', 'translations', 'images', 'sale', 'catalogCollections'])
-            ->where('name', 'like', '%' . $query . '%')
             ->limit($limit);
+
+        $this->applySearch($builder, $query);
 
         $this->applyVisibilityFilter($builder, $viewer);
 
@@ -399,6 +400,24 @@ class ProductService
         }
     }
 
+    /**
+     * Every word must match the product name, its brand or its category, so
+     * "7.1 fanola" finds Fanola's 7.1 shade and "mask botugen" finds the mask.
+     */
+    private function applySearch(Builder $query, string $text): void
+    {
+        $words = array_slice(preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 6);
+
+        foreach ($words as $word) {
+            $like = '%' . addcslashes($word, '%_\\') . '%';
+            $query->where(function (Builder $match) use ($like) {
+                $match->where('products.name', 'like', $like)
+                    ->orWhereHas('brand', fn (Builder $brand) => $brand->where('name', 'like', $like))
+                    ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', $like));
+            });
+        }
+    }
+
     private function applyFilters(Builder $query, array $filters): void
     {
         if (!empty($filters['brand_id'])) {
@@ -428,7 +447,7 @@ class ProductService
         }
 
         if (!empty($filters['search'])) {
-            $query->where('products.name', 'like', '%' . $filters['search'] . '%');
+            $this->applySearch($query, (string) $filters['search']);
         }
 
         if (!empty($filters['on_sale'])) {

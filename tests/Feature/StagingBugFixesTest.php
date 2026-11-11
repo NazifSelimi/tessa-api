@@ -81,4 +81,30 @@ class StagingBugFixesTest extends TestCase
 
         $this->getJson('/api/v1/products?category_ids=1;drop')->assertStatus(422);
     }
+
+    #[Test]
+    public function search_matches_each_word_against_name_brand_or_category(): void
+    {
+        $fanola = Brand::factory()->create(['name' => 'Fanolatest']);
+        $other = Brand::factory()->create(['name' => 'Otherbrandtest']);
+        $category = Category::factory()->create();
+        $make = fn (Brand $brand, string $name) => Product::factory()->create([
+            'brand_id' => $brand->id,
+            'category_id' => $category->id,
+            'name' => $name,
+            'price' => 900,
+            'stylist_price' => 600,
+            'quantity' => 5,
+            'stylist_only' => false,
+        ]);
+        $wanted = $make($fanola, '7.1 - Ash Blonde Searchtest 100ml');
+        $otherBrand = $make($other, '7.1 - Ash Blonde Searchtest 100ml');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('test')->plainTextToken;
+        $ids = collect($this->withToken($admin)->getJson('/api/v1/products?search=' . urlencode('7.1 fanolatest searchtest') . '&perPage=50')->assertOk()->json('data'))
+            ->pluck('id')->map(fn ($id) => (string) $id);
+
+        $this->assertContains((string) $wanted->id, $ids);
+        $this->assertNotContains((string) $otherBrand->id, $ids);
+    }
 }
