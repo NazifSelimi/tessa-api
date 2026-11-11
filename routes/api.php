@@ -187,6 +187,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
                 Route::delete('/orders/{id}/force', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'forceDelete'])->whereNumber('id');
             });
 
+            // Customers (simple CRM): accounts and guest buyers, notes and tags
+            Route::get('/customers', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'index']);
+            Route::get('/customers/{key}', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'show'])->where('key', '[^/]+');
+            Route::put('/customers/{key}', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'update'])->where('key', '[^/]+');
+
             // Switchable features and the shop's identity
             Route::get('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'index']);
             Route::get('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'index']);
