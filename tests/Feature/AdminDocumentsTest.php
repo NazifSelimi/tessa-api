@@ -8,14 +8,14 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\Documents\OrderDocumentData;
 use App\Services\Documents\PriceListData;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class AdminDocumentsTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     private function order(): Order
     {
