@@ -213,6 +213,7 @@ class ProductImporter
                     $product->forceFill([
                         'quantity' => 0,
                         'price' => 0,
+                        'stylist_price' => 0,
                         ...$line['values'],
                     ])->save();
                     $undo['created'][] = $product->id;
