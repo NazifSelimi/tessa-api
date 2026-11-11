@@ -166,8 +166,17 @@ class ProductImporter
                         $values[$field] = $text;
                     }
                 }
+                // ... and needs a brand and a category, whatever fields were chosen.
+                foreach (['brand' => [$brands, 'brand_id'], 'category' => [$categories, 'category_id']] as $field => [$lookup, $column]) {
+                    $found = $lookup[ValueParser::key($cell($row, $field))] ?? null;
+                    if ($found !== null) {
+                        $values[$column] = (int) $found;
+                    }
+                }
                 if (($values['name'] ?? '') === '') {
                     $line['problems'][] = 'Not found in the catalogue and the row has no name.';
+                } elseif ($createNew && (!isset($values['brand_id']) || !isset($values['category_id']))) {
+                    $line['problems'][] = 'A new product needs a brand and a category that already exist (add Brand and Category columns).';
                 } elseif (!$createNew) {
                     $line['action'] = 'new';
                 } else {

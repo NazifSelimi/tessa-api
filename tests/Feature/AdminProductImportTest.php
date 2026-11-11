@@ -54,9 +54,11 @@ class AdminProductImportTest extends TestCase
         $product = $this->product(['manufacturer_code' => 'TST-77']);
         Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]));
 
-        $csv = "Article code;Name;Retail price;Stock\nTST-77;;650;40\nTST-88;Brand new thing;120;2\n";
+        $brand = $product->brand->name;
+        $category = $product->category->name;
+        $csv = "Article code;Name;Brand;Category;Retail price;Stock\nTST-77;;;;650;40\nTST-88;Brand new thing;{$brand};{$category};120;2\nTST-99;No brand thing;;;120;2\n";
         $upload = $this->post('/api/v1/admin/product-import', ['file' => UploadedFile::fake()->createWithContent('stock.csv', $csv)]);
-        $upload->assertOk()->assertJsonPath('data.summary.update', 1)->assertJsonPath('data.summary.new', 1);
+        $upload->assertOk()->assertJsonPath('data.summary.update', 1)->assertJsonPath('data.summary.new', 2);
         $token = $upload->json('data.token');
 
         $applied = $this->postJson("/api/v1/admin/product-import/{$token}/apply", ['create_new' => true]);
