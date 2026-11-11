@@ -41,8 +41,6 @@ use App\Http\Controllers\Api\V1\Admin\CatalogImageCandidateController;
 use App\Http\Controllers\Api\V1\Admin\HairQuizController;
 
 /*
- * HTTP-to-domain map: docs/UI_TO_DATA_FLOW_REVIEW.md is the review entry point.
- *
  * Keep route comments focused on feature ownership and authorization. Controller
  * and service comments belong beside the decision/query they explain so this
  * file remains the authoritative public API surface rather than a second copy
