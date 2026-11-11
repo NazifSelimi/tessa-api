@@ -202,6 +202,16 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::put('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'update']);
             Route::post('/business/logo', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'uploadLogo']);
 
+            // Viber & WhatsApp: templates, send-to-a-list, optional automatic WhatsApp (off by default).
+            Route::prefix('messaging')->middleware('feature:messaging')->controller(\App\Http\Controllers\Api\V1\Admin\AdminMessagingController::class)->group(function () {
+                Route::get('/templates', 'templates');
+                Route::put('/templates', 'saveTemplates');
+                Route::post('/audience', 'audience');
+                Route::get('/whatsapp', 'whatsapp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+                Route::put('/whatsapp', 'saveWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+                Route::post('/whatsapp/test', 'testWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+            });
+
             // Email: mailbox settings are always reachable; writing emails and the outbox can be switched off.
             Route::get('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'settings']);
             Route::put('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'updateSettings']);
