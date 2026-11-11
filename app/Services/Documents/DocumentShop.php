@@ -14,12 +14,12 @@ use Throwable;
 class DocumentShop
 {
     public const DEFAULTS = [
-        'name' => 'Tessa',
+        'name' => '',
         'legal_name' => '',
         'tagline' => '',
-        'email' => 'tessa@tessa.mk',
-        'phone' => '078 286 003',
-        'phone_2' => '042 333 003',
+        'email' => '',
+        'phone' => '',
+        'phone_2' => '',
         'address' => '',
         'city' => '',
         'country' => '',
@@ -60,6 +60,9 @@ class DocumentShop
         }
         if (! preg_match('/^#[0-9a-fA-F]{3,8}$/', $details['brand_color'])) {
             $details['brand_color'] = self::DEFAULTS['brand_color'];
+        }
+        if ($details['name'] === '') {
+            $details['name'] = (string) config('app.name', 'Shop');
         }
         $details['website_label'] = (string) preg_replace('#^https?://(www\.)?#', '', rtrim($details['website'], '/'));
 

@@ -56,7 +56,10 @@ class AdminEmailController extends Controller
     public function updateSettings(Request $request)
     {
         $data = $request->validate([
-            'mode' => ['sometimes', Rule::in(['env', 'smtp', 'off'])],
+            'mode' => ['sometimes', Rule::in(['env', 'resend', 'smtp', 'off'])],
+            'resendKey' => ['nullable', 'string', 'starts_with:re_', 'max:200'],
+            'clearResendKey' => ['sometimes', 'boolean'],
+            'dailyLimit' => ['nullable', 'integer', 'between:0,100000'],
             'host' => ['nullable', 'string', 'max:190'],
             'port' => ['nullable', 'integer', 'between:1,65535'],
             'encryption' => ['nullable', Rule::in(['tls', 'ssl', 'none'])],
@@ -74,9 +77,24 @@ class AdminEmailController extends Controller
         if (($data['mode'] ?? null) === 'smtp' && empty($data['host']) && ! $this->settings->raw('host')) {
             return ApiResponse::error('Enter the mail server (host) of your mailbox.', 422);
         }
+        if (($data['mode'] ?? null) === 'resend' && empty($data['resendKey']) && ! $this->settings->resendKey()) {
+            return ApiResponse::error('Paste your Resend API key (Resend → API Keys; the free plan is enough).', 422);
+        }
         $this->settings->update($data);
 
         return ApiResponse::ok($this->settings->forAdmin(), 200, null, 'Email settings saved');
+    }
+
+    /** SPF / DKIM / DMARC of the sending domain, so emails don't land in spam. */
+    public function deliverability(Request $request, \App\Services\Mail\DeliverabilityCheck $check)
+    {
+        $from = (string) ($request->query('from') ?: $this->settings->raw('from_address', '') ?: config('mail.from.address'));
+        $domain = str_contains($from, '@') ? substr(strrchr($from, '@'), 1) : $from;
+        if (! $domain || ! preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', $domain)) {
+            return ApiResponse::error('Enter a "Send as" address first.', 422);
+        }
+
+        return ApiResponse::ok($check->run($domain) + ['from' => $from]);
     }
 
     /** Sends one email straight away (not queued) and reports the real error, if any. */
@@ -160,7 +178,16 @@ class AdminEmailController extends Controller
             'deliveryNote' => $this->settings->describe(),
             'sentLast7Days' => EmailLog::where('status', EmailLog::STATUS_SENT)->where('sent_at', '>=', now()->subDays(7))->count(),
             'optedOut' => User::whereNotNull('email_opt_out_at')->count(),
+            'sentToday' => $this->sentSince(now()->startOfDay()),
+            'sentThisMonth' => $this->sentSince(now()->startOfMonth()),
+            'dailyLimit' => $this->settings->dailyLimit(),
+            'monthlyLimit' => $this->settings->raw('mode', 'env') === 'resend' ? MailSettings::RESEND_MONTHLY_LIMIT : null,
         ]);
+    }
+
+    private function sentSince(\DateTimeInterface $since): int
+    {
+        return EmailLog::where('status', EmailLog::STATUS_SENT)->where('delivery', 'smtp')->where('sent_at', '>=', $since)->count();
     }
 
     public function logs(Request $request)
@@ -381,6 +408,8 @@ class AdminEmailController extends Controller
                 ? trim($r['user']->first_name . ' ' . $r['user']->last_name) . ' <' . $r['email'] . '>'
                 : $r['email'])->values(),
             'limit' => self::MAX_RECIPIENTS,
+            'dailyLimit' => $this->settings->dailyLimit(),
+            'leftToday' => max(0, $this->settings->dailyLimit() - $this->sentSince(now()->startOfDay())),
         ]);
     }
 
@@ -450,21 +479,33 @@ class AdminEmailController extends Controller
             'created_by' => $request->user()?->id,
         ]);
 
-        foreach ($recipients as $recipient) {
+        // Stay inside the mailbox's daily limit: what doesn't fit today goes out on the next days.
+        $limit = max(1, $this->settings->dailyLimit());
+        $leftToday = max(0, $limit - $this->sentSince(now()->startOfDay()));
+        foreach ($recipients->values() as $index => $recipient) {
             /** @var User|null $user */
             $user = $recipient['user'];
+            $sendAt = null;
+            if ($index >= $leftToday) {
+                $day = intdiv($index - $leftToday, $limit) + 1;
+                $sendAt = now()->addDays($day)->startOfDay()->addHours(9)->addSeconds(($index - $leftToday) % $limit * 20);
+            } elseif ($index > 0) {
+                $sendAt = now()->addSeconds($index * 2); // a little spacing so the mailbox isn't flooded
+            }
             $this->emails->send($recipient['email'], $this->buildMail($data, $user, $isGroup), [
                 'type' => 'admin-message',
                 'user_id' => $user?->id,
                 'name' => $user ? trim($user->first_name . ' ' . $user->last_name) : null,
                 'campaign_id' => $campaign->id,
                 'created_by' => $request->user()?->id,
-            ]);
+            ], $sendAt);
         }
+        $spreadDays = $recipients->count() > $leftToday ? (int) ceil(($recipients->count() - $leftToday) / $limit) : 0;
 
         return ApiResponse::ok([
             'campaignId' => $campaign->id,
             'recipients' => $recipients->count(),
+            'spreadDays' => $spreadDays,
             'delivery' => $this->settings->deliveryMode(),
             'note' => $this->settings->describe(),
         ], 201, null, 'Sending to ' . $recipients->count() . ' recipient(s)');

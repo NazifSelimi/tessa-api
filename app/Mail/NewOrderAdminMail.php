@@ -18,7 +18,10 @@ class NewOrderAdminMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public readonly Order $order,
-    ) {}
+    ) {
+        // Shop alerts are written in English, whatever language the customer used.
+        $this->locale('en');
+    }
 
     public function envelope(): Envelope
     {

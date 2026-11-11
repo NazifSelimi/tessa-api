@@ -18,6 +18,8 @@ class FeatureSwitchTest extends TestCase
     {
         parent::setUp();
         Setting::put('features', '{}');
+        Setting::put('features.plans', '{}');
+        Setting::put('business.plan', 'premium');
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     }
 
@@ -32,8 +34,9 @@ class FeatureSwitchTest extends TestCase
     public function the_shop_can_read_which_features_are_on()
     {
         $this->getJson('/api/v1/features')->assertOk()
-            ->assertJsonPath('data.hair_quiz', true)
-            ->assertJsonPath('data.order_delete', true);
+            ->assertJsonPath('data.hair_quiz.enabled', true)
+            ->assertJsonPath('data.hair_quiz.plan', 'basic')
+            ->assertJsonPath('data.order_delete.included', true);
     }
 
     #[Test]
@@ -42,11 +45,29 @@ class FeatureSwitchTest extends TestCase
         $this->asAdmin()->putJson('/api/v1/admin/features', ['features' => ['hair_quiz' => false, 'bundles' => false]])
             ->assertOk();
 
-        $this->getJson('/api/v1/features')->assertJsonPath('data.hair_quiz', false);
+        $this->getJson('/api/v1/features')->assertJsonPath('data.hair_quiz.enabled', false);
         $this->postJson('/api/v1/recommendations', [])->assertNotFound()->assertJsonPath('errors.code', 'feature_off');
         // The shop always loads bundles; when off it just gets none.
         $this->getJson('/api/v1/bundles')->assertOk()->assertExactJson(['success' => true, 'data' => []]);
         $this->asAdmin()->getJson('/api/v1/admin/hair-quiz/products')->assertNotFound();
+    }
+
+    #[Test]
+    public function a_basic_plan_locks_pro_and_premium_features()
+    {
+        $this->asAdmin()->putJson('/api/v1/admin/features', ['shop_plan' => 'basic'])->assertOk()
+            ->assertJsonPath('data.plan', 'basic');
+
+        $this->getJson('/api/v1/features')
+            ->assertJsonPath('data.admin_emails.included', false)
+            ->assertJsonPath('data.admin_emails.enabled', true) // still switched on, just not in the plan
+            ->assertJsonPath('data.hair_quiz.included', true);
+        $this->asAdmin()->getJson('/api/v1/admin/emails/logs')->assertNotFound();
+
+        // Moving one feature down to Basic unlocks it without changing the plan.
+        $this->asAdmin()->putJson('/api/v1/admin/features', ['plans' => ['admin_emails' => 'basic']])->assertOk();
+        $this->asAdmin()->getJson('/api/v1/admin/emails/logs')->assertOk();
+        $this->asAdmin()->putJson('/api/v1/admin/features', ['shop_plan' => 'gold'])->assertStatus(422);
     }
 
     #[Test]

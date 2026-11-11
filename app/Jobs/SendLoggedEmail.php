@@ -38,6 +38,7 @@ class SendLoggedEmail implements ShouldQueue
             if (! $mail instanceof Mailable) {
                 throw new \RuntimeException('The saved email could not be read.');
             }
+            \App\Services\Mail\EmailService::prepare($mail);
             $settings->apply();
             $delivery = $settings->deliveryMode();
             Mail::to($log->to_email, $log->to_name)->sendNow($mail);
