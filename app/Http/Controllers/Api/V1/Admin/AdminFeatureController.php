@@ -17,18 +17,26 @@ class AdminFeatureController extends Controller
         return ApiResponse::ok($this->features->adminList());
     }
 
+    /** Switches, per-feature plan levels and the shop's plan (no billing: set by hand). */
     public function update(Request $request)
     {
-        $keys = array_keys($this->features->registry());
         $data = $request->validate([
-            'features' => ['required', 'array'],
+            'features' => ['sometimes', 'array'],
             'features.*' => ['boolean'],
+            'plans' => ['sometimes', 'array'],
+            'plans.*' => [Rule::in(FeatureService::PLANS)],
+            'shop_plan' => ['sometimes', Rule::in(FeatureService::PLANS)],
         ]);
-        $unknown = array_diff(array_keys($data['features']), $keys);
+        $keys = array_keys($this->features->registry());
+        $unknown = array_diff(array_merge(array_keys($data['features'] ?? []), array_keys($data['plans'] ?? [])), $keys);
         if ($unknown !== []) {
             return ApiResponse::error('Unknown feature: ' . implode(', ', $unknown), 422);
         }
-        $this->features->update($data['features']);
+        $this->features->update($data['features'] ?? []);
+        $this->features->updatePlanLevels($data['plans'] ?? []);
+        if (isset($data['shop_plan'])) {
+            $this->features->setShopPlan($data['shop_plan']);
+        }
 
         return ApiResponse::ok($this->features->adminList(), 200, null, 'Features saved');
     }

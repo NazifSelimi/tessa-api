@@ -28,6 +28,8 @@ class MailSettings
 
     /** Ready-made settings for common mailboxes, shown as one-click presets. */
     public const PRESETS = [
+        'hostinger' => ['label' => 'Hostinger Email (recommended mailbox)', 'host' => 'smtp.hostinger.com', 'port' => 465, 'encryption' => 'ssl',
+            'help' => 'Username = the full mailbox address (e.g. shop@yourdomain.mk), password = that mailbox\'s password from hPanel → Emails. Port 465 SSL (or 587 TLS). Set SPF, DKIM and DMARC in hPanel → Emails → DNS so mail does not land in spam. Plans allow a limited number of emails per day.'],
         'gmail' => ['label' => 'Gmail / Google Workspace', 'host' => 'smtp.gmail.com', 'port' => 587, 'encryption' => 'tls',
             'help' => 'Turn on 2-step verification, then create an App Password at myaccount.google.com/apppasswords and paste it as the password. Up to ~500 emails a day (2,000 on Workspace).'],
         'outlook' => ['label' => 'Outlook / Microsoft 365', 'host' => 'smtp.office365.com', 'port' => 587, 'encryption' => 'tls',
@@ -39,6 +41,11 @@ class MailSettings
         'brevo' => ['label' => 'Brevo (newsletters, high volume)', 'host' => 'smtp-relay.brevo.com', 'port' => 587, 'encryption' => 'tls',
             'help' => 'Free plan: 300 emails a day. Verify your sender address/domain in Brevo, then use the SMTP login and key from Brevo → SMTP & API.'],
     ];
+
+    /** Free-plan sending limits (per day) used to spread group emails; admins can lower or raise it. */
+    public const DEFAULT_DAILY_LIMIT = ['resend' => 100, 'smtp' => 300, 'env' => 300, 'off' => 1000000];
+
+    public const RESEND_MONTHLY_LIMIT = 3000;
 
     public function __construct(private readonly BusinessProfile $business) {}
 
@@ -56,7 +63,10 @@ class MailSettings
         }
 
         return [
-            'mode' => $this->raw('mode', 'env'), // env = server file, smtp = own mailbox, off = don't send (log only)
+            'mode' => $this->raw('mode', 'env'), // env = server file, resend = Resend API, smtp = own mailbox, off = don't send (log only)
+            'hasResendKey' => (string) $this->raw('resend_key', '') !== '' || (string) config('services.resend.key') !== '',
+            'resendKeyFromServer' => (string) $this->raw('resend_key', '') === '' && (string) config('services.resend.key') !== '',
+            'dailyLimit' => $this->dailyLimit(),
             'host' => (string) $this->raw('host', ''),
             'port' => (int) $this->raw('port', 587),
             'encryption' => (string) $this->raw('encryption', 'tls'),
@@ -79,7 +89,7 @@ class MailSettings
         $map = [
             'mode' => 'mode', 'host' => 'host', 'port' => 'port', 'encryption' => 'encryption', 'username' => 'username',
             'fromAddress' => 'from_address', 'fromName' => 'from_name', 'replyTo' => 'reply_to',
-            'adminRecipients' => 'admin_recipients', 'testRecipient' => 'test_recipient',
+            'adminRecipients' => 'admin_recipients', 'testRecipient' => 'test_recipient', 'dailyLimit' => 'daily_limit',
         ];
         foreach ($map as $input => $key) {
             if (array_key_exists($input, $data)) {
@@ -91,6 +101,11 @@ class MailSettings
             Setting::put('mail.password', Crypt::encryptString((string) $data['password']));
         } elseif (! empty($data['clearPassword'])) {
             Setting::put('mail.password', '');
+        }
+        if (! empty($data['resendKey'])) {
+            Setting::put('mail.resend_key', Crypt::encryptString((string) $data['resendKey']));
+        } elseif (! empty($data['clearResendKey'])) {
+            Setting::put('mail.resend_key', '');
         }
         foreach ($data['autoEmails'] ?? [] as $key => $on) {
             if (isset(self::AUTO_EMAILS[$key])) {
@@ -126,7 +141,7 @@ class MailSettings
         if ($mode === 'off') {
             return 'log';
         }
-        if ($mode === 'smtp') {
+        if ($mode === 'smtp' || $mode === 'resend') {
             return 'smtp';
         }
 
@@ -147,7 +162,11 @@ class MailSettings
             'log' => app()->isProduction()
                 ? 'Sending is off: emails are only written to the server log.'
                 : 'Test server: emails are only logged. Add a test address to receive them.',
-            default => 'Emails are delivered through ' . ($this->raw('mode', 'env') === 'smtp' ? (string) $this->raw('host') : 'the server mail settings') . '.',
+            default => 'Emails are delivered through ' . match ($this->raw('mode', 'env')) {
+                'smtp' => (string) $this->raw('host'),
+                'resend' => 'Resend',
+                default => 'the server mail settings',
+            } . '.',
         };
     }
 
@@ -156,6 +175,12 @@ class MailSettings
     {
         $mode = $this->raw('mode', 'env');
         $profile = $this->business->all();
+
+        if ($mode === 'resend' && $this->resendKey()) {
+            config(['mail.default' => 'resend', 'services.resend.key' => $this->resendKey(), 'resend.api_key' => $this->resendKey()]);
+            // The Resend client is a singleton; rebuild it so a newly saved key is used.
+            app()->forgetInstance(\Resend\Contracts\Client::class);
+        }
 
         if ($mode === 'smtp' && $this->raw('host')) {
             $encryption = (string) $this->raw('encryption', 'tls');
@@ -184,10 +209,36 @@ class MailSettings
         if ($delivery === 'redirected') {
             $mailer->alwaysTo($this->testRecipient());
         }
-        $replyTo = (string) $this->raw('reply_to', '');
+        // Replies reach a person: the saved reply-to, else the shop's contact mailbox.
+        $replyTo = (string) $this->raw('reply_to', '') ?: $profile['email'];
         if (filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
             $mailer->alwaysReplyTo($replyTo, $fromName);
         }
+    }
+
+    /** How many emails a day the connected mailbox may send (group emails are spread to stay under it). */
+    public function dailyLimit(): int
+    {
+        $saved = (int) $this->raw('daily_limit', 0);
+        if ($saved > 0) {
+            return $saved;
+        }
+
+        return self::DEFAULT_DAILY_LIMIT[$this->raw('mode', 'env')] ?? 300;
+    }
+
+    public function resendKey(): ?string
+    {
+        $stored = (string) $this->raw('resend_key', '');
+        if ($stored !== '') {
+            try {
+                return Crypt::decryptString($stored);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return (string) config('services.resend.key') ?: null;
     }
 
     private function password(): ?string

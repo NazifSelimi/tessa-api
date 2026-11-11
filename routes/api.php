@@ -187,20 +187,39 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
                 Route::delete('/orders/{id}/force', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'forceDelete'])->whereNumber('id');
             });
 
+            // PDF documents: order summary, delivery notes, price list (PRO plan)
+            require __DIR__ . '/documents.php';
+
+            // Customers (simple CRM): accounts and guest buyers, notes and tags
+            Route::get('/customers', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'index']);
+            Route::get('/customers/{key}', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'show'])->where('key', '[^/]+');
+            Route::put('/customers/{key}', [\App\Http\Controllers\Api\V1\Admin\AdminCustomerController::class, 'update'])->where('key', '[^/]+');
+
             // Switchable features and the shop's identity
             Route::get('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'index']);
             Route::get('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'index']);
-            Route::post('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'store'])->middleware('feature:ai_assistant');
+            Route::post('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'store'])->middleware('feature:mcp');
             Route::delete('/ai-tokens/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'destroy'])->whereNumber('id');
             Route::put('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'update']);
             Route::get('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'show']);
             Route::put('/business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'update']);
             Route::post('/business/logo', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'uploadLogo']);
 
+            // Viber & WhatsApp: templates, send-to-a-list, optional automatic WhatsApp (off by default).
+            Route::prefix('messaging')->middleware('feature:messaging')->controller(\App\Http\Controllers\Api\V1\Admin\AdminMessagingController::class)->group(function () {
+                Route::get('/templates', 'templates');
+                Route::put('/templates', 'saveTemplates');
+                Route::post('/audience', 'audience');
+                Route::get('/whatsapp', 'whatsapp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+                Route::put('/whatsapp', 'saveWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+                Route::post('/whatsapp/test', 'testWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+            });
+
             // Email: mailbox settings are always reachable; writing emails and the outbox can be switched off.
             Route::get('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'settings']);
             Route::put('/email-settings', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'updateSettings']);
             Route::post('/email-settings/test', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'test']);
+            Route::get('/email-settings/deliverability', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'deliverability']);
             Route::get('/email-templates', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templates']);
             Route::get('/email-templates/{key}/preview', [\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class, 'templatePreview']);
             Route::prefix('emails')->middleware('feature:admin_emails')->controller(\App\Http\Controllers\Api\V1\Admin\AdminEmailController::class)->group(function () {
@@ -226,6 +245,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Reports & Analytics
             Route::get('/reports/sales', [AdminReportController::class, 'sales']);
             Route::get('/reports/products', [AdminReportController::class, 'products']);
+            Route::get('/reports/overview', [AdminReportController::class, 'overview'])->middleware('feature:sales_reports');
+            Route::get('/reports/summary', [AdminReportController::class, 'summary'])->middleware('feature:sales_reports');
+            Route::get('/reports/slow-movers', [AdminReportController::class, 'slowMovers'])->middleware('feature:sales_reports');
             
             // Stylist referral codes and store credit
             Route::get('/referrals', [AdminReferralController::class, 'index'])->middleware('feature:referrals');

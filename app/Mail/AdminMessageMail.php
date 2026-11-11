@@ -44,7 +44,7 @@ class AdminMessageMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.admin-message', with: [
+        return new Content(view: 'emails.admin-message', text: 'emails.admin-message-text', with: [
             'heading' => $this->heading,
             'paragraphs' => self::paragraphs($this->body, $this->recipientName),
             'buttonText' => $this->buttonText,
