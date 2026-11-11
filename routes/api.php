@@ -187,6 +187,15 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
                 Route::delete('/orders/{id}/force', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'forceDelete'])->whereNumber('id');
             });
 
+            // Excel / CSV import and export of products (PRO plan)
+            Route::prefix('product-import')->middleware('feature:excel_import')->controller(\App\Http\Controllers\Api\V1\Admin\AdminProductImportController::class)->group(function () {
+                Route::get('/export', 'export');
+                Route::post('/', 'upload');
+                Route::post('/{token}/preview', 'preview')->whereUuid('token');
+                Route::post('/{token}/apply', 'apply')->whereUuid('token');
+                Route::post('/{token}/undo', 'undo')->whereUuid('token');
+            });
+
             // PDF documents: order summary, delivery notes, price list (PRO plan)
             require __DIR__ . '/documents.php';
 

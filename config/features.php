@@ -134,4 +134,11 @@ return [
         'plan' => 'pro',
         'default' => true,
     ],
+    'excel_import' => [
+        'label' => 'Excel import and export',
+        'description' => 'Update prices and stock or add products from an Excel / CSV file, with a preview and undo, and download the catalogue as Excel.',
+        'area' => 'admin',
+        'default' => true,
+        'plan' => 'pro',
+    ],
 ];
