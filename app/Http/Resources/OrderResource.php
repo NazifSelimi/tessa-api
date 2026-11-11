@@ -74,6 +74,7 @@ class OrderResource extends JsonResource
             'shippingAddress' => [
                 'fullName' => $fullName,
                 'phone' => $shippingInfo?->phone ?? $user?->phone ?? '',
+                'email' => $shippingInfo?->email ?: ($user?->email ?? ''),
                 'address' => $shippingInfo?->address ?? $user?->address ?? '',
                 'city' => $shippingInfo?->city ?? $user?->city ?? '',
                 'state' => $state,

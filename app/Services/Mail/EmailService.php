@@ -17,7 +17,7 @@ class EmailService
     /**
      * @param  array{type?: string, order_id?: int|null, user_id?: int|null, campaign_id?: int|null, created_by?: int|null, name?: string|null, locale?: string|null}  $context
      */
-    public function send(string $to, Mailable $mail, array $context = []): EmailLog
+    public function send(string $to, Mailable $mail, array $context = [], ?\DateTimeInterface $sendAt = null): EmailLog
     {
         $to = trim($to);
         if (! empty($context['locale'])) {
@@ -43,7 +43,10 @@ class EmailService
             return $log;
         }
 
-        SendLoggedEmail::dispatch($log->id);
+        // Group emails can be spread over time to stay inside the mailbox's daily limit.
+        $sendAt && $sendAt > now()
+            ? SendLoggedEmail::dispatch($log->id)->delay($sendAt)
+            : SendLoggedEmail::dispatch($log->id);
 
         return $log->refresh();
     }
@@ -69,10 +72,20 @@ class EmailService
         try {
             $mail = unserialize($log->payload);
 
-            return $mail instanceof Mailable ? $mail->render() : null;
+            return $mail instanceof Mailable ? self::prepare($mail)->render() : null;
         } catch (\Throwable $e) {
             return '<p style="font-family:sans-serif;color:#b42318">This email can no longer be shown: ' . e($e->getMessage()) . '</p>';
         }
+    }
+
+    /** Fixes older saved emails: shop alerts are always English. */
+    public static function prepare(Mailable $mail): Mailable
+    {
+        if (! $mail->locale && ($mail instanceof \App\Mail\NewOrderAdminMail || $mail instanceof \App\Mail\Stylists\NewStylistRequestAdminMail)) {
+            $mail->locale('en');
+        }
+
+        return $mail;
     }
 
     public function subjectOf(Mailable $mail): ?string

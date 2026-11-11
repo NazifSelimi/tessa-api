@@ -20,6 +20,8 @@ class OrderTrashTest extends TestCase
     {
         parent::setUp();
         Setting::put('features', '{}');
+        Setting::put('features.plans', '{}');
+        Setting::put('business.plan', 'premium');
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     }
 

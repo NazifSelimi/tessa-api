@@ -22,6 +22,7 @@ class ShopMcpServerTest extends TestCase
     public function the_endpoint_needs_an_admin_token()
     {
         Setting::put('features', '{}');
+        Setting::put('business.plan', 'premium');
         $this->postJson('/api/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])->assertUnauthorized();
 
         $customer = User::factory()->create(['role' => User::ROLE_USER]);
@@ -33,6 +34,7 @@ class ShopMcpServerTest extends TestCase
     public function an_admin_token_from_the_admin_works()
     {
         Setting::put('features', '{}');
+        Setting::put('business.plan', 'premium');
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $token = $this->withToken($admin->createToken('login')->plainTextToken)
             ->postJson('/api/v1/admin/ai-tokens', ['name' => 'Claude'])->assertCreated()->json('data.token');

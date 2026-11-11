@@ -30,6 +30,8 @@ class EmailOutboxTest extends TestCase
     {
         parent::setUp();
         Setting::put('features', '{}');
+        Setting::put('features.plans', '{}');
+        Setting::put('business.plan', 'premium');
         Setting::put('mail.test_recipient', '');
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     }
