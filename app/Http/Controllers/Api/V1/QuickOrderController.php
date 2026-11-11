@@ -17,7 +17,7 @@ class QuickOrderController extends Controller
         $request->validate([
             'search'      => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'color_restock' => ['nullable', 'boolean'],
+            'color_restock' => ['nullable', 'in:0,1,true,false'],
             'page'        => ['nullable', 'integer', 'min:1'],
         ]);
 

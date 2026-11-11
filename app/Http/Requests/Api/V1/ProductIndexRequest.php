@@ -16,6 +16,8 @@ class ProductIndexRequest extends FormRequest
         return [
             'brand_id'    => ['nullable', 'integer', 'exists:brands,id'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            // Comma-separated category ids, e.g. "3,8,11" (collection pages fall back to these).
+            'category_ids' => ['nullable', 'string', 'max:200', 'regex:/^\d+(,\d+)*$/'],
             'collection'  => ['nullable', 'string', 'max:100', 'exists:product_collections,slug'],
             'min_price'   => ['nullable', 'numeric', 'min:0'],
             'max_price'   => ['nullable', 'numeric', 'min:0'],

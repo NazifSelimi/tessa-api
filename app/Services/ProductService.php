@@ -409,6 +409,10 @@ class ProductService
             $query->where('category_id', $filters['category_id']);
         }
 
+        if (!empty($filters['category_ids'])) {
+            $query->whereIn('category_id', array_map('intval', explode(',', $filters['category_ids'])));
+        }
+
         if (!empty($filters['collection'])) {
             $query->whereHas('catalogCollections', function (Builder $collectionQuery) use ($filters) {
                 $collectionQuery->where('product_collections.slug', $filters['collection']);

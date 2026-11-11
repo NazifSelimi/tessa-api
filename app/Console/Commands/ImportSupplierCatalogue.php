@@ -22,7 +22,7 @@ class ImportSupplierCatalogue extends Command
     protected $description = 'Import a supplier price list as reviewable catalogue products without changing existing products';
 
     private const FALLBACK_BRAND = 'Supplier catalogue';
-    private const FALLBACK_CATEGORY = 'Catalogue review';
+    private const FALLBACK_CATEGORY = \App\Services\CategoryService::REVIEW_CATEGORY;
 
     public function handle(): int
     {
