@@ -25,6 +25,7 @@ class PdfRenderer
                 'isRemoteEnabled' => false,
                 'isPhpEnabled' => false,
                 'isHtml5ParserEnabled' => true,
+                'isFontSubsettingEnabled' => true,
                 'dpi' => 96,
                 'chroot' => [storage_path(), public_path(), base_path('vendor/dompdf')],
             ])
