@@ -226,6 +226,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Reports & Analytics
             Route::get('/reports/sales', [AdminReportController::class, 'sales']);
             Route::get('/reports/products', [AdminReportController::class, 'products']);
+            Route::get('/reports/overview', [AdminReportController::class, 'overview']);
+            Route::get('/reports/summary', [AdminReportController::class, 'summary']);
+            Route::get('/reports/slow-movers', [AdminReportController::class, 'slowMovers']);
             
             // Stylist referral codes and store credit
             Route::get('/referrals', [AdminReferralController::class, 'index'])->middleware('feature:referrals');
