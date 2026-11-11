@@ -187,6 +187,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
                 Route::delete('/orders/{id}/force', [\App\Http\Controllers\Api\V1\Admin\AdminOrderTrashController::class, 'forceDelete'])->whereNumber('id');
             });
 
+            // PDF documents: order summary, delivery notes, price list (PRO plan)
+            require __DIR__ . '/documents.php';
+
             // Switchable features and the shop's identity
             Route::get('/features', [\App\Http\Controllers\Api\V1\Admin\AdminFeatureController::class, 'index']);
             Route::get('/ai-tokens', [\App\Http\Controllers\Api\V1\Admin\AdminAiTokenController::class, 'index']);

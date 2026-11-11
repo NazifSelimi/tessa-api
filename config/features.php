@@ -92,4 +92,11 @@ return [
         'area' => 'admin',
         'default' => true,
     ],
+    'pdf_documents' => [
+        'label' => 'PDF documents',
+        'description' => 'Order summary (pro-forma) and delivery note PDFs for each order, and a price list / catalogue PDF for salons and shops.',
+        'area' => 'admin',
+        'plan' => 'pro',
+        'default' => true,
+    ],
 ];
