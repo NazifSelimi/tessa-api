@@ -38,13 +38,17 @@ class AdminProductImportTest extends TestCase
             ['', 'маска  тест 500ml', '', 7],
             ['999', 'Нов производ', 250, 3],
             ['', 'Маска тест 500ml', 'abc', 1],
+            ['Група на артикли: Шампони', '', '', ''],
         ], ['manufacturer_code' => 0, 'name' => 1, 'price' => 2, 'quantity' => 3], ['fields' => ['price', 'quantity']]);
 
-        $this->assertSame(['rows' => 4, 'update' => 2, 'create' => 0, 'new' => 1, 'same' => 0, 'problems' => 1], $plan['summary']);
+        $plan['summary']['ignored'] === 1 ?: $this->fail('The group heading row should be ignored.');
+        $plan['summary']['ignored'] = 0;
+        $this->assertSame(['rows' => 4, 'update' => 2, 'create' => 0, 'new' => 1, 'same' => 0, 'problems' => 1, 'ignored' => 0], $plan['summary']);
         $this->assertSame($byCode->id, $plan['lines'][0]['productId']);
         $this->assertEquals(['from' => 500, 'to' => 1380.0], $plan['lines'][0]['changes']['price']);
         $this->assertSame($byName->id, $plan['lines'][1]['productId']);
         $this->assertSame(['quantity'], array_keys($plan['lines'][1]['changes']));
+        $this->assertArrayNotHasKey('name', $plan['lines'][0]['changes'], 'Names of existing products are left alone unless asked.');
     }
 
     #[Test]

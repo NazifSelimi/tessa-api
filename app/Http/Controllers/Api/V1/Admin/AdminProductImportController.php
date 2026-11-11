@@ -128,12 +128,13 @@ class AdminProductImportController extends Controller
             'mapping' => ['nullable', 'array'],
             'mapping.*' => ['nullable', 'integer', 'min:0'],
             'create_new' => ['nullable', 'boolean'],
+            'update_details' => ['nullable', 'boolean'],
             'fields' => ['nullable', 'array'],
             'fields.*' => ['string'],
         ]);
         $stored = $this->importer->load($token);
         $mapping = isset($validated['mapping']) ? array_filter($validated['mapping'], fn ($column) => $column !== null) : null;
 
-        return $this->importer->plan($stored['rows'], $mapping, ['create_new' => (bool) ($validated['create_new'] ?? false), 'fields' => $validated['fields'] ?? null]);
+        return $this->importer->plan($stored['rows'], $mapping, ['create_new' => (bool) ($validated['create_new'] ?? false), 'update_details' => (bool) ($validated['update_details'] ?? false), 'fields' => $validated['fields'] ?? null]);
     }
 }
