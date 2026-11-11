@@ -159,6 +159,13 @@ class ProductImporter
                     $line['action'] = $line['problems'] ? 'skip' : ($line['changes'] ? 'update' : 'same');
                 }
             } elseif (!$line['problems']) {
+                // A new product always takes its name and code from the row.
+                foreach (['name', 'manufacturer_code'] as $field) {
+                    $text = ValueParser::text($cell($row, $field));
+                    if ($text !== null) {
+                        $values[$field] = $text;
+                    }
+                }
                 if (($values['name'] ?? '') === '') {
                     $line['problems'][] = 'Not found in the catalogue and the row has no name.';
                 } elseif (!$createNew) {

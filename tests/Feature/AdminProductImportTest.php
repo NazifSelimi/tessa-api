@@ -59,8 +59,9 @@ class AdminProductImportTest extends TestCase
         $upload->assertOk()->assertJsonPath('data.summary.update', 1)->assertJsonPath('data.summary.new', 1);
         $token = $upload->json('data.token');
 
-        $this->postJson("/api/v1/admin/product-import/{$token}/apply", ['create_new' => true])
-            ->assertOk()->assertJsonPath('data.updated', 1)->assertJsonPath('data.created', 1);
+        $applied = $this->postJson("/api/v1/admin/product-import/{$token}/apply", ['create_new' => true]);
+        $this->assertSame(200, $applied->status(), $applied->getContent());
+        $applied->assertJsonPath('data.updated', 1)->assertJsonPath('data.created', 1);
         $this->assertSame(40, $product->fresh()->quantity);
         $this->assertEquals(650, $product->fresh()->price);
         $created = Product::where('name', 'Brand new thing')->firstOrFail();
