@@ -120,4 +120,11 @@ return [
         'area' => 'admin',
         'default' => true,
     ],
+    'sales_reports' => [
+        'label' => 'Sales reports',
+        'description' => 'Revenue, profit, best sellers, customers, codes and slow stock for any period on /admin/reports.',
+        'area' => 'admin',
+        'default' => true,
+        'plan' => 'pro',
+    ],
 ];
