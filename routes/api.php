@@ -48,13 +48,16 @@ use App\Http\Controllers\Api\V1\Admin\HairQuizController;
  */
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1'); // brute-force guard per IP
+    Route::post('/auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:5,1');
     Route::get('/auth/oauth/{provider}/redirect', [AuthController::class, 'socialRedirect']);
     Route::get('/auth/oauth/{provider}/callback', [AuthController::class, 'socialCallback']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
         ->middleware('throttle:5,1'); // 5 attempts per minute
-    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:5,1');
     Route::get('/stylist-invitations/{token}', [StylistInvitationController::class, 'show'])
         ->middleware('throttle:10,1');
     Route::post('/stylist-invitations/{token}/activate', [StylistInvitationController::class, 'activate'])
@@ -73,7 +76,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('brands', [BrandController::class, 'index']);
     Route::get('hair-profile-options', HairProfileOptionController::class);
-    Route::post('coupons/validate', [CouponController::class, 'validate']);
+    Route::post('coupons/validate', [CouponController::class, 'validate'])->middleware('throttle:20,1'); // code guessing guard
     Route::post('recommendations', RecommendationController::class)->middleware('feature:hair_quiz');
     Route::get('bundles', [BundleController::class, 'index'])->middleware('feature:bundles,empty');
     Route::get('features', \App\Http\Controllers\Api\V1\FeatureController::class);
@@ -91,7 +94,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('admin/catalog-image-candidates/{productId}/preview', [CatalogImageCandidateController::class, 'preview'])
         ->middleware('signed')
         ->name('admin.catalog-image-candidates.preview');
-    Route::post('/checkout', [CheckoutController::class, 'checkout']);
+    Route::post('/checkout', [CheckoutController::class, 'checkout'])->middleware('throttle:10,1'); // order spam guard
     Route::post('/cart/quote', CartQuoteController::class);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -99,7 +102,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
-        Route::put('/auth/password', [AuthController::class, 'changePassword']);
+        Route::put('/auth/password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
 
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);

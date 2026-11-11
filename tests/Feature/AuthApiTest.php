@@ -214,4 +214,16 @@ class AuthApiTest extends TestCase
         $response->assertStatus(422);
         $this->assertTrue(Hash::check('current-password', $user->fresh()->password));
     }
+
+    #[Test]
+    public function login_is_blocked_after_ten_tries_a_minute()
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/v1/auth/login', ['identifier' => 'nobody@example.com', 'password' => 'wrong-pass-1'])
+                ->assertStatus(422);
+        }
+
+        $this->postJson('/api/v1/auth/login', ['identifier' => 'nobody@example.com', 'password' => 'wrong-pass-1'])
+            ->assertStatus(429);
+    }
 }
