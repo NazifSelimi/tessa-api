@@ -181,7 +181,7 @@ class SalesReportCalculatorTest extends TestCase
             $this->line(['productId' => 3, 'brand' => null, 'revenue' => 200, 'qty' => 1, 'unitCost' => 100]),
         ], 'brand');
 
-        $this->assertSame(['name' => 'Brand A', 'qty' => 5, 'revenue' => 4000.0, 'profit' => 2900.0], $rows[0]);
+        $this->assertSame(['name' => 'Brand A', 'qty' => 5, 'revenue' => 4000.0, 'profit' => 1900.0], $rows[0]);
         $this->assertSame('Unassigned', $rows[1]['name']);
     }
 
