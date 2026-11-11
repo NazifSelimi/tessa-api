@@ -45,7 +45,7 @@ class ProductImporter
     /**
      * @param list<list<mixed>> $rows
      * @param array<string, int|null>|null $mapping field => column, null to guess
-     * @param array{create_new?: bool, fields?: list<string>} $options
+     * @param array{create_new?: bool, update_details?: bool, fields?: list<string>} $options
      */
     public function plan(array $rows, ?array $mapping = null, array $options = []): array
     {
@@ -54,6 +54,9 @@ class ProductImporter
         $mapping = $this->cleanMapping($mapping ?? ColumnMapper::suggest($headings), count($headings));
         $only = $options['fields'] ?? null;
         $createNew = (bool) ($options['create_new'] ?? false);
+        // Names, codes, brands and categories of existing products only change when asked:
+        // a supplier list usually words them differently.
+        $details = (bool) ($options['update_details'] ?? false);
 
         if (!array_intersect(array_keys($mapping), ['id', 'manufacturer_code', 'name'])) {
             return $this->result($headerRow, $headings, $mapping, [], ['A column with the product ID, the article code or the name is needed to find the products.']);
@@ -71,6 +74,7 @@ class ProductImporter
 
         $lines = [];
         $seen = [];
+        $ignored = 0;
         foreach (array_slice($rows, $headerRow + 1, null, true) as $index => $row) {
             if (!array_filter($row, fn ($value) => trim((string) $value) !== '')) {
                 continue;
@@ -120,13 +124,13 @@ class ProductImporter
             }
             foreach (['name', 'manufacturer_code'] as $field) {
                 $text = ValueParser::text($cell($row, $field));
-                if ($wanted($field) && $text !== null) {
+                if ($product && $details && $wanted($field) && $text !== null) {
                     $values[$field] = $text;
                 }
             }
             foreach (['brand' => [$brands, 'brand_id'], 'category' => [$categories, 'category_id']] as $field => [$lookup, $column]) {
                 $text = ValueParser::text($cell($row, $field));
-                if (!$wanted($field) || $text === null) {
+                if (!$product || !$details || !$wanted($field) || $text === null) {
                     continue;
                 }
                 $found = $lookup[ValueParser::key($text)] ?? null;
@@ -174,7 +178,9 @@ class ProductImporter
                     }
                 }
                 if (($values['name'] ?? '') === '') {
-                    $line['problems'][] = 'Not found in the catalogue and the row has no name.';
+                    $ignored++; // group headings, totals, empty lines
+
+                    continue;
                 } elseif ($createNew && (!isset($values['brand_id']) || !isset($values['category_id']))) {
                     $line['problems'][] = 'A new product needs a brand and a category that already exist (add Brand and Category columns).';
                 } elseif (!$createNew) {
@@ -190,7 +196,7 @@ class ProductImporter
             $lines[] = $line;
         }
 
-        return $this->result($headerRow, $headings, $mapping, $lines, []);
+        return $this->result($headerRow, $headings, $mapping, $lines, [], $ignored);
     }
 
     /** Applies a plan. @return array{updated: int, created: int, undoable: bool} */
@@ -296,7 +302,7 @@ class ProductImporter
         return $clean;
     }
 
-    private function result(int $headerRow, array $headings, array $mapping, array $lines, array $errors): array
+    private function result(int $headerRow, array $headings, array $mapping, array $lines, array $errors, int $ignored = 0): array
     {
         $count = fn (string $action) => count(array_filter($lines, fn (array $line) => $line['action'] === $action));
 
@@ -313,6 +319,7 @@ class ProductImporter
                 'new' => $count('new'),
                 'same' => $count('same'),
                 'problems' => count(array_filter($lines, fn (array $line) => $line['problems'] !== [])),
+                'ignored' => $ignored,
             ],
             'lines' => $lines,
         ];
