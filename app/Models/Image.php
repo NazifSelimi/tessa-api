@@ -59,6 +59,12 @@ class Image extends Model
             || str_contains((string) $this->url, Product::PLACEHOLDER_IMAGE_PATH);
     }
 
+    /** Removed from the shop by an admin; the file and record are kept. */
+    public function isHidden(): bool
+    {
+        return $this->review_status === 'hidden';
+    }
+
     /** Attached automatically by the 2026-09 catalogue audit, not by a person. */
     public function isFromCatalogAudit(): bool
     {

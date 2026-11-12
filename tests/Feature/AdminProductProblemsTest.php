@@ -87,4 +87,46 @@ class AdminProductProblemsTest extends TestCase
         $this->withToken($admin)->postJson('/api/v1/admin/products/image-preview', ['url' => 'http://10.0.0.1/a.png'])->assertStatus(422);
         $this->assertSame($images, \App\Models\Image::count());
     }
+
+    #[Test]
+    public function admin_can_save_size_and_manufacturer_code_inline(): void
+    {
+        $product = Product::factory()->create(['name' => 'Inline 250ml']);
+        $this->withToken($this->admin())->putJson("/api/v1/admin/products/{$product->id}", [
+            'manufacturer_code' => 'ABC-1', 'size_value' => '250', 'size_unit' => 'ml', 'translations' => ['en' => 'Nice', 'mk' => 'Убаво', 'shq' => 'Bukur'],
+        ])->assertOk();
+        $product->refresh();
+        $this->assertSame(['ABC-1', '250', 'ml'], [$product->manufacturer_code, $product->size_value, $product->size_unit]);
+        $this->assertSame('Убаво', $product->translations()->where('locale', 'mk')->value('description'));
+    }
+
+    #[Test]
+    public function a_photo_removed_from_the_shop_is_kept_but_no_longer_counts(): void
+    {
+        $product = Product::factory()->create();
+        $image = $product->images()->first();
+        $this->withToken($this->admin())->patchJson("/api/v1/admin/products/{$product->id}/images/{$image->id}", ['review_status' => 'hidden'])
+            ->assertOk()->assertJsonPath('images.0.review_status', 'hidden');
+        $product->refresh()->load('images');
+        $this->assertTrue($product->images->contains('id', $image->id), 'the file and record are kept');
+        $this->assertContains('no_photo', $product->reviewReasons());
+        $this->assertFalse(Product::whereKey($product->id)->readyForSale()->exists());
+        $this->withToken($this->admin())->patchJson("/api/v1/admin/products/{$product->id}/images/{$image->id}", ['make_primary' => true])->assertStatus(422);
+    }
+
+    #[Test]
+    public function description_drafts_come_from_the_same_product_in_another_size(): void
+    {
+        $brand = Brand::factory()->create();
+        $big = Product::factory()->create(['brand_id' => $brand->id, 'name' => 'Draft Test Shampoo 1000ml']);
+        $big->translations()->create(['locale' => 'en', 'description' => 'Draft Test Shampoo 1000ml cleans gently. 1000ml bottle.']);
+        $small = Product::factory()->create(['brand_id' => $brand->id, 'name' => 'Draft Test Shampoo 250ml']);
+
+        $response = $this->withToken($this->admin())->getJson("/api/v1/admin/products/{$small->id}/description-suggestions")->assertOk();
+        $response->assertJsonPath('drafts.en.kind', 'same_product_other_size')
+            ->assertJsonPath('drafts.en.from.id', $big->id)
+            ->assertJsonPath('drafts.en.text', 'Draft Test Shampoo 250ml cleans gently. 250ml bottle.')
+            ->assertJsonPath('drafts.mk', null);
+        $this->assertSame(0, $small->translations()->count(), 'nothing is saved');
+    }
 }

@@ -78,7 +78,7 @@ class ProductProblemController extends Controller
             $problems[] = compact('group', 'code', 'label', 'detail');
         };
 
-        $realImages = $product->images->reject(fn (Image $image) => $image->isPlaceholder());
+        $realImages = $product->images->reject(fn (Image $image) => $image->isPlaceholder() || $image->isHidden());
         $visible = $product->visible_to_guests || $product->visible_to_customers || $product->visible_to_stylists;
         $qty = (int) $product->quantity;
         $price = (float) $product->price;
@@ -212,6 +212,16 @@ class ProductProblemController extends Controller
             'category' => $category,
             'size' => trim(($product->size_value ?? '') . ' ' . ($product->size_unit ?? '')) ?: $product->package_label,
             'manufacturer_code' => $product->manufacturer_code,
+            'brand_id' => $product->brand_id,
+            'category_id' => $product->category_id,
+            'product_family_id' => $product->product_family_id,
+            'size_value' => $product->size_value,
+            'size_unit' => $product->size_unit,
+            'cost_price' => $product->cost_price,
+            'visible_to_guests' => (bool) $product->visible_to_guests,
+            'visible_to_customers' => (bool) $product->visible_to_customers,
+            'visible_to_stylists' => (bool) $product->visible_to_stylists,
+            'descriptions' => collect(['en', 'mk', 'shq'])->mapWithKeys(fn ($l) => [$l => (string) $product->translations->firstWhere('locale', $l)?->description])->all(),
             'price' => $product->price,
             'stylist_price' => $product->stylist_price,
             'quantity' => $qty,
@@ -233,6 +243,50 @@ class ProductProblemController extends Controller
         $sizes = array_unique(array_map(fn ($s) => $this->size($s), $m[0]));
 
         return count($sizes) === 1 ? $m[0][0] : '';
+    }
+
+    /**
+     * Description drafts copied from a sibling: the same product in another
+     * size first, then another product of the same colour line, with the name
+     * and size swapped in. Nothing is saved; the admin edits and saves.
+     */
+    public function suggestions(Product $product): JsonResponse
+    {
+        $base = fn (string $name) => trim(preg_replace('/\s+/', ' ', preg_replace('/[-–,]?\s*\d+(?:[.,]\d+)?\s*(ml|lt|l|gr|g|kg)\b/i', '', mb_strtolower($name))));
+        $candidates = Product::with('translations')
+            ->whereKeyNot($product->id)
+            ->where(fn ($q) => $q->where(fn ($q) => $q->where('brand_id', $product->brand_id)->whereNotNull('brand_id'))
+                ->orWhere(fn ($q) => $q->where('product_family_id', $product->product_family_id)->whereNotNull('product_family_id')))
+            ->get();
+        $sameName = $candidates->filter(fn (Product $p) => $p->brand_id === $product->brand_id && $base($p->name) === $base($product->name));
+        $sameLine = $product->product_family_id ? $candidates->where('product_family_id', $product->product_family_id) : collect();
+        $mySize = $this->sizeText($product->name);
+
+        $drafts = [];
+        foreach (['en', 'mk', 'shq'] as $locale) {
+            $drafts[$locale] = null;
+            foreach ([['same_product_other_size', $sameName], ['same_colour_line', $sameLine]] as [$kind, $group]) {
+                $from = $group->first(fn (Product $p) => trim((string) $p->translations->firstWhere('locale', $locale)?->description) !== '');
+                if (!$from) {
+                    continue;
+                }
+                $text = (string) $from->translations->firstWhere('locale', $locale)->description;
+                $text = str_ireplace($from->name, $product->name, $text);
+                $theirSize = $this->sizeText($from->name);
+                if ($theirSize && $mySize) {
+                    $text = preg_replace('/' . preg_quote($theirSize, '/') . '/i', $mySize, $text);
+                }
+                $drafts[$locale] = ['text' => $text, 'kind' => $kind, 'from' => ['id' => $from->id, 'name' => $from->name]];
+                break;
+            }
+        }
+
+        return response()->json(['product_id' => $product->id, 'drafts' => $drafts]);
+    }
+
+    private function sizeText(string $name): ?string
+    {
+        return preg_match('/\d+(?:[.,]\d+)?\s*(?:ml|lt|l|gr|g|kg)\b/i', $name, $m) ? $m[0] : null;
     }
 
     /** "1000 ml", "1L", "250gr" → "1000ml" / "250g"; null when no size. */

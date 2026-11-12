@@ -54,7 +54,7 @@ class ProductImageController extends Controller
         $data = $request->validate([
             'alt' => ['sometimes', 'nullable', 'string', 'max:255'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:10000'],
-            'review_status' => ['sometimes', 'in:approved,needs_review,rejected'],
+            'review_status' => ['sometimes', 'in:approved,needs_review,rejected,hidden'],
             'make_primary' => ['sometimes', 'boolean'],
         ]);
         DB::transaction(function () use ($request, $product, $image, $data) {
@@ -63,7 +63,7 @@ class ProductImageController extends Controller
             $primary = $data['make_primary'] ?? false;
             unset($data['make_primary']);
             if ($primary) {
-                abort_if(($data['review_status'] ?? $record->review_status) === 'rejected', 422, 'Approve or mark the image for review before making it primary.');
+                abort_if(in_array($data['review_status'] ?? $record->review_status, ['rejected', 'hidden'], true), 422, 'Approve or mark the image for review before making it primary.');
                 $product->images()->where('variant', 'card')->update(['variant' => 'gallery']);
                 $data['variant'] = 'card';
                 $data['sort_order'] = 0;

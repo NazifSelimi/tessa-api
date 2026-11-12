@@ -309,6 +309,7 @@ class Product extends Model
         return $query
             ->whereHas('images', fn (Builder $images) => $images
                 ->where('name', 'not like', $placeholder)
+                ->where(fn (Builder $status) => $status->whereNull('review_status')->orWhere('review_status', '!=', 'hidden'))
                 ->where(fn (Builder $url) => $url->whereNull('url')->orWhere('url', 'not like', $placeholder)))
             ->whereDoesntHave('brand', fn (Builder $brand) => $brand->whereIn('name', self::REVIEW_BRAND_NAMES))
             ->whereDoesntHave('category', fn (Builder $category) => $category->whereIn('name', self::REVIEW_CATEGORY_NAMES));
@@ -323,7 +324,7 @@ class Product extends Model
     {
         $reasons = [];
 
-        if ($this->images->reject(fn (Image $image) => $image->isPlaceholder())->isEmpty()) {
+        if ($this->images->reject(fn (Image $image) => $image->isPlaceholder() || $image->isHidden())->isEmpty()) {
             $reasons[] = 'no_photo';
         }
         if (in_array(mb_strtolower((string) $this->brand?->name), self::REVIEW_BRAND_NAMES, true)) {
@@ -349,7 +350,7 @@ class Product extends Model
      */
     public function storefrontImages(): Collection
     {
-        $images = $this->images->reject(fn (Image $image) => $image->isPlaceholder());
+        $images = $this->images->reject(fn (Image $image) => $image->isPlaceholder() || $image->isHidden());
 
         if ($images->contains(fn (Image $image) => ($image->variant ?? 'legacy') === 'legacy')) {
             $images = $images->reject(fn (Image $image) => $image->isFromCatalogAudit());

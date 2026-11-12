@@ -131,6 +131,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Product Management
             Route::get('/products', [AdminProductController::class, 'index']);
             Route::get('/products/problems', [\App\Http\Controllers\Api\V1\Admin\ProductProblemController::class, 'index']);
+            Route::get('/products/{product}/description-suggestions', [\App\Http\Controllers\Api\V1\Admin\ProductProblemController::class, 'suggestions']);
             Route::get('/product-families', [AdminProductController::class, 'families']);
             Route::post('/products', [AdminProductController::class, 'store']);
             Route::put('/products/{id}', [AdminProductController::class, 'update']);

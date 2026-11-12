@@ -121,6 +121,9 @@ class AdminProductController extends Controller
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
             'stylist_only' => ['sometimes', 'boolean'],
+            'manufacturer_code' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'size_value' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'size_unit' => ['sometimes', 'nullable', 'string', 'in:ml,l,g,kg,pcs'],
             'visible_to' => ['sometimes', 'nullable', 'array'],
             'visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
             'hair_type_ids' => ['sometimes', 'array'],
@@ -154,6 +157,12 @@ class AdminProductController extends Controller
             'visible_to_guests', 'visible_to_customers', 'visible_to_stylists',
         ])->toArray();
         $product->update($productData);
+        // Catalogue identity fields are not mass-assignable; set them explicitly.
+        $identity = collect($validated)->only(['manufacturer_code', 'size_value', 'size_unit'])
+            ->map(fn ($value) => $value === '' ? null : $value)->all();
+        if ($identity) {
+            $product->forceFill($identity)->save();
+        }
 
         $shadeData = collect($validated)->only(['product_family_id', 'shade_code', 'shade_name', 'shade_sort_order'])
             ->map(fn ($value) => $value === '' ? null : $value)
