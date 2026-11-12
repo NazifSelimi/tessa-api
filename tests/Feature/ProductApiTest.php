@@ -31,7 +31,7 @@ class ProductApiTest extends TestCase
         $response->assertJsonStructure([
             'success',
             'data' => [
-                '*' => ['id', 'name', 'price', 'stylistPrice', 'brand', 'category', 'inStock']
+                '*' => ['id', 'name', 'price', 'brand', 'category', 'inStock']
             ],
             'meta' => ['current_page', 'per_page', 'total', 'last_page']
         ]);
@@ -103,8 +103,15 @@ class ProductApiTest extends TestCase
         $response->assertJsonPath('data.name', $product->name);
         $response->assertJsonStructure([
             'success',
-            'data' => ['id', 'name', 'price', 'stylistPrice', 'brand', 'category', 'quantity', 'inStock']
+            'data' => ['id', 'name', 'price', 'brand', 'category', 'quantity', 'inStock']
         ]);
+        // Salon prices are trade information: hidden from guests, shown to business accounts.
+        $response->assertJsonMissingPath('data.stylistPrice');
+
+        $stylist = \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_STYLIST]);
+        $this->withToken($stylist->createToken('t')->plainTextToken)
+            ->getJson("/api/v1/products/{$product->id}")
+            ->assertJsonStructure(['data' => ['stylistPrice']]);
     }
 
     #[Test]

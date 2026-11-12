@@ -27,7 +27,10 @@ class RecommendedProductResource extends JsonResource
             'name'                => $this->name,
             'description'         => $description,
             'price'               => (float) $this->price,
-            'stylistPrice'        => (float) $this->stylist_price,
+            'stylistPrice'        => $this->when(
+                (bool) \App\Support\ApiUserResolver::fromRequest($request)?->canSeeSalonPrices(),
+                fn () => (float) $this->stylist_price,
+            ),
             'stylistOnly'         => (bool) $this->stylist_only,
             'quantity'            => (int) $this->quantity,
             'inStock'             => $this->quantity > 0,

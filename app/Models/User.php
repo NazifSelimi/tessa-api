@@ -56,6 +56,12 @@ class User extends Authenticatable
     {
         return (int) $this->role === self::ROLE_ADMIN;
     }
+
+    /** Salon (stylist) prices are trade information: business accounts and admins only. */
+    public function canSeeSalonPrices(): bool
+    {
+        return $this->isStylist() || $this->isAdmin();
+    }
     public function orders()
     {
         return $this->hasMany(Order::class);

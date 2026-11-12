@@ -14,6 +14,8 @@ class BundleResource extends JsonResource
             return $this->resource;
         }
 
+        $salonPrices = (bool) \App\Support\ApiUserResolver::fromRequest($request)?->canSeeSalonPrices();
+
         return [
             'id'                 => (string) $this->id,
             'name'               => $this->name,
@@ -32,7 +34,7 @@ class BundleResource extends JsonResource
                     'id'       => (string) $product->id,
                     'name'     => $product->name,
                     'price'    => (float) $product->price,
-                    'stylistPrice' => (float) $product->stylist_price,
+                    'stylistPrice' => $this->when($salonPrices, fn () => (float) $product->stylist_price),
                     'quantity' => (int) $product->pivot->quantity,
                     'isBonus'  => (bool) $product->pivot->is_bonus,
                     'bonusQuantity' => (int) $product->pivot->bonus_quantity,

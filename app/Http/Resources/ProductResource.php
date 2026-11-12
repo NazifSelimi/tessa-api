@@ -57,7 +57,10 @@ class ProductResource extends JsonResource
             'description' => $description,
             'translations' => $translations,
             'price' => (float) $this->price,
-            'stylistPrice' => (float) $this->stylist_price,
+            'stylistPrice' => $this->when(
+                (bool) ApiUserResolver::fromRequest($request)?->canSeeSalonPrices(),
+                fn () => (float) $this->stylist_price,
+            ),
             'stylistOnly' => (bool) $this->stylist_only,
             // Audiences the admin opened this product to; [] = hidden from everyone.
             'visibleTo' => $this->when($isAdmin, fn () => $this->resource->visibleTo()),
