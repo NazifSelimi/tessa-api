@@ -1,62 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Stylist Application</title>
-    <style>
-        body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .wrapper { max-width: 600px; margin: 0 auto; padding: 24px 16px; }
-        .card { background: #ffffff; border-radius: 8px; padding: 32px; }
-        .header { padding-bottom: 24px; border-bottom: 1px solid #eaeaea; margin-bottom: 24px; }
-        .header h1 { margin: 0; font-size: 22px; color: #1a1a1a; }
-        .badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 600; }
-        .section { margin-bottom: 24px; }
-        .section h2 { font-size: 14px; color: #555; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-grid { font-size: 14px; color: #333; line-height: 1.6; }
-    </style>
-</head>
-<body>
-<div class="wrapper">
-    <div class="card">
-        <div class="header">
-            <h1>New Stylist Application</h1>
-            <p style="margin: 8px 0 0;">
-                <span class="badge">Pending Review</span>
-            </p>
-        </div>
+@php($site = rtrim(app(\App\Services\BusinessProfile::class)->get('website'), '/'))
+@extends('emails.layouts.shop', ['title' => 'New business account application', 'preheader' => trim($user->first_name . ' ' . $user->last_name) . ' applied for a business account'])
 
-        <div class="section">
-            <h2>Applicant</h2>
-            <div class="info-grid">
-                {{ $user->first_name }} {{ $user->last_name }}<br>
-                {{ $user->email }}<br>
-                @if ($user->phone)
-                    {{ $user->phone }}
-                @endif
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Salon Details</h2>
-            <div class="info-grid">
-                <strong>Salon Name:</strong> {{ $request->saloon_name }}<br>
-                <strong>Address:</strong> {{ $request->saloon_address }}<br>
-                <strong>City:</strong> {{ $request->saloon_city }}<br>
-                <strong>Phone:</strong> {{ $request->saloon_phone }}
-            </div>
-        </div>
-
-        @if ($request->message)
-            <div class="section">
-                <h2>Application Message</h2>
-                <p style="font-size:14px; color:#333;">{{ $request->message }}</p>
-            </div>
-        @endif
-    </div>
-
-    @include('emails.partials.footer')
-</div>
-</body>
-</html>
-
+@section('content')
+    <p style="margin:0 0 12px;"><span style="display:inline-block; padding:5px 14px; border-radius:999px; font-size:13px; font-weight:700; background:#fff4e0; color:#a35c00;">Waiting for approval</span></p>
+    <h1 style="font-size:22px; margin:0 0 8px;">New business account application</h1>
+    <p style="font-size:14px; line-height:1.7; margin:0;">
+        <strong>{{ trim($user->first_name . ' ' . $user->last_name) }}</strong><br>
+        @if ($user->email)<a href="mailto:{{ $user->email }}" style="color:#242124;">{{ $user->email }}</a><br>@endif
+        @if ($user->phone){{ $user->phone }}@endif
+    </p>
+    @if ($request)
+        <p style="font-size:14px; line-height:1.7; margin:16px 0 0;">
+            @if ($request->saloon_name)<strong>Business:</strong> {{ $request->saloon_name }}<br>@endif
+            @if ($request->saloon_address)<strong>Address:</strong> {{ $request->saloon_address }}<br>@endif
+            @if ($request->saloon_city)<strong>City:</strong> {{ $request->saloon_city }}<br>@endif
+            @if ($request->saloon_phone)<strong>Phone:</strong> {{ $request->saloon_phone }}@endif
+        </p>
+    @endif
+    @include('emails.partials.button', ['url' => $site . '/admin/stylist-requests', 'label' => 'Review application'])
+@endsection

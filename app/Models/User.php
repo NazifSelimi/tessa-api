@@ -44,6 +44,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'request_submitted' => 'boolean',
         'role' => 'integer',
+        'email_opt_out_at' => 'datetime',
     ];
 
     public function isStylist(): bool
@@ -54,6 +55,12 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (int) $this->role === self::ROLE_ADMIN;
+    }
+
+    /** Salon (stylist) prices are trade information: business accounts and admins only. */
+    public function canSeeSalonPrices(): bool
+    {
+        return $this->isStylist() || $this->isAdmin();
     }
     public function orders()
     {
@@ -93,5 +100,10 @@ class User extends Authenticatable
     public function usedCodes(): HasOne
     {
         return $this->hasOne(StylistInvitationCode::class, 'used_by');
+    }
+
+    public function activatedStylistInvitation(): HasOne
+    {
+        return $this->hasOne(StylistInvitation::class, 'activated_user_id');
     }
 }

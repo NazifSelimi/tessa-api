@@ -18,12 +18,15 @@ class NewOrderAdminMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public readonly Order $order,
-    ) {}
+    ) {
+        // Shop alerts are written in English, whatever language the customer used.
+        $this->locale('en');
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Order Received — #' . $this->order->id,
+            subject: 'New order #' . $this->order->id . ' — ' . number_format(round((float) $this->order->total), 0, ',', '.') . ' MKD',
         );
     }
 

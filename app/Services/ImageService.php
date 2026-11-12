@@ -14,19 +14,13 @@ class ImageService
     private const CATALOG_SUBJECT_MAX_HEIGHT = 530;
     private const EDGE_INSET = 5;
     private const EDGE_VARIANCE_THRESHOLD = 18.0;
-    private const CATALOG_MATCH_THRESHOLD = 18.0;
     private const OPAQUE_ALPHA_THRESHOLD = 0.9;
     private const GD_BACKGROUND_FLOOD_THRESHOLD = 32.0;
 
     /**
-     * Store an uploaded image, converting it to WebP for optimization.
-     * Writes directly to public/storage/<folder> to match existing image paths.
-     *
-     * @param UploadedFile $file     The uploaded file
-     * @param string       $folder   Subfolder inside public/storage (e.g. 'images')
-     * @param int          $maxWidth Maximum width to resize to
-     * @param int          $quality  WebP quality (1-100)
-     * @return string                Just the filename (e.g. "abc123.webp")
+     * Store an uploaded image and return the preferred display filename.
+     * Newer callers should use storeProductImageAssets() to preserve originals
+     * and create multiple catalog variants.
      */
     public function storeAsWebP(
         UploadedFile $file,
@@ -35,43 +29,175 @@ class ImageService
         int $quality = 82,
         bool $normalizeCatalogBackground = false
     ): string {
-        $filename = Str::uuid() . '.webp';
+        $assets = $this->storeProductImageAssets(
+            $file,
+            $folder,
+            $maxWidth,
+            $quality,
+            $normalizeCatalogBackground
+        );
+
+        $preferred = collect($assets)->firstWhere('variant', 'detail')
+            ?? collect($assets)->firstWhere('variant', 'legacy')
+            ?? $assets[0]
+            ?? null;
+
+        return (string) ($preferred['name'] ?? '');
+    }
+
+    /**
+     * Store the untouched original plus any derived catalog assets.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function storeProductImageAssets(
+        UploadedFile $file,
+        string $folder = 'images',
+        int $maxWidth = 1200,
+        int $quality = 82,
+        bool $normalizeCatalogBackground = false
+    ): array {
         $directory = public_path('storage/' . $folder);
+        $this->ensureDirectoryExists($directory);
 
-        // Ensure the directory exists
-        if (!is_dir($directory)) {
-            mkdir($directory, 0755, true);
+        $originalRelativePath = 'originals/' . Str::uuid() . '.' . $this->originalExtension($file);
+        $originalAbsolutePath = $directory . '/' . $originalRelativePath;
+        $this->ensureDirectoryExists(dirname($originalAbsolutePath));
+        copy($file->getPathname(), $originalAbsolutePath);
+
+        $alt = $this->normalizeAltText($file->getClientOriginalName());
+        $assets = [[
+            'name' => $originalRelativePath,
+            'alt' => $alt,
+            'sort_order' => 30,
+            'variant' => 'original',
+            'background' => 'unknown',
+            'review_status' => 'preserved',
+            'metadata' => $this->originalMetadata($file, $normalizeCatalogBackground),
+        ]];
+
+        if (!function_exists('imagecreatefromstring')) {
+            $detailRelativePath = 'catalog/detail/' . Str::uuid() . '.' . $this->originalExtension($file);
+            $detailAbsolutePath = $directory . '/' . $detailRelativePath;
+            $this->ensureDirectoryExists(dirname($detailAbsolutePath));
+            copy($file->getPathname(), $detailAbsolutePath);
+
+            $assets[] = [
+                'name' => $detailRelativePath,
+                'alt' => $alt,
+                'sort_order' => 10,
+                'variant' => 'detail',
+                'background' => 'unknown',
+                'review_status' => $normalizeCatalogBackground ? 'needs_review' : 'ready',
+                'metadata' => [
+                    'derived_from' => 'original',
+                    'strategy' => 'copied-original',
+                ],
+            ];
+
+            return $assets;
         }
 
-        $destPath = $directory . '/' . $filename;
+        $imageData = file_get_contents($file->getPathname());
+        $src = $imageData !== false ? @imagecreatefromstring($imageData) : false;
 
-        // Try GD-based WebP conversion
-        if (function_exists('imagecreatefromstring')) {
-            $imageData = file_get_contents($file->getPathname());
-            $src = @imagecreatefromstring($imageData);
+        if (!$src instanceof \GdImage) {
+            $detailRelativePath = 'catalog/detail/' . Str::uuid() . '.' . $this->originalExtension($file);
+            $detailAbsolutePath = $directory . '/' . $detailRelativePath;
+            $this->ensureDirectoryExists(dirname($detailAbsolutePath));
+            copy($file->getPathname(), $detailAbsolutePath);
 
-            if ($src !== false) {
-                $src = $this->resizeGdIfNeeded($src, $maxWidth);
-                $normalized = $this->normalizeCatalogPackshotWithGd($src, $folder, $normalizeCatalogBackground);
+            $assets[] = [
+                'name' => $detailRelativePath,
+                'alt' => $alt,
+                'sort_order' => 10,
+                'variant' => 'detail',
+                'background' => 'unknown',
+                'review_status' => $normalizeCatalogBackground ? 'needs_review' : 'ready',
+                'metadata' => [
+                    'derived_from' => 'original',
+                    'strategy' => 'copied-original',
+                ],
+            ];
 
-                if ($normalized instanceof \GdImage) {
-                    imagedestroy($src);
-                    $src = $normalized;
-                }
-
-                imagewebp($src, $destPath, $quality);
-                imagedestroy($src);
-
-                return $filename;
-            }
+            return $assets;
         }
 
-        // Fallback: store original file as-is
-        $ext = $file->getClientOriginalExtension();
-        $fallbackName = Str::uuid() . '.' . $ext;
-        $file->move($directory, $fallbackName);
+        $src = $this->resizeGdIfNeeded($src, $maxWidth);
+        $hasTransparentSource = $this->hasTransparentPixelsGd($src);
+        $transparentMaster = $this->extractTransparentPackshotWithGd($src, $folder, $normalizeCatalogBackground);
+        $baseImage = $transparentMaster instanceof \GdImage ? $transparentMaster : $src;
+        $hasTransparentMaster = $transparentMaster instanceof \GdImage || $hasTransparentSource;
+        $baseBackground = $hasTransparentMaster
+            ? 'transparent'
+            : 'opaque';
+        $reviewStatus = $normalizeCatalogBackground && !$hasTransparentMaster
+            ? 'needs_review'
+            : 'ready';
 
-        return $fallbackName;
+        $cardVariant = $this->createCatalogCardVariantGd($baseImage);
+        $cardRelativePath = 'catalog/card/' . Str::uuid() . '.webp';
+        $this->storeGdImage($cardVariant, $directory . '/' . $cardRelativePath, $quality);
+        imagedestroy($cardVariant);
+
+        $assets[] = [
+            'name' => $cardRelativePath,
+            'alt' => $alt,
+            'sort_order' => 0,
+            'variant' => 'card',
+            'background' => 'transparent',
+            'review_status' => $reviewStatus,
+            'metadata' => [
+                'derived_from' => $hasTransparentMaster ? 'transparent_master' : 'detail',
+                'strategy' => 'catalog-card',
+            ],
+        ];
+
+        $detailRelativePath = 'catalog/detail/' . Str::uuid() . '.webp';
+        $this->storeGdImage($baseImage, $directory . '/' . $detailRelativePath, $quality);
+
+        $assets[] = [
+            'name' => $detailRelativePath,
+            'alt' => $alt,
+            'sort_order' => 10,
+            'variant' => 'detail',
+            'background' => $baseBackground,
+            'review_status' => $reviewStatus,
+            'metadata' => [
+                'derived_from' => $hasTransparentMaster ? 'transparent_master' : 'original',
+                'strategy' => 'detail',
+            ],
+        ];
+
+        if ($hasTransparentMaster) {
+            $masterRelativePath = 'catalog/masters/' . Str::uuid() . '.webp';
+            $masterSource = $transparentMaster instanceof \GdImage ? $transparentMaster : $src;
+            $this->storeGdImage($masterSource, $directory . '/' . $masterRelativePath, $quality);
+
+            $assets[] = [
+                'name' => $masterRelativePath,
+                'alt' => $alt,
+                'sort_order' => 20,
+                'variant' => 'transparent_master',
+                'background' => 'transparent',
+                'review_status' => 'ready',
+                'metadata' => [
+                    'derived_from' => 'original',
+                    'strategy' => $transparentMaster instanceof \GdImage
+                        ? 'transparent-master-extracted'
+                        : 'transparent-master-uploaded',
+                ],
+            ];
+
+        }
+
+        if ($transparentMaster instanceof \GdImage) {
+            imagedestroy($transparentMaster);
+        }
+
+        imagedestroy($src);
+
+        return $assets;
     }
 
     /**
@@ -83,11 +209,79 @@ class ImageService
             return;
         }
 
-        $fullPath = public_path('storage/' . $folder . '/' . $path);
+        $fullPath = public_path('storage/' . $folder . '/' . ltrim($path, '/'));
 
         if (file_exists($fullPath)) {
             @unlink($fullPath);
         }
+    }
+
+    private function normalizeAltText(string $originalName): ?string
+    {
+        $alt = trim(pathinfo($originalName, PATHINFO_FILENAME));
+
+        return $alt !== '' ? $alt : null;
+    }
+
+    private function originalMetadata(UploadedFile $file, bool $normalizeCatalogBackground): array
+    {
+        return array_filter([
+            'original_filename' => $file->getClientOriginalName(),
+            'original_mime_type' => $file->getClientMimeType(),
+            'original_size' => $file->getSize(),
+            'requested_transparent_master' => $normalizeCatalogBackground,
+        ], static fn ($value) => $value !== null);
+    }
+
+    private function originalExtension(UploadedFile $file): string
+    {
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+
+        return $extension !== '' ? $extension : 'bin';
+    }
+
+    private function ensureDirectoryExists(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+    }
+
+    private function storeGdImage(\GdImage $image, string $absolutePath, int $quality): void
+    {
+        $this->ensureDirectoryExists(dirname($absolutePath));
+        imagewebp($image, $absolutePath, $quality);
+    }
+
+    private function createCatalogCardVariantGd(\GdImage $source): \GdImage
+    {
+        $targetWidth = imagesx($source);
+        $targetHeight = imagesy($source);
+        $scale = min(
+            self::CATALOG_SUBJECT_MAX_WIDTH / max(1, $targetWidth),
+            self::CATALOG_SUBJECT_MAX_HEIGHT / max(1, $targetHeight),
+            1
+        );
+
+        $resized = $this->resizeGdImage(
+            $source,
+            max(1, (int) round($targetWidth * $scale)),
+            max(1, (int) round($targetHeight * $scale))
+        );
+
+        $canvas = imagecreatetruecolor(self::CATALOG_CANVAS_WIDTH, self::CATALOG_CANVAS_HEIGHT);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+        imagefill($canvas, 0, 0, $transparent);
+
+        $x = (int) floor((self::CATALOG_CANVAS_WIDTH - imagesx($resized)) / 2);
+        $y = (int) floor((self::CATALOG_CANVAS_HEIGHT - imagesy($resized)) / 2);
+
+        imagecopy($canvas, $resized, $x, $y, 0, 0, imagesx($resized), imagesy($resized));
+        imagedestroy($resized);
+
+        return $canvas;
     }
 
     private function edgeSeedPoints(int $width, int $height): array
@@ -150,6 +344,8 @@ class ImageService
 
         imagealphablending($dst, false);
         imagesavealpha($dst, true);
+        $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+        imagefill($dst, 0, 0, $transparent);
 
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $maxWidth, $newHeight, $origWidth, $origHeight);
         imagedestroy($src);
@@ -157,7 +353,7 @@ class ImageService
         return $dst;
     }
 
-    private function normalizeCatalogPackshotWithGd(
+    private function extractTransparentPackshotWithGd(
         \GdImage $image,
         string $folder,
         bool $normalizeCatalogBackground
@@ -167,10 +363,6 @@ class ImageService
         }
 
         if (!$this->hasUniformEdgeBackgroundGd($image)) {
-            return null;
-        }
-
-        if ($this->alreadyMatchesCatalogCanvasGd($image)) {
             return null;
         }
 
@@ -190,30 +382,7 @@ class ImageService
             return null;
         }
 
-        $isolated = $this->cropOpaqueRegionGd($image, $backgroundMask, $minX, $minY, $width, $height);
-        $scale = min(
-            self::CATALOG_SUBJECT_MAX_WIDTH / max(1, imagesx($isolated)),
-            self::CATALOG_SUBJECT_MAX_HEIGHT / max(1, imagesy($isolated))
-        );
-
-        $targetWidth = max(1, (int) round(imagesx($isolated) * $scale));
-        $targetHeight = max(1, (int) round(imagesy($isolated) * $scale));
-        $resized = $this->resizeGdImage($isolated, $targetWidth, $targetHeight);
-        imagedestroy($isolated);
-
-        $canvas = imagecreatetruecolor(self::CATALOG_CANVAS_WIDTH, self::CATALOG_CANVAS_HEIGHT);
-        $background = imagecolorallocate($canvas, 250, 211, 229);
-        imagefill($canvas, 0, 0, $background);
-
-        $x = (int) floor((self::CATALOG_CANVAS_WIDTH - $targetWidth) / 2);
-        $y = (int) floor((self::CATALOG_CANVAS_HEIGHT - $targetHeight) / 2);
-
-        imagealphablending($canvas, true);
-        imagesavealpha($canvas, false);
-        imagecopy($canvas, $resized, $x, $y, 0, 0, $targetWidth, $targetHeight);
-        imagedestroy($resized);
-
-        return $canvas;
+        return $this->cropOpaqueRegionGd($image, $backgroundMask, $minX, $minY, $width, $height);
     }
 
     private function hasUniformEdgeBackgroundGd(\GdImage $image): bool
@@ -228,21 +397,6 @@ class ImageService
         }
 
         return true;
-    }
-
-    private function alreadyMatchesCatalogCanvasGd(\GdImage $image): bool
-    {
-        $widthMatches = abs(imagesx($image) - self::CATALOG_CANVAS_WIDTH) <= 8;
-        $heightMatches = abs(imagesy($image) - self::CATALOG_CANVAS_HEIGHT) <= 8;
-
-        if (!$widthMatches || !$heightMatches) {
-            return false;
-        }
-
-        $avg = $this->averageColor($this->sampleEdgeColorsGd($image));
-        $catalog = ['r' => 250, 'g' => 211, 'b' => 229];
-
-        return $this->colorDistance($avg, $catalog) <= self::CATALOG_MATCH_THRESHOLD;
     }
 
     private function sampleEdgeColorsGd(\GdImage $image): array
@@ -403,5 +557,23 @@ class ImageService
         $alpha = ($rgba & 0x7F000000) >> 24;
 
         return 1.0 - ($alpha / 127.0);
+    }
+
+    private function hasTransparentPixelsGd(\GdImage $image): bool
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $stepX = max(1, (int) floor($width / 20));
+        $stepY = max(1, (int) floor($height / 20));
+
+        for ($y = 0; $y < $height; $y += $stepY) {
+            for ($x = 0; $x < $width; $x += $stepX) {
+                if ($this->gdAlphaAt($image, $x, $y) < 0.98) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

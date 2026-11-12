@@ -2,6 +2,8 @@
 
 return [
 
+    'site_url' => env('SITE_URL', env('FRONTEND_URL', 'https://tessa.mk')),
+
     /*
     |--------------------------------------------------------------------------
     | Admin Notification Email

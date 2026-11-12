@@ -4,10 +4,16 @@ namespace App\Services;
 
 use App\Events\OrderStatusUpdated;
 use App\Models\Order;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AdminOrderService
 {
+    public function __construct(
+        private readonly ReferralService $referrals,
+        private readonly OrderService $orders
+    ) {}
+
     /**
      * Map string status names to the Order model integer constants.
      */
@@ -23,7 +29,11 @@ class AdminOrderService
      */
     public function listFiltered(array $filters, int $perPage = 20)
     {
-        $query = Order::with(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon']);
+        $query = Order::with(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
+
+        if (($filters['trashed'] ?? null) === 'only') {
+            $query->onlyTrashed();
+        }
 
         if (!empty($filters['status'])) {
             $statusInt = self::STATUS_MAP[$filters['status']] ?? null;
@@ -66,15 +76,28 @@ class AdminOrderService
      */
     public function updateStatus($id, string $status): Order
     {
-        $order = Order::findOrFail($id);
-
         $statusInt = self::STATUS_MAP[$status] ?? null;
         if ($statusInt === null) {
             throw new \InvalidArgumentException("Invalid status: {$status}");
         }
 
-        $previousStatus = $order->status;
-        $order->update(['status' => $statusInt]);
+        [$order, $previousStatus] = DB::transaction(function () use ($id, $statusInt) {
+            $order = Order::query()->lockForUpdate()->findOrFail($id);
+            $previousStatus = $order->status;
+            $order->update(['status' => $statusInt]);
+
+            // Stock follows the order: cancelling puts items back, undoing a cancel takes them again
+            // (the same as a customer cancelling their own order).
+            $wasCancelled = $previousStatus === Order::STATUS_CANCELLED;
+            $isCancelled = $statusInt === Order::STATUS_CANCELLED;
+            if ($wasCancelled !== $isCancelled) {
+                $this->orders->moveStock($order, $isCancelled ? +1 : -1);
+            }
+
+            $this->referrals->syncOrder($order);
+
+            return [$order, $previousStatus];
+        });
 
         try {
             OrderStatusUpdated::dispatch($order, $previousStatus);
@@ -85,6 +108,6 @@ class AdminOrderService
             ]);
         }
 
-        return $order->load(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon']);
+        return $order->load(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
     }
 }

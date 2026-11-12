@@ -1,0 +1,18 @@
+{
+    ":name is no longer available.": ":name nuk është më i disponueshëm.",
+    "Only :count left of :name.": "Kanë mbetur vetëm :count nga :name.",
+    "Only pending orders can be cancelled.": "Mund të anulohen vetëm porositë në pritje.",
+    "Coupon not found.": "Kodi nuk ekziston.",
+    "Coupon is expired or has been fully used.": "Kodi ka skaduar ose është përdorur plotësisht.",
+    "Sign in or create an account to use this stylist code.": "Hyni ose krijoni llogari për ta përdorur këtë kod.",
+    "Use 4 to 20 letters (A–Z), numbers or dashes.": "Përdorni 4 deri në 20 shkronja (A–Z), numra ose viza.",
+    "This code is already taken.": "Ky kod është i zënë.",
+    "Stylist codes are not available right now.": "Kodet e stilistëve nuk janë të disponueshme tani.",
+    "Referral codes are for clients; salon accounts already get salon prices.": "Kodet e rekomandimit janë për klientët; llogaritë e biznesit kanë tashmë çmime sallonesh.",
+    "This referral code is for your first order only.": "Ky kod vlen vetëm për porosinë e parë.",
+    "Your session has expired. Please sign in again.": "Sesioni skadoi. Ju lutemi hyni përsëri.",
+    "The current password is incorrect.": "Fjalëkalimi aktual nuk është i saktë.",
+    "Password updated successfully.": "Fjalëkalimi u ndryshua.",
+    "If an account exists with that email, a reset link has been sent.": "Nëse ekziston një llogari me këtë email, është dërguar një lidhje për rivendosje.",
+    "This phone number is already linked to an account.": "Ky numër telefoni është i lidhur tashmë me një llogari."
+}

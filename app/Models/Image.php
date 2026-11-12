@@ -14,15 +14,27 @@ class Image extends Model
 
     protected $fillable = [
         'name',
+        'url',
+        'alt',
+        'sort_order',
+        'variant',
+        'background',
+        'review_status',
+        'metadata',
         'imageable_type',
         'imageable_id',
+    ];
+
+    protected $casts = [
+        'sort_order' => 'integer',
+        'metadata' => 'array',
     ];
 
     public function delete()
     {
         // Delete the image file from storage if needed
         if (is_string($this->name) && !str_starts_with($this->name, 'http')) {
-            Storage::delete('public/images/' . $this->name);
+            Storage::delete('public/images/' . ltrim($this->name, '/'));
         }
 
 
@@ -38,6 +50,32 @@ class Image extends Model
     public function product():BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /** The shared "pending review" artwork the supplier importer attaches. */
+    public function isPlaceholder(): bool
+    {
+        return str_contains((string) $this->name, Product::PLACEHOLDER_IMAGE_PATH)
+            || str_contains((string) $this->url, Product::PLACEHOLDER_IMAGE_PATH);
+    }
+
+    /** Attached automatically by the 2026-09 catalogue audit, not by a person. */
+    public function isFromCatalogAudit(): bool
+    {
+        return isset($this->metadata['catalog_audit_source']);
+    }
+
+    public function publicUrl(): ?string
+    {
+        if (!is_string($this->name) || $this->name === '') {
+            return null;
+        }
+
+        if (str_starts_with($this->name, 'http')) {
+            return $this->name;
+        }
+
+        return asset('storage/images/' . ltrim($this->name, '/'));
     }
 }
 /*

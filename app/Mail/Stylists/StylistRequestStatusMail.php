@@ -25,7 +25,7 @@ class StylistRequestStatusMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Stylist Application — ' . $this->statusLabel,
+            subject: __('emails.stylist.subject_' . (in_array(strtolower($this->statusLabel), ['submitted', 'approved'], true) ? strtolower($this->statusLabel) : 'rejected')),
         );
     }
 

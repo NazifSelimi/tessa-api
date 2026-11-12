@@ -11,49 +11,135 @@ use Exception;
 
 class ProductService
 {
+    public const LOW_STOCK_THRESHOLD = 3;
+
     /* ===================================================== */
     /* INDEX (WITH FILTERING SUPPORT)                        */
     /* ===================================================== */
 
+    /**
+     * Storefront/admin catalogue query used by both listing controllers.
+     * Relations here are the data ProductResource needs; keep additions aligned
+     * with that DTO to avoid N+1 queries or silent response-field regressions.
+     */
     public function paginate(array $filters = [], int $perPage = 20, ?User $viewer = null)
     {
+        $relations = [
+            'brand',
+            'category',
+            'translations',
+            'images',
+            'sale',
+            'hairTypes',
+            'hairConcerns',
+            'catalogCollections',
+        ];
+
+        if ($viewer?->isAdmin()) {
+            $relations[] = 'collectionAssignments';
+        }
+
         $query = Product::query()
-            ->with([
-                'brand',
-                'category',
-                'translations',
-                'images',
-                'sale'
-            ]);
+            ->with($relations);
 
         $this->applyVisibilityFilter($query, $viewer);
         $this->applyFilters($query, $filters);
 
-        return $query->paginate($perPage);
+        // Shop browsing shows a colour line once; a search still finds single shades
+        // and admins keep seeing every product.
+        $lines = !$viewer?->isAdmin() && empty($filters['search']) && ($filters['shades'] ?? null) !== 'all'
+            ? $this->colourLineSummaries($filters, $viewer)
+            : collect();
+
+        if ($lines->isNotEmpty()) {
+            $query->where(fn (Builder $card) => $card
+                ->whereNull('products.product_family_id')
+                ->orWhereIn('products.id', $lines->pluck('id')));
+            $query->with('productFamily');
+        }
+
+        $page = $query->paginate($perPage);
+
+        foreach ($page->items() as $product) {
+            if ($line = $lines->get($product->product_family_id)) {
+                $product->setAttribute('shade_count', $line['count']);
+                $product->setAttribute('shade_preview', $line['preview']);
+            }
+        }
+
+        return $page;
+    }
+
+    /**
+     * For each colour line with shades matching the listing: the first shade
+     * (the line's card), how many shades match and a few swatches to preview.
+     */
+    private function colourLineSummaries(array $filters, ?User $viewer): \Illuminate\Support\Collection
+    {
+        $query = Product::query()->whereNotNull('products.product_family_id');
+        $this->applyVisibilityFilter($query, $viewer);
+        $this->applyFilters($query, $filters);
+
+        return $query->reorder()
+            ->select(['products.id', 'products.product_family_id', 'products.shade_sort_order', 'products.swatch_image'])
+            ->get()
+            ->groupBy('product_family_id')
+            ->map(function ($shades) {
+                $shades = $shades->sortBy([['shade_sort_order', 'asc'], ['id', 'asc']])->values();
+
+                return [
+                    'id' => $shades->first()->id,
+                    'count' => $shades->count(),
+                    'preview' => $shades->map(fn (Product $shade) => $shade->swatchUrl())->filter()->take(5)->values()->all(),
+                ];
+            });
     }
 
     /* ===================================================== */
     /* SHOW SINGLE                                           */
     /* ===================================================== */
 
-    public function find(Product $product): Product
+    /**
+     * Hydrates the detail-screen aggregate with the same relations expected by
+     * ProductResource. Visibility is intentionally checked by the caller.
+     */
+    public function find(Product $product, ?User $viewer = null): Product
     {
-        return $product->load([
+        $product->load([
             'brand',
             'category',
             'translations',
             'images',
-            'sale'
+            'sale',
+            'hairTypes',
+            'hairConcerns',
+            'catalogCollections',
+            'productFamily',
         ]);
-    }
 
-    public function canView(Product $product, ?User $viewer = null): bool
-    {
-        if (!$product->stylist_only) {
-            return true;
+        // Other shades of the same colour line, limited to what this viewer may buy.
+        if ($product->product_family_id) {
+            $query = Product::query()->where('product_family_id', $product->product_family_id);
+            $this->applyVisibilityFilter($query, $viewer);
+
+            $shades = $query
+                ->orderByRaw('shade_sort_order IS NULL, shade_sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'shade_code', 'shade_name', 'swatch_image', 'quantity', 'product_family_id']);
+
+            $product->setRelation('shades', $shades);
         }
 
-        return $viewer?->isStylist() || $viewer?->isAdmin();
+        return $product;
+    }
+
+    /**
+     * Central visibility rule for public catalogue endpoints. Staff roles may
+     * inspect stylist-only catalogue rows; a normal authenticated user may not.
+     */
+    public function canView(Product $product, ?User $viewer = null): bool
+    {
+        return $product->isAvailableTo($viewer);
     }
 
     /* ===================================================== */
@@ -69,6 +155,7 @@ class ProductService
             $this->handleTranslations($product, $data);
             $this->handleSale($product, $data);
             $this->handleImage($product, $data);
+            $this->syncHairProfile($product, $data);
 
             return $this->find($product);
         });
@@ -87,6 +174,7 @@ class ProductService
             $this->handleTranslations($product, $data);
             $this->handleSale($product, $data);
             $this->handleImage($product, $data);
+            $this->syncHairProfile($product, $data);
 
             return $this->find($product);
         });
@@ -114,7 +202,7 @@ class ProductService
 
     public function related(Product $product, int $limit = 3, ?User $viewer = null)
     {
-        $query = Product::with(['brand', 'images'])
+        $query = Product::with(['brand', 'images', 'catalogCollections'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->limit($limit);
@@ -130,7 +218,7 @@ class ProductService
 
     public function latest(int $limit = 3, ?User $viewer = null)
     {
-        $query = Product::with(['images', 'sale'])
+        $query = Product::with(['images', 'sale', 'catalogCollections'])
             ->latest()
             ->limit($limit);
 
@@ -146,9 +234,10 @@ class ProductService
     public function search(string $query, int $limit = 10, ?User $viewer = null)
     {
         $builder = Product::query()
-            ->with(['brand', 'category', 'translations', 'images', 'sale'])
-            ->where('name', 'like', '%' . $query . '%')
+            ->with(['brand', 'category', 'translations', 'images', 'sale', 'catalogCollections'])
             ->limit($limit);
+
+        $this->applySearch($builder, $query);
 
         $this->applyVisibilityFilter($builder, $viewer);
 
@@ -159,13 +248,18 @@ class ProductService
     /* PRODUCTS ON SALE                                      */
     /* ===================================================== */
 
+    /**
+     * Currently has no in-repository caller. Retain only if a scheduled job or
+     * external consumer depends on it; otherwise remove it with a regression
+     * test rather than allowing a second, undocumented sale-query contract.
+     */
     public function activeSales()
     {
         return Product::whereHas('sale', function ($query) {
             $query->where('start_date', '<=', now())
                 ->where('end_date', '>=', now());
         })
-            ->with(['sale', 'images'])
+            ->with(['sale', 'images', 'catalogCollections'])
             ->get();
     }
 
@@ -204,7 +298,11 @@ class ProductService
             'quantity',
             'price',
             'stylist_price',
+            'cost_price',
             'stylist_only',
+            'visible_to_guests',
+            'visible_to_customers',
+            'visible_to_stylists',
         ])->toArray();
     }
 
@@ -248,11 +346,7 @@ class ProductService
 
     private function applyVisibilityFilter(Builder $query, ?User $viewer = null): void
     {
-        if ($viewer?->isStylist() || $viewer?->isAdmin()) {
-            return;
-        }
-
-        $query->where('stylist_only', false);
+        $query->availableTo($viewer);
     }
 
     private function handleSale(Product $product, array $data): void
@@ -274,15 +368,54 @@ class ProductService
 
     private function handleImage(Product $product, array $data): void
     {
+        if (isset($data['image_assets']) && is_array($data['image_assets'])) {
+            $product->images()->get()->each->delete();
+
+            foreach ($data['image_assets'] as $asset) {
+                $product->images()->create($asset);
+            }
+
+            return;
+        }
+
         if (!isset($data['image'])) {
             return;
         }
 
-        $product->images()->delete();
+        $product->images()->get()->each->delete();
 
         $product->images()->create([
             'name' => $data['image']
         ]);
+    }
+
+    private function syncHairProfile(Product $product, array $data): void
+    {
+        if (array_key_exists('hair_type_ids', $data)) {
+            $product->hairTypes()->sync($data['hair_type_ids'] ?? []);
+        }
+
+        if (array_key_exists('hair_concern_ids', $data)) {
+            $product->hairConcerns()->sync($data['hair_concern_ids'] ?? []);
+        }
+    }
+
+    /**
+     * Every word must match the product name, its brand or its category, so
+     * "7.1 fanola" finds Fanola's 7.1 shade and "mask botugen" finds the mask.
+     */
+    private function applySearch(Builder $query, string $text): void
+    {
+        $words = array_slice(preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 6);
+
+        foreach ($words as $word) {
+            $like = '%' . addcslashes($word, '%_\\') . '%';
+            $query->where(function (Builder $match) use ($like) {
+                $match->where('products.name', 'like', $like)
+                    ->orWhereHas('brand', fn (Builder $brand) => $brand->where('name', 'like', $like))
+                    ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', $like));
+            });
+        }
     }
 
     private function applyFilters(Builder $query, array $filters): void
@@ -295,6 +428,16 @@ class ProductService
             $query->where('category_id', $filters['category_id']);
         }
 
+        if (!empty($filters['category_ids'])) {
+            $query->whereIn('category_id', array_map('intval', explode(',', $filters['category_ids'])));
+        }
+
+        if (!empty($filters['collection'])) {
+            $query->whereHas('catalogCollections', function (Builder $collectionQuery) use ($filters) {
+                $collectionQuery->where('product_collections.slug', $filters['collection']);
+            });
+        }
+
         if (!empty($filters['min_price'])) {
             $query->where('products.price', '>=', $filters['min_price']);
         }
@@ -304,7 +447,7 @@ class ProductService
         }
 
         if (!empty($filters['search'])) {
-            $query->where('products.name', 'like', '%' . $filters['search'] . '%');
+            $this->applySearch($query, (string) $filters['search']);
         }
 
         if (!empty($filters['on_sale'])) {
@@ -317,6 +460,41 @@ class ProductService
         if (!empty($filters['in_stock'])) {
             $query->where('products.quantity', '>', 0);
         }
+
+        // Admin work queue; other viewers never receive products in review.
+        if (($filters['review'] ?? null) === 'in_review') {
+            $query->whereNot(fn (Builder $ready) => $ready->readyForSale());
+        } elseif (($filters['review'] ?? null) === 'ready') {
+            $query->readyForSale();
+        }
+
+        if (($filters['price_status'] ?? null) === 'missing') {
+            $query->where(fn (Builder $q) => $q->where('products.price', '<=', 0)
+                ->orWhereNull('products.price')
+                ->orWhere('products.stylist_price', '<=', 0)
+                ->orWhereNull('products.stylist_price'));
+        }
+
+        match ($filters['stock'] ?? null) {
+            'low' => $query->whereBetween('products.quantity', [1, self::LOW_STOCK_THRESHOLD]),
+            'out' => $query->where('products.quantity', '<=', 0),
+            default => null,
+        };
+
+        // Admin filter on who a product is shown to.
+        match ($filters['visibility'] ?? null) {
+            'hidden' => $query->where('products.visible_to_guests', false)
+                ->where('products.visible_to_customers', false)
+                ->where('products.visible_to_stylists', false),
+            'limited' => $query->where(fn (Builder $q) => $q->where('products.visible_to_guests', false)
+                ->orWhere('products.visible_to_customers', false)
+                ->orWhere('products.visible_to_stylists', false)),
+            'everyone' => $query->where('products.visible_to_guests', true)
+                ->where('products.visible_to_customers', true)
+                ->where('products.visible_to_stylists', true),
+            'guests', 'customers', 'stylists' => $query->where('products.visible_to_' . $filters['visibility'], true),
+            default => null,
+        };
 
         // Sorting — use database-driven sort_priority on categories
         $sort = $filters['sort'] ?? 'name_asc';
@@ -332,6 +510,9 @@ class ProductService
             'price_asc'  => $query->orderBy('products.price', 'asc'),
             'price_desc' => $query->orderBy('products.price', 'desc'),
             'newest'     => $query->orderBy('products.created_at', 'desc'),
+            // Older storefront clients use this value. Products have no
+            // featured column, so newest is the stable, honest fallback.
+            'featured'   => $query->orderBy('products.created_at', 'desc'),
             default      => $query->orderBy('products.name', 'asc'),
         };
     }

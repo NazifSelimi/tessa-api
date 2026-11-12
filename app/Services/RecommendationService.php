@@ -4,19 +4,26 @@ namespace App\Services;
 
 use App\Models\Bundle;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class RecommendationService
 {
+    /** Values of products.quiz_mode, set by admins on the Hair quiz page. */
+    public const QUIZ_MODES = ['auto', 'featured', 'hidden'];
+
+    /** Large enough that a matching featured product always outranks profile-only matches. */
+    private const FEATURED_BOOST = 100;
+
     /**
      * Get product recommendations based on hair type, concerns, and optional budget.
      *
      * @return array{products: array, bundles: array}
      */
-    public function getRecommendations(int $hairTypeId, array $concerns, ?string $budgetRange = null, bool $includeStylistOnly = false): array
+    public function getRecommendations(int $hairTypeId, array $concerns, ?string $budgetRange = null, string $audience = 'customers'): array
     {
-        $products = $this->scoredProducts($hairTypeId, $concerns, $budgetRange, $includeStylistOnly);
-        $bundles  = $this->matchingBundles($hairTypeId, $concerns, $includeStylistOnly);
+        $products = $this->scoredProducts($hairTypeId, $concerns, $budgetRange, $audience);
+        $bundles  = $this->matchingBundles($hairTypeId, $concerns, $audience);
 
         if ($bundles->isEmpty()) {
             $dynamic = $this->generateDynamicBundle($products);
@@ -35,14 +42,27 @@ class RecommendationService
      * SCORING
      * ------------------------------------------------- */
 
-    protected function scoredProducts(int $hairTypeId, array $concerns, ?string $budgetRange, bool $includeStylistOnly): Collection
+    /**
+     * Products the admin opened to this audience ('guests', 'customers' or
+     * 'stylists'), priced for it and ready for sale.
+     */
+    protected function restrictToAudience(Builder $query, string $audience): void
+    {
+        $query->where($query->qualifyColumn('visible_to_' . $audience), true)
+            ->pricedFor($audience === 'stylists')
+            ->readyForSale();
+    }
+
+    protected function scoredProducts(int $hairTypeId, array $concerns, ?string $budgetRange, string $audience): Collection
     {
         $query = Product::query()
             ->with(['brand', 'category', 'translations', 'images', 'sale', 'hairTypes', 'hairConcerns']);
 
-        if (!$includeStylistOnly) {
-            $query->where('stylist_only', false);
-        }
+        // Admins can exclude a product from the quiz, and an out-of-stock or
+        // unpriced recommendation cannot be bought, so none of them is offered.
+        $query->where('quiz_mode', '!=', 'hidden')
+            ->where('quantity', '>', 0);
+        $this->restrictToAudience($query, $audience);
 
         // Optional budget filtering
         if ($budgetRange !== null) {
@@ -79,6 +99,10 @@ class RecommendationService
                 }
             }
 
+            if ($product->quiz_mode === 'featured') {
+                $score += self::FEATURED_BOOST;
+            }
+
             $product->setAttribute('recommendation_score', $score);
 
             return $product;
@@ -94,14 +118,12 @@ class RecommendationService
     /**
      * Find static bundles whose products overlap with the matching hair type / concerns.
      */
-    protected function matchingBundles(int $hairTypeId, array $concerns, bool $includeStylistOnly): Collection
+    protected function matchingBundles(int $hairTypeId, array $concerns, string $audience): Collection
     {
         return Bundle::query()
             ->where('is_dynamic', false)
-            ->whereHas('products', function ($q) use ($hairTypeId, $concerns, $includeStylistOnly) {
-                if (!$includeStylistOnly) {
-                    $q->where('products.stylist_only', false);
-                }
+            ->whereHas('products', function ($q) use ($hairTypeId, $concerns, $audience) {
+                $this->restrictToAudience($q, $audience);
 
                 $q->where(function ($sub) use ($hairTypeId, $concerns) {
                     $sub->whereHas('hairTypes', fn ($ht) => $ht->where('hair_types.id', $hairTypeId));
@@ -111,11 +133,7 @@ class RecommendationService
                 });
             })
             ->with([
-                'products' => function ($q) use ($includeStylistOnly) {
-                    if (!$includeStylistOnly) {
-                        $q->where('products.stylist_only', false);
-                    }
-                },
+                'products' => fn ($q) => $this->restrictToAudience($q->getQuery(), $audience),
                 'products.images',
                 'products.brand',
                 'products.category',

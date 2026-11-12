@@ -30,14 +30,9 @@ class OrderResource extends JsonResource
         $country = $shippingInfo?->country ?? 'MK';
         $state = $country === 'MK' ? 'North Macedonia' : $country;
 
-        // Expose who placed the order so admins can tell apart retail vs. pro
-        // (stylist) pricing at a glance. No user → guest checkout.
-        $roleMap = [
-            \App\Models\User::ROLE_ADMIN => 'admin',
-            \App\Models\User::ROLE_STYLIST => 'stylist',
-            \App\Models\User::ROLE_USER => 'user',
-        ];
-        $customerRole = $user ? ($roleMap[(int) $user->role] ?? 'user') : 'guest';
+        $customerRole = $user
+            ? ($user->isAdmin() ? 'admin' : ($user->isStylist() ? 'stylist' : 'user'))
+            : 'guest';
 
         return [
             'id' => (string) $this->id,
@@ -56,18 +51,11 @@ class OrderResource extends JsonResource
                     }
                 }
 
-                $brandName = ($product && $product->relationLoaded('brand'))
-                    ? $product->brand?->name
-                    : null;
-                $categoryName = ($product && $product->relationLoaded('category'))
-                    ? $product->category?->name
-                    : null;
-
                 return [
                     'productId' => (string) $item->product_id,
                     'productName' => $product?->name ?? 'Unknown',
-                    'brandName' => $brandName,
-                    'categoryName' => $categoryName,
+                    'brandName' => $product?->brand?->name,
+                    'categoryName' => $product?->category?->name,
                     'quantity' => (int) $item->quantity,
                     'unitPrice' => (float) $item->price,
                     'total' => (float) ($item->price * $item->quantity),
@@ -78,6 +66,7 @@ class OrderResource extends JsonResource
             'discount' => (float) ($this->discount ?? 0),
             'shipping' => (float) ($this->shipping ?? 0),
             'tax' => (float) ($this->tax ?? 0),
+            'storeCreditUsed' => (float) ($this->store_credit_used ?? 0),
             'total' => (float) $this->total,
             'status' => $status,
             'paymentMethod' => $this->payment_method ?? 'cod',
@@ -85,6 +74,7 @@ class OrderResource extends JsonResource
             'shippingAddress' => [
                 'fullName' => $fullName,
                 'phone' => $shippingInfo?->phone ?? $user?->phone ?? '',
+                'email' => $shippingInfo?->email ?: ($user?->email ?? ''),
                 'address' => $shippingInfo?->address ?? $user?->address ?? '',
                 'city' => $shippingInfo?->city ?? $user?->city ?? '',
                 'state' => $state,
@@ -93,7 +83,14 @@ class OrderResource extends JsonResource
             ],
             'customMessage' => $this->message,
             'couponCode' => $this->coupon?->code ?? $this->coupon_code,
+            // Only the admin order queries load the stylist, so customers never see this.
+            'referral' => $this->referral_stylist_id && $this->relationLoaded('referralStylist') ? [
+                'stylistId' => (string) $this->referral_stylist_id,
+                'stylistName' => trim(($this->referralStylist?->first_name ?? '') . ' ' . ($this->referralStylist?->last_name ?? '')),
+                'commission' => (float) $this->referral_commission,
+            ] : null,
             'trackingNumber' => $this->tracking_number,
+            'deletedAt' => $this->deleted_at?->toISOString(),
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];

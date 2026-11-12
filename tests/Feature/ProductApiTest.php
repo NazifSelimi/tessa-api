@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Brand;
@@ -13,7 +14,7 @@ class ProductApiTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function it_lists_products_with_pagination()
     {
         $brand = Brand::factory()->create(['name' => 'TestBrand']);
@@ -30,7 +31,7 @@ class ProductApiTest extends TestCase
         $response->assertJsonStructure([
             'success',
             'data' => [
-                '*' => ['id', 'name', 'price', 'stylistPrice', 'brand', 'category', 'inStock']
+                '*' => ['id', 'name', 'price', 'brand', 'category', 'inStock']
             ],
             'meta' => ['current_page', 'per_page', 'total', 'last_page']
         ]);
@@ -39,7 +40,7 @@ class ProductApiTest extends TestCase
         $this->assertGreaterThanOrEqual(25, $response->json('meta.total'));
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_products_by_category()
     {
         $category1 = Category::factory()->create();
@@ -61,7 +62,7 @@ class ProductApiTest extends TestCase
         $this->assertCount(5, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_searches_products_by_name()
     {
         $brand = Brand::factory()->create();
@@ -85,7 +86,7 @@ class ProductApiTest extends TestCase
         $this->assertCount(1, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_single_product_details()
     {
         $brand = Brand::factory()->create();
@@ -102,11 +103,18 @@ class ProductApiTest extends TestCase
         $response->assertJsonPath('data.name', $product->name);
         $response->assertJsonStructure([
             'success',
-            'data' => ['id', 'name', 'price', 'stylistPrice', 'brand', 'category', 'quantity', 'inStock']
+            'data' => ['id', 'name', 'price', 'brand', 'category', 'quantity', 'inStock']
         ]);
+        // Salon prices are trade information: hidden from guests, shown to business accounts.
+        $response->assertJsonMissingPath('data.stylistPrice');
+
+        $stylist = \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_STYLIST]);
+        $this->withToken($stylist->createToken('t')->plainTextToken)
+            ->getJson("/api/v1/products/{$product->id}")
+            ->assertJsonStructure(['data' => ['stylistPrice']]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_featured_products()
     {
         $brand = Brand::factory()->create();

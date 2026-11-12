@@ -17,6 +17,7 @@ class QuickOrderController extends Controller
         $request->validate([
             'search'      => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'color_restock' => ['nullable', 'in:0,1,true,false'],
             'page'        => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -24,9 +25,7 @@ class QuickOrderController extends Controller
             ->select(['id', 'name', 'price', 'stylist_price', 'quantity', 'category_id'])
             ->with(['images' => fn ($q) => $q->limit(1)]);
 
-        if (!ApiUserResolver::canAccessStylistOnlyProducts($viewer)) {
-            $query->where('stylist_only', false);
-        }
+        $query->availableTo($viewer);
 
         if ($search = $request->query('search')) {
             $query->where('name', 'like', '%' . $search . '%');
@@ -36,6 +35,10 @@ class QuickOrderController extends Controller
             $query->where('category_id', $categoryId);
         }
 
+        if ($request->boolean('color_restock')) {
+            $query->whereHas('category', fn ($category) => $category->whereRaw('LOWER(name) like ?', ['%color%']));
+        }
+
         $products = $query->paginate(20);
 
         $data = collect($products->items())->map(fn (Product $p) => [
@@ -43,6 +46,7 @@ class QuickOrderController extends Controller
             'name'      => $p->name,
             'price'     => (float) $p->price,
             'stylistPrice' => (float) $p->stylist_price,
+            'stock'     => (int) $p->quantity,
             'thumbnail' => $p->images->isNotEmpty()
                 ? asset('storage/images/' . $p->images->first()->name)
                 : null,

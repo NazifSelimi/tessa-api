@@ -11,12 +11,12 @@ class RecommendedProductResource extends JsonResource
     {
         $primaryImage = null;
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
-            $primaryImage = asset('storage/images/' . $this->images->first()->name);
+            $primaryImage = asset('storage/images/' . $this->primaryImage()->name);
         }
 
         $description = null;
         if ($this->relationLoaded('translations') && $this->translations->isNotEmpty()) {
-            $locale = app()->getLocale();
+            $locale = \App\Support\ContentLocale::current();
             $translation = $this->translations->firstWhere('locale', $locale)
                 ?? $this->translations->first();
             $description = $translation?->description;
@@ -27,7 +27,10 @@ class RecommendedProductResource extends JsonResource
             'name'                => $this->name,
             'description'         => $description,
             'price'               => (float) $this->price,
-            'stylistPrice'        => (float) $this->stylist_price,
+            'stylistPrice'        => $this->when(
+                (bool) \App\Support\ApiUserResolver::fromRequest($request)?->canSeeSalonPrices(),
+                fn () => (float) $this->stylist_price,
+            ),
             'stylistOnly'         => (bool) $this->stylist_only,
             'quantity'            => (int) $this->quantity,
             'inStock'             => $this->quantity > 0,

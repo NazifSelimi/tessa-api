@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ProductIndexRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\ProductFamily;
 use App\Services\ImageService;
 use App\Services\ProductService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AdminProductController extends Controller
 {
@@ -52,10 +54,17 @@ class AdminProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'min:0'],
             'stylist_price' => ['nullable', 'numeric', 'min:0'],
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
             'quantity' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['required', 'exists:brands,id'],
             'stylist_only' => ['nullable', 'boolean'],
+            'visible_to' => ['nullable', 'array'],
+            'visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
+            'hair_type_ids' => ['nullable', 'array'],
+            'hair_type_ids.*' => ['integer', 'distinct', 'exists:hair_types,id'],
+            'hair_concern_ids' => ['nullable', 'array'],
+            'hair_concern_ids.*' => ['integer', 'distinct', 'exists:hair_concerns,id'],
             'normalize_catalog_background' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'translations' => ['nullable', 'array'],
@@ -69,19 +78,20 @@ class AdminProductController extends Controller
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        // Handle image upload — convert to WebP before passing to the service
+        // Preserve the source and create non-destructive catalogue variants.
         if ($request->hasFile('image')) {
-            $filename = $this->imageService->storeAsWebP(
+            $validated['image_assets'] = $this->imageService->storeProductImageAssets(
                 $request->file('image'),
                 'images',
                 1200,
                 82,
                 filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
             );
-            $validated['image'] = $filename;
+            unset($validated['image']);
         }
 
         $validated['translations'] = $this->normalizeTranslations($validated['translations'] ?? []);
+        $validated = $this->audienceColumns($validated);
 
         $product = $this->productService->create($validated);
 
@@ -106,41 +116,68 @@ class AdminProductController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'stylist_price' => ['sometimes', 'numeric', 'min:0'],
+            'cost_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'category_id' => ['sometimes', 'exists:categories,id'],
             'brand_id' => ['sometimes', 'exists:brands,id'],
             'stylist_only' => ['sometimes', 'boolean'],
+            'visible_to' => ['sometimes', 'nullable', 'array'],
+            'visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
+            'hair_type_ids' => ['sometimes', 'array'],
+            'hair_type_ids.*' => ['integer', 'distinct', 'exists:hair_types,id'],
+            'hair_concern_ids' => ['sometimes', 'array'],
+            'hair_concern_ids.*' => ['integer', 'distinct', 'exists:hair_concerns,id'],
             'normalize_catalog_background' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'],
             'translations' => ['sometimes', 'array'],
             'translations.en' => ['nullable', 'string'],
             'translations.mk' => ['nullable', 'string'],
             'translations.shq' => ['nullable', 'string'],
+            // Colour lines: which line the product belongs to and its shade in that line.
+            'product_family_id' => ['sometimes', 'nullable', 'integer', 'exists:product_families,id'],
+            'shade_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'shade_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'shade_sort_order' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'swatch' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'remove_swatch' => ['sometimes', 'boolean'],
         ])->validate();
 
-        // Auto-update stylist_price if price changed and stylist_price not provided
-        if (isset($validated['price']) && !isset($validated['stylist_price'])) {
+        // Fill a missing salon price from the new retail price, but never overwrite
+        // a salon price that is already set.
+        if (isset($validated['price']) && !isset($validated['stylist_price']) && (float) $product->stylist_price <= 0) {
             $validated['stylist_price'] = $validated['price'] * 0.9;
         }
 
-        $productData = collect($validated)->only(['name', 'price', 'stylist_price', 'quantity', 'category_id', 'brand_id'])->toArray();
+        $validated = $this->audienceColumns($validated);
+        $productData = collect($validated)->only([
+            'name', 'price', 'stylist_price', 'cost_price', 'stylist_only', 'quantity', 'category_id', 'brand_id',
+            'visible_to_guests', 'visible_to_customers', 'visible_to_stylists',
+        ])->toArray();
         $product->update($productData);
 
-        // Handle image upload — convert to WebP and replace old images
-        if ($request->hasFile('image')) {
-            // Delete old image files from storage
-            foreach ($product->images as $oldImage) {
-                $this->imageService->delete($oldImage->name);
-            }
+        $shadeData = collect($validated)->only(['product_family_id', 'shade_code', 'shade_name', 'shade_sort_order'])
+            ->map(fn ($value) => $value === '' ? null : $value)
+            ->all();
+        if ($request->hasFile('swatch')) {
+            $shadeData['swatch_image'] = $request->file('swatch')->store('swatches/uploads', 'public');
+        } elseif (filter_var($validated['remove_swatch'] ?? false, FILTER_VALIDATE_BOOL)) {
+            $shadeData['swatch_image'] = null;
+        }
+        unset($validated['swatch'], $validated['remove_swatch']);
+        if ($shadeData) {
+            $product->forceFill($shadeData)->save();
+        }
 
-            $filename = $this->imageService->storeAsWebP(
+        // Persist an original plus derived assets; existing products are untouched until replaced.
+        if ($request->hasFile('image')) {
+            $validated['image_assets'] = $this->imageService->storeProductImageAssets(
                 $request->file('image'),
                 'images',
                 1200,
                 82,
                 filter_var($validated['normalize_catalog_background'] ?? false, FILTER_VALIDATE_BOOL)
             );
-            $validated['image'] = $filename;
+            unset($validated['image']);
         }
 
         if (array_key_exists('translations', $validated)) {
@@ -158,6 +195,24 @@ class AdminProductController extends Controller
     }
 
     /**
+     * Colour lines a product can be assigned to.
+     */
+    public function families()
+    {
+        $families = ProductFamily::query()
+            ->withCount('products')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (ProductFamily $family) => [
+                'id' => (string) $family->id,
+                'name' => $family->name,
+                'shadeCount' => $family->products_count,
+            ]);
+
+        return ApiResponse::ok($families);
+    }
+
+    /**
      * Delete product.
      */
     public function destroy($id)
@@ -168,12 +223,7 @@ class AdminProductController extends Controller
             return ApiResponse::error('Cannot delete product with existing orders', 400);
         }
 
-        // Delete image files from storage
-        foreach ($product->images as $image) {
-            $this->imageService->delete($image->name);
-        }
-
-        $product->images()->delete();
+        $product->images()->get()->each->delete();
         $product->translations()->delete();
         $product->sale()->delete();
         $product->delete();
@@ -230,7 +280,10 @@ class AdminProductController extends Controller
             'updates' => ['required', 'array'],
             'updates.category_id' => ['sometimes', 'exists:categories,id'],
             'updates.brand_id' => ['sometimes', 'exists:brands,id'],
+            'updates.visible_to' => ['sometimes', 'nullable', 'array'],
+            'updates.visible_to.*' => ['string', Rule::in(Product::AUDIENCES)],
         ]);
+        $validated['updates'] = $this->audienceColumns($validated['updates']);
 
         $updated = 0;
         $failed = 0;
@@ -257,15 +310,45 @@ class AdminProductController extends Controller
         );
     }
 
+    /**
+     * visible_to (the audiences ticked; empty = hidden) becomes the three
+     * visible_to_* columns. It takes over from the old stylist_only switch.
+     */
+    private function audienceColumns(array $validated): array
+    {
+        if (!array_key_exists('visible_to', $validated)) {
+            return $validated;
+        }
+
+        $audiences = $validated['visible_to'] ?? [];
+        unset($validated['visible_to'], $validated['stylist_only']);
+
+        foreach (Product::AUDIENCES as $audience) {
+            $validated['visible_to_' . $audience] = in_array($audience, $audiences, true);
+        }
+
+        return $validated;
+    }
+
     private function normalizeRequestData(Request $request): array
     {
         $data = $request->all();
+
+        // Form posts cannot send an empty array, so 'none' (or '') means hidden.
+        foreach (['visibleTo', 'visible_to'] as $key) {
+            if (array_key_exists($key, $data) && !is_array($data[$key])) {
+                $value = trim((string) $data[$key]);
+                $data[$key] = in_array($value, ['', 'none'], true) ? [] : array_map('trim', explode(',', $value));
+            }
+        }
 
         $fieldMap = [
             'categoryId' => 'category_id',
             'brandId' => 'brand_id',
             'stylistPrice' => 'stylist_price',
+            'costPrice' => 'cost_price',
             'stylistOnly' => 'stylist_only',
+            'visibleTo' => 'visible_to',
             'normalizeCatalogBackground' => 'normalize_catalog_background',
         ];
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Order;
@@ -14,7 +15,7 @@ class OrderApiTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function it_creates_an_order_for_authenticated_user()
     {
         $user = User::factory()->create();
@@ -73,7 +74,7 @@ class OrderApiTest extends TestCase
         // Check database
         $this->assertDatabaseHas('orders', [
             'user_id' => $user->id,
-            'total' => 250.00, // (100 * 2) + (50 * 1)
+            'total' => 400.00, // (100 * 2) + (50 * 1) + 150 shipping under 3000 MKD
             'status' => Order::STATUS_PENDING,
         ]);
 
@@ -95,7 +96,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_order_creation_data()
     {
         $user = User::factory()->create();
@@ -110,7 +111,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['items', 'shipping_address']);
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_order_with_insufficient_stock()
     {
         $user = User::factory()->create();
@@ -147,7 +148,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['items']);
     }
 
-    /** @test */
+    #[Test]
     public function it_lists_user_orders()
     {
         $user = User::factory()->create();
@@ -168,7 +169,7 @@ class OrderApiTest extends TestCase
         $this->assertCount(3, $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_single_order_details()
     {
         $user = User::factory()->create();
@@ -186,7 +187,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_cancels_pending_order()
     {
         $user = User::factory()->create();
@@ -208,7 +209,7 @@ class OrderApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_cannot_cancel_non_pending_order()
     {
         $user = User::factory()->create();
@@ -225,7 +226,7 @@ class OrderApiTest extends TestCase
         $response->assertJsonValidationErrors(['order']);
     }
 
-    /** @test */
+    #[Test]
     public function it_applies_stylist_pricing_for_stylist_users()
     {
         $user = User::factory()->create([
@@ -265,15 +266,46 @@ class OrderApiTest extends TestCase
 
         $response->assertStatus(201);
 
-        // Should use stylist price (80.00) instead of regular price (100.00)
+        // Should use stylist price (80.00) instead of regular price (100.00), plus 150 shipping
         $this->assertDatabaseHas('orders', [
             'user_id' => $user->id,
-            'total' => 80.00,
+            'total' => 230.00,
         ]);
 
         $this->assertDatabaseHas('items', [
             'product_id' => $product->id,
             'price' => 80.00,
         ]);
+    }
+
+    #[Test]
+    public function admin_cancel_returns_stock_and_undo_takes_it_again()
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $buyer = User::factory()->create(['role' => User::ROLE_USER]);
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 50]);
+        $buyerToken = $buyer->createToken('t')->plainTextToken;
+
+        $orderId = $this->withToken($buyerToken)->postJson('/api/v1/orders', [
+            'items' => [['product_id' => $product->id, 'qty' => 3]],
+            'shipping_address' => [
+                'firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.com', 'phone' => '070111222',
+                'address' => '1 Street', 'city' => 'Skopje', 'state' => 'MK', 'zip' => '1000',
+            ],
+            'payment_method' => 'online',
+        ])->assertStatus(201)->json('data.id');
+        $this->assertSame(47, $product->fresh()->quantity);
+
+        $this->app['auth']->forgetGuards();
+        $adminToken = $admin->createToken('t')->plainTextToken;
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'cancelled'])->assertOk();
+        $this->assertSame(50, $product->fresh()->quantity);
+
+        // Cancelling twice does not add the stock twice.
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'cancelled'])->assertOk();
+        $this->assertSame(50, $product->fresh()->quantity);
+
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'confirmed'])->assertOk();
+        $this->assertSame(47, $product->fresh()->quantity);
     }
 }

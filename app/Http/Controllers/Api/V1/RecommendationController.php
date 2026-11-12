@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\RecommendationRequest;
 use App\Http\Resources\BundleResource;
 use App\Http\Resources\RecommendedProductResource;
+use App\Models\Product;
 use App\Services\RecommendationService;
 use App\Support\ApiUserResolver;
 use App\Support\ApiResponse;
@@ -23,7 +24,8 @@ class RecommendationController extends Controller
             hairTypeId:  $request->validated('hair_type_id'),
             concerns:    $request->validated('concerns'),
             budgetRange: $request->validated('budget_range'),
-            includeStylistOnly: ApiUserResolver::canAccessStylistOnlyProducts($viewer),
+            // Admins preview the quiz as a stylist would see it.
+            audience: $viewer?->isAdmin() ? 'stylists' : Product::audienceOf($viewer),
         );
 
         return ApiResponse::ok([

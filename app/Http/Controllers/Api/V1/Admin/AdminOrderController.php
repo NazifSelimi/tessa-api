@@ -16,7 +16,7 @@ class AdminOrderController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['status', 'date_from', 'date_to', 'search']);
+        $filters = $request->only(['status', 'date_from', 'date_to', 'search', 'trashed']);
         $perPage = $request->per_page ?? 20;
 
         $orders = $this->adminOrderService->listFiltered($filters, $perPage);

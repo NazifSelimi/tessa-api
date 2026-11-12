@@ -7,6 +7,7 @@ use App\Actions\CheckoutAction;
 use App\Http\Resources\OrderResource;
 use App\Support\ApiResponse;
 use App\Http\Requests\Api\V1\StoreOrderRequest;
+use App\Support\ApiUserResolver;
 
 class CheckoutController extends Controller
 {
@@ -16,13 +17,10 @@ class CheckoutController extends Controller
 
     public function checkout(StoreOrderRequest $request)
     {
-        // This route is public so guests can check out, which means the default
-        // (session/web) guard never resolves the bearer token. Resolve the user
-        // explicitly through the sanctum guard so authenticated customers —
-        // crucially stylists — are recognised and get their correct pricing
-        // instead of being billed as guests at retail prices.
-        $user = $request->user('sanctum') ?? $request->user();
-
+        $user = $request->bearerToken() ? ApiUserResolver::fromRequest($request) : $request->user();
+        if ($request->bearerToken() && !$user) {
+            return ApiResponse::error(__('Your session has expired. Please sign in again.'), 401);
+        }
         $order = $this->checkoutAction->execute(
             $user,
             $request->validated()

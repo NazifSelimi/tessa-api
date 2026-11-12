@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Events\StylistRequestApproved;
 use App\Events\StylistRequestRejected;
 use App\Events\StylistRequestSubmitted;
@@ -21,7 +22,7 @@ class StylistRequestEmailTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @test */
+    #[Test]
     public function submitting_a_stylist_request_dispatches_event_and_sends_admin_and_user_emails()
     {
         Mail::fake();
@@ -62,11 +63,11 @@ class StylistRequestEmailTest extends TestCase
         Mail::assertSent(StylistRequestStatusMail::class, function ($mail) use ($request, $user) {
             return $mail->requestStylist?->id === $request->id
                 && $mail->user->id === $user->id
-                && $mail->statusLabel === 'Submitted';
+                && $mail->statusLabel === 'submitted';
         });
     }
 
-    /** @test */
+    #[Test]
     public function approving_a_stylist_request_dispatches_event_and_sends_status_email()
     {
         Mail::fake();
@@ -100,11 +101,11 @@ class StylistRequestEmailTest extends TestCase
         $listener->handle(new StylistRequestApproved($request->fresh(), $user->fresh()));
 
         Mail::assertSent(StylistRequestStatusMail::class, function ($mail) use ($user) {
-            return $mail->user->id === $user->id && $mail->statusLabel === 'Approved';
+            return $mail->user->id === $user->id && $mail->statusLabel === 'approved';
         });
     }
 
-    /** @test */
+    #[Test]
     public function rejecting_a_stylist_request_dispatches_event_and_sends_status_email()
     {
         Mail::fake();
@@ -138,7 +139,7 @@ class StylistRequestEmailTest extends TestCase
         $listener->handle(new StylistRequestRejected($request, $user, 'Not enough details'));
 
         Mail::assertSent(StylistRequestStatusMail::class, function ($mail) use ($user) {
-            return $mail->user->id === $user->id && $mail->statusLabel === 'Rejected';
+            return $mail->user->id === $user->id && $mail->statusLabel === 'rejected';
         });
     }
 }

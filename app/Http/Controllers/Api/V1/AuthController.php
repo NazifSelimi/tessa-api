@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ForgotPasswordRequest;
+use App\Http\Requests\Api\V1\ChangePasswordRequest;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\ProfileUpdateRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
@@ -20,7 +21,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AuthController extends Controller
@@ -54,6 +57,7 @@ class AuthController extends Controller
         $user->city = $data['city'];
         $user->postcode = $data['postcode'];
         $user->password = Hash::make($data['password']);
+        $this->synchronizePhoneLogin($user, $data['phone']);
         $user->save();
 
         $token = $user->createToken('api')->plainTextToken;
@@ -166,6 +170,7 @@ class AuthController extends Controller
 
         if (array_key_exists('phone', $data)) {
             $user->phone = $data['phone'];
+            $this->synchronizePhoneLogin($user, $data['phone']);
         }
 
         if (array_key_exists('address', $data)) {
@@ -189,6 +194,22 @@ class AuthController extends Controller
         return ApiResponse::ok(new UserResource($user));
     }
 
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        $user = $request->user();
+
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return ApiResponse::error(__('The current password is incorrect.'), 422, [
+                'current_password' => [__('The current password is incorrect.')],
+            ]);
+        }
+
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        return ApiResponse::ok(null, 200, [], __('Password updated successfully.'));
+    }
+
     public function forgotPassword(ForgotPasswordRequest $request)
     {
         $user = User::where('email', $request->email)->first();
@@ -205,7 +226,12 @@ class AuthController extends Controller
                 ]
             );
 
-            Mail::to($user->email)->send(new PasswordResetMail($user, $token));
+            // Always sent (not switchable); logged in the outbox like every email.
+            app(\App\Services\Mail\EmailService::class)->send($user->email, new PasswordResetMail($user, $token), [
+                'type' => 'password-reset',
+                'user_id' => $user->id,
+                'locale' => \App\Listeners\EmailLocale::forUser($user),
+            ]);
         }
 
         // Always return success to prevent email enumeration
@@ -213,7 +239,7 @@ class AuthController extends Controller
             null,
             200,
             [],
-            'If an account exists with that email, a reset link has been sent.'
+            __('If an account exists with that email, a reset link has been sent.')
         );
     }
 
@@ -228,7 +254,7 @@ class AuthController extends Controller
         }
 
         // Check if token is not older than 60 minutes
-        if (now()->diffInMinutes($resetRecord->created_at) > 60) {
+        if (!$resetRecord->created_at || \Illuminate\Support\Carbon::parse($resetRecord->created_at)->lte(now()->subMinutes(60))) {
             return ApiResponse::error('Reset token has expired', 422);
         }
 
@@ -239,6 +265,9 @@ class AuthController extends Controller
 
         $user->password = Hash::make($request->password);
         $user->save();
+
+        // Sign out every existing session: whoever knew the old password may hold one.
+        $user->tokens()->delete();
 
         // Delete the reset token
         DB::table('password_reset_tokens')
@@ -350,6 +379,7 @@ class AuthController extends Controller
             'last_name' => (string) ($profile['family_name'] ?? ''),
             'name' => (string) ($profile['name'] ?? ''),
             'avatar' => (string) ($profile['picture'] ?? ''),
+            'email_verified' => filter_var($profile['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
         ];
     }
 
@@ -397,6 +427,8 @@ class AuthController extends Controller
             'last_name' => (string) ($profile['last_name'] ?? ''),
             'name' => (string) ($profile['name'] ?? ''),
             'avatar' => (string) data_get($profile, 'picture.data.url', ''),
+            // The Graph API does not say whether the email was verified.
+            'email_verified' => false,
         ];
     }
 
@@ -415,15 +447,29 @@ class AuthController extends Controller
 
         $providerField = $provider . '_id';
 
-        $user = User::withTrashed()
-            ->where($providerField, $providerId)
-            ->orWhere('email', $email)
-            ->first();
+        $emailVerified = (bool) ($profile['email_verified'] ?? false);
+
+        $user = User::withTrashed()->where($providerField, $providerId)->first();
 
         $isNewUser = false;
 
-        if ($user && filled($user->{$providerField}) && $user->{$providerField} !== $providerId) {
-            throw new \RuntimeException('This email is already linked to another ' . ucfirst($provider) . ' account.');
+        if (!$user && ($existing = User::withTrashed()->where('email', $email)->first())) {
+            // Linking by email alone would hand the account to whoever controls that
+            // address at the provider, so only link verified emails to non-admins.
+            if (filled($existing->{$providerField})) {
+                throw new \RuntimeException('This email is already linked to another ' . ucfirst($provider) . ' account.');
+            }
+
+            if (!$emailVerified || $existing->isAdmin()) {
+                throw new \RuntimeException('An account with this email already exists. Please sign in with your email or phone and password.');
+            }
+
+            $user = $existing;
+        }
+
+        // A soft-deleted user was removed by an admin; social sign-in must not undo that.
+        if ($user && $user->trashed()) {
+            throw new \RuntimeException('This account is no longer active. Please contact Tessa.');
         }
 
         if (!$user) {
@@ -436,10 +482,6 @@ class AuthController extends Controller
             $user->password = Hash::make(Str::random(40));
             $user->role = User::ROLE_USER;
             $isNewUser = true;
-        }
-
-        if ($user->trashed()) {
-            $user->restore();
         }
 
         $name = trim((string) ($profile['name'] ?? ''));
@@ -465,8 +507,7 @@ class AuthController extends Controller
         }
 
         $user->{$providerField} = $providerId;
-        $user->email = $email;
-        $user->email_verified_at = $user->email_verified_at ?? now();
+        $user->email_verified_at = $user->email_verified_at ?? ($emailVerified ? now() : null);
 
         $avatar = trim((string) ($profile['avatar'] ?? ''));
         if ($avatar !== '') {
@@ -488,6 +529,35 @@ class AuthController extends Controller
         return rtrim((string) config('tessa.frontend_url'), '/') . (string) config('tessa.social_auth_callback_path');
     }
 
+    private function synchronizePhoneLogin(User $user, string $phone): void
+    {
+        // Production may still be on the pre-phone-first schema. Keeping this
+        // guard makes the API backwards-compatible while staging uses the
+        // normalized unique value required for phone-first stylist sign-in.
+        if (! Schema::hasColumn('users', 'phone_login')) {
+            return;
+        }
+
+        $normalized = preg_replace('/\D+/', '', $phone) ?: '';
+
+        if ($normalized === '') {
+            return;
+        }
+
+        $exists = User::query()
+            ->where('phone_login', $normalized)
+            ->when($user->exists, fn ($query) => $query->whereKeyNot($user->getKey()))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'phone' => [__('This phone number is already linked to an account.')],
+            ]);
+        }
+
+        $user->phone_login = $normalized;
+    }
+
     private function redirectSocialSuccess(string $provider, string $token, User $user, array $meta): RedirectResponse
     {
         $userPayload = json_encode((new UserResource($user))->resolve());
@@ -503,7 +573,9 @@ class AuthController extends Controller
             'redirect' => $meta['redirect'] ?? '/',
         ]);
 
-        return redirect()->away($this->frontendSocialCallbackUrl() . '?' . $query);
+        // Keep the bearer token out of HTTP requests, referrer headers and
+        // server logs. The frontend callback already reads fragment parameters.
+        return redirect()->away($this->frontendSocialCallbackUrl() . '#' . $query);
     }
 
     private function redirectSocialError(string $provider, string $message): RedirectResponse
@@ -513,6 +585,6 @@ class AuthController extends Controller
             'provider' => $provider,
         ]);
 
-        return redirect()->away($this->frontendSocialCallbackUrl() . '?' . $query);
+        return redirect()->away($this->frontendSocialCallbackUrl() . '#' . $query);
     }
 }

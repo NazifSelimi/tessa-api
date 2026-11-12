@@ -19,7 +19,10 @@ class AdminUserService
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('phone_login', 'like', "%{$search}%")
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -29,7 +32,9 @@ class AdminUserService
             $query->where('role', $roleValue);
         }
 
-        return $query->latest()->paginate($perPage);
+        $sorts = ['newest' => ['created_at', 'desc'], 'oldest' => ['created_at', 'asc'], 'name_asc' => ['first_name', 'asc'], 'name_desc' => ['first_name', 'desc'], 'email_asc' => ['email', 'asc']];
+        [$column, $direction] = $sorts[$filters['sort'] ?? 'newest'] ?? $sorts['newest'];
+        return $query->orderBy($column, $direction)->orderBy('id')->paginate($perPage);
     }
 
     /**

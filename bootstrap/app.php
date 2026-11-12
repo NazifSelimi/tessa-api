@@ -18,7 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(HandleCors::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'feature' => \App\Http\Middleware\EnsureFeatureEnabled::class,
         ]);
+        // API guests get a JSON 401 (see below); there is no named "login" route to redirect them to.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/login');
         $middleware->api(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);

@@ -6,12 +6,16 @@ use App\Models\Category;
 
 class CategoryService
 {
+    /** Internal holding category for imported products that still need review. */
+    public const REVIEW_CATEGORY = 'Catalogue review';
+
     /**
-     * List all categories ordered by name.
+     * List categories ordered by name. Non-admins do not see the review category.
      */
-    public function listAll()
+    public function listAll(bool $includeInternal = true)
     {
         return Category::orderBy('name')
+            ->when(! $includeInternal, fn ($q) => $q->where('name', '!=', self::REVIEW_CATEGORY))
             ->get()
             ->map(fn (Category $category) => [
                 'id' => $category->id,

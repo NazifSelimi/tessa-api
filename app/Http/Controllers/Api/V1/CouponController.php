@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\CouponService;
 use App\Support\ApiResponse;
+use App\Support\ApiUserResolver;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller
@@ -23,11 +24,16 @@ class CouponController extends Controller
         $result = $this->couponService->validateCoupon(
             $request->code,
             (float) $request->subtotal,
-            $request->user()
+            // The route is public, so read the signed-in user from the token ourselves.
+            $request->bearerToken() ? ApiUserResolver::fromRequest($request) : null
         );
 
         if (!$result['valid']) {
-            return ApiResponse::error($result['error'], $result['errorCode']);
+            return ApiResponse::error(
+                $result['error'],
+                $result['errorCode'],
+                !empty($result['requiresLogin']) ? ['requires_login' => true] : null
+            );
         }
 
         return ApiResponse::ok([
