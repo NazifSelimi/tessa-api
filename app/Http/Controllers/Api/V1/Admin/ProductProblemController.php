@@ -258,7 +258,7 @@ class ProductProblemController extends Controller
             ->where(fn ($q) => $q->where(fn ($q) => $q->where('brand_id', $product->brand_id)->whereNotNull('brand_id'))
                 ->orWhere(fn ($q) => $q->where('product_family_id', $product->product_family_id)->whereNotNull('product_family_id')))
             ->get();
-        $sameName = $candidates->filter(fn (Product $p) => $p->brand_id === $product->brand_id && $base($p->name) === $base($product->name));
+        $sameName = $candidates->filter(fn (Product $p) => $p->brand_id === $product->brand_id && $p->category_id === $product->category_id && $base($p->name) === $base($product->name));
         $sameLine = $product->product_family_id ? $candidates->where('product_family_id', $product->product_family_id) : collect();
         $mySize = $this->sizeText($product->name);
 

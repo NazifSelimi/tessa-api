@@ -118,9 +118,12 @@ class AdminProductProblemsTest extends TestCase
     public function description_drafts_come_from_the_same_product_in_another_size(): void
     {
         $brand = Brand::factory()->create();
-        $big = Product::factory()->create(['brand_id' => $brand->id, 'name' => 'Draft Test Shampoo 1000ml']);
+        $category = Category::factory()->create();
+        $otherType = Product::factory()->create(['brand_id' => $brand->id, 'name' => 'Draft Test Shampoo 500ml']);
+        $otherType->translations()->create(['locale' => 'mk', 'description' => 'Wrong type of product']);
+        $big = Product::factory()->create(['brand_id' => $brand->id, 'category_id' => $category->id, 'name' => 'Draft Test Shampoo 1000ml']);
         $big->translations()->create(['locale' => 'en', 'description' => 'Draft Test Shampoo 1000ml cleans gently. 1000ml bottle.']);
-        $small = Product::factory()->create(['brand_id' => $brand->id, 'name' => 'Draft Test Shampoo 250ml']);
+        $small = Product::factory()->create(['brand_id' => $brand->id, 'category_id' => $category->id, 'name' => 'Draft Test Shampoo 250ml']);
 
         $response = $this->withToken($this->admin())->getJson("/api/v1/admin/products/{$small->id}/description-suggestions")->assertOk();
         $response->assertJsonPath('drafts.en.kind', 'same_product_other_size')
