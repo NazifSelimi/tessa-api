@@ -57,15 +57,17 @@ class ProductProblemController extends Controller
                 <=> [$b['rank'], $a['live'], $a['quantity'], $a['orders'], $b['id']])
             ->values();
 
+        $open = $rows->reject(fn (array $row) => $row['checked']);
         $summary = collect(self::GROUPS)->map(fn ($label, $group) => [
             'group' => $group,
             'label' => $label,
-            'products' => $rows->filter(fn ($row) => in_array($group, $row['groups'], true))->count(),
+            'products' => $open->filter(fn ($row) => in_array($group, $row['groups'], true))->count(),
         ])->values();
 
         return response()->json([
             'total_products' => $products->count(),
-            'products_with_problems' => $rows->count(),
+            'products_with_problems' => $open->count(),
+            'checked' => $rows->count() - $open->count(),
             'summary' => $summary,
             'products' => $rows,
         ]);
@@ -202,6 +204,10 @@ class ProductProblemController extends Controller
         }
 
         $groups = array_values(array_unique(array_column($problems, 'group')));
+        $codes = array_values(array_unique(array_column($problems, 'code')));
+        // Checked by an admin: stays off the list until a problem appears that was not there then.
+        $checkedCodes = $product->fix_checked_at ? (json_decode((string) $product->fix_checked_codes, true) ?: []) : null;
+        $checked = $checkedCodes !== null && array_diff($codes, $checkedCodes) === [];
         $ranks = array_flip(array_keys(self::GROUPS));
         $primary = $product->primaryImage();
 
@@ -231,6 +237,9 @@ class ProductProblemController extends Controller
             'image_count' => $realImages->count(),
             'thumbnail' => $primary ? ($primary->url ?: $primary->publicUrl()) : null,
             'groups' => $groups,
+            'codes' => $codes,
+            'checked' => $checked,
+            'checked_at' => $product->fix_checked_at,
             'rank' => $groups === [] ? 99 : min(array_map(fn ($g) => $ranks[$g], $groups)),
             'problems' => $problems,
         ];
@@ -243,6 +252,25 @@ class ProductProblemController extends Controller
         $sizes = array_unique(array_map(fn ($s) => $this->size($s), $m[0]));
 
         return count($sizes) === 1 ? $m[0][0] : '';
+    }
+
+    /**
+     * Mark a product as checked (the admin decided the remaining flags are fine)
+     * or put it back on the list. Stores the current problem codes.
+     */
+    public function check(\Illuminate\Http\Request $request, Product $product): JsonResponse
+    {
+        $data = $request->validate(['checked' => ['sometimes', 'boolean']]);
+        if (!($data['checked'] ?? true)) {
+            $product->forceFill(['fix_checked_at' => null, 'fix_checked_codes' => null])->save();
+
+            return response()->json(['id' => $product->id, 'checked' => false]);
+        }
+        $all = Product::with(['brand', 'category', 'images', 'translations', 'sale'])->withCount('items')->get();
+        $row = $this->row($all->firstWhere('id', $product->id), $this->duplicateIndex($all));
+        $product->forceFill(['fix_checked_at' => now(), 'fix_checked_codes' => json_encode($row['codes'])])->save();
+
+        return response()->json(['id' => $product->id, 'checked' => true, 'codes' => $row['codes']]);
     }
 
     /**

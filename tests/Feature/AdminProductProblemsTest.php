@@ -157,4 +157,22 @@ class AdminProductProblemsTest extends TestCase
         $this->withToken($this->admin())->deleteJson("/api/v1/admin/products/{$product->id}")->assertStatus(400);
         $this->assertDatabaseHas('products', ['id' => $product->id]);
     }
+
+    #[Test]
+    public function a_checked_product_leaves_the_list_until_a_new_problem_appears(): void
+    {
+        $admin = $this->admin();
+        $product = Product::factory()->create(['name' => 'Checked Test 250ml', 'price' => 0, 'stylist_price' => 100, 'quantity' => 2]);
+        $row = fn () => collect($this->withToken($admin)->getJson('/api/v1/admin/products/problems')->assertOk()->json('products'))->firstWhere('id', $product->id);
+        $this->assertFalse($row()['checked']);
+
+        $this->withToken($admin)->postJson("/api/v1/admin/products/{$product->id}/fix-checked")->assertOk()->assertJsonPath('checked', true);
+        $this->assertTrue($row()['checked'], 'still flagged for no price, but the admin accepted it');
+
+        $product->images()->delete();   // a new problem: no photo
+        $this->assertFalse($row()['checked']);
+
+        $this->withToken($admin)->postJson("/api/v1/admin/products/{$product->id}/fix-checked", ['checked' => false])->assertOk();
+        $this->assertNull($product->fresh()->fix_checked_at);
+    }
 }
