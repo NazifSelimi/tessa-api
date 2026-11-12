@@ -75,4 +75,16 @@ class AdminProductProblemsTest extends TestCase
             ->assertStatus(422);
         $this->assertSame($count, $product->images()->count());
     }
+
+    #[Test]
+    public function image_preview_downloads_without_saving_and_refuses_internal_addresses(): void
+    {
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), 200, ['Content-Type' => 'image/png'])]);
+        $images = \App\Models\Image::count();
+        $admin = $this->admin();
+        $this->withToken($admin)->post('/api/v1/admin/products/image-preview', ['url' => 'https://example.com/a.png'], ['Accept' => 'application/json'])
+            ->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->withToken($admin)->postJson('/api/v1/admin/products/image-preview', ['url' => 'http://10.0.0.1/a.png'])->assertStatus(422);
+        $this->assertSame($images, \App\Models\Image::count());
+    }
 }

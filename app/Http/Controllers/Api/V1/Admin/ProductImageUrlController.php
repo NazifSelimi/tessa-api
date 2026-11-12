@@ -38,6 +38,20 @@ class ProductImageUrlController extends Controller
         }
     }
 
+    /**
+     * Download a web picture and hand it back without saving anything, so the
+     * browser photo editor can read its pixels (many sites block that directly).
+     */
+    public function preview(Request $request)
+    {
+        $data = $request->validate(['url' => ['required', 'url:http,https', 'max:2000']]);
+        $body = $this->download($data['url']);
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($body) ?: '';
+        abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true), 422, 'That address is not a JPG, PNG or WebP image.');
+
+        return response($body, 200, ['Content-Type' => $mime, 'Cache-Control' => 'no-store', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
     /** Fetch a public http(s) URL, refusing private/internal addresses (also after redirects). */
     private function download(string $url): string
     {

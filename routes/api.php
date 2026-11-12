@@ -145,6 +145,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::get('/catalog-image-health', [CatalogImageCandidateController::class, 'health'])->middleware('feature:image_review');
             Route::get('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'index'])->middleware('feature:image_review');
             Route::post('/products/{product}/images', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'store'])->middleware('feature:image_review');
+            Route::post('/products/image-preview', [\App\Http\Controllers\Api\V1\Admin\ProductImageUrlController::class, 'preview'])->middleware(['feature:image_review', 'throttle:60,1']);
             Route::post('/products/{product}/images/from-url', \App\Http\Controllers\Api\V1\Admin\ProductImageUrlController::class)->middleware(['feature:image_review', 'throttle:30,1']);
             Route::patch('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'update'])->middleware('feature:image_review');
             Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve'])->middleware('feature:image_review');
