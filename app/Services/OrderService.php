@@ -195,20 +195,35 @@ class OrderService
         }
 
         return DB::transaction(function () use ($order) {
+            // Re-read under a row lock: two quick cancel requests must not both put the stock back.
+            $order = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+            if ($order->status === Order::STATUS_CANCELLED) {
+                return $order->load(['items.product.images', 'coupon', 'user', 'info']);
+            }
+
             $order->status = Order::STATUS_CANCELLED;
             $order->save();
             $this->referrals->syncOrder($order);
 
-            $order->load('items.product');
-
-            foreach ($order->items as $item) {
-                if ($item->product) {
-                    $item->product->increment('quantity', $item->quantity);
-                }
-            }
+            $this->moveStock($order, +1);
 
             return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         });
+    }
+
+    /**
+     * Put an order's items back on the shelf (+1, order cancelled) or take them again (-1, cancel undone).
+     * Call inside a transaction.
+     */
+    public function moveStock(Order $order, int $direction): void
+    {
+        $order->load('items.product');
+
+        foreach ($order->items as $item) {
+            if ($item->product) {
+                $item->product->increment('quantity', $direction * $item->quantity);
+            }
+        }
     }
 
     public function validCoupon(string $code, bool $lock = false): Coupon

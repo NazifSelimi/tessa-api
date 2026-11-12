@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Events\OrderStatusUpdated;
 use App\Models\Order;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AdminOrderService
 {
     public function __construct(
-        private readonly ReferralService $referrals
+        private readonly ReferralService $referrals,
+        private readonly OrderService $orders
     ) {}
 
     /**
@@ -74,16 +76,28 @@ class AdminOrderService
      */
     public function updateStatus($id, string $status): Order
     {
-        $order = Order::findOrFail($id);
-
         $statusInt = self::STATUS_MAP[$status] ?? null;
         if ($statusInt === null) {
             throw new \InvalidArgumentException("Invalid status: {$status}");
         }
 
-        $previousStatus = $order->status;
-        $order->update(['status' => $statusInt]);
-        $this->referrals->syncOrder($order);
+        [$order, $previousStatus] = DB::transaction(function () use ($id, $statusInt) {
+            $order = Order::query()->lockForUpdate()->findOrFail($id);
+            $previousStatus = $order->status;
+            $order->update(['status' => $statusInt]);
+
+            // Stock follows the order: cancelling puts items back, undoing a cancel takes them again
+            // (the same as a customer cancelling their own order).
+            $wasCancelled = $previousStatus === Order::STATUS_CANCELLED;
+            $isCancelled = $statusInt === Order::STATUS_CANCELLED;
+            if ($wasCancelled !== $isCancelled) {
+                $this->orders->moveStock($order, $isCancelled ? +1 : -1);
+            }
+
+            $this->referrals->syncOrder($order);
+
+            return [$order, $previousStatus];
+        });
 
         try {
             OrderStatusUpdated::dispatch($order, $previousStatus);

@@ -277,4 +277,35 @@ class OrderApiTest extends TestCase
             'price' => 80.00,
         ]);
     }
+
+    #[Test]
+    public function admin_cancel_returns_stock_and_undo_takes_it_again()
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $buyer = User::factory()->create(['role' => User::ROLE_USER]);
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 50]);
+        $buyerToken = $buyer->createToken('t')->plainTextToken;
+
+        $orderId = $this->withToken($buyerToken)->postJson('/api/v1/orders', [
+            'items' => [['product_id' => $product->id, 'qty' => 3]],
+            'shipping_address' => [
+                'firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.com', 'phone' => '070111222',
+                'address' => '1 Street', 'city' => 'Skopje', 'state' => 'MK', 'zip' => '1000',
+            ],
+            'payment_method' => 'online',
+        ])->assertStatus(201)->json('data.id');
+        $this->assertSame(47, $product->fresh()->quantity);
+
+        $this->app['auth']->forgetGuards();
+        $adminToken = $admin->createToken('t')->plainTextToken;
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'cancelled'])->assertOk();
+        $this->assertSame(50, $product->fresh()->quantity);
+
+        // Cancelling twice does not add the stock twice.
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'cancelled'])->assertOk();
+        $this->assertSame(50, $product->fresh()->quantity);
+
+        $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'confirmed'])->assertOk();
+        $this->assertSame(47, $product->fresh()->quantity);
+    }
 }
