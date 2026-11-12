@@ -74,4 +74,31 @@ class ProductImageController extends Controller
         });
         return $this->index($product);
     }
+
+    /**
+     * Remove one photo from a product that has more than one. Only the database
+     * row goes; the file stays on disk so it can be recovered. If it was the
+     * main photo, the next photo becomes main.
+     */
+    public function destroy(Request $request, Product $product, int $image)
+    {
+        DB::transaction(function () use ($product, $image) {
+            Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $record = $product->images()->whereKey($image)->firstOrFail();
+            $product->load('images');
+            $primary = $product->primaryImage();
+            $photos = $product->images->reject(fn ($i) => $i->isPlaceholder());
+            abort_if($photos->count() <= 1 && !$record->isPlaceholder(), 422, 'This is the only photo of the product. Add another photo first.');
+            $record->delete();
+            if ($primary?->id === $record->id) {
+                $next = $product->images()->get()->reject(fn ($i) => $i->isPlaceholder() || $i->isHidden() || $i->review_status === 'rejected')->first();
+                if ($next) {
+                    $product->images()->where('variant', 'card')->update(['variant' => 'gallery']);
+                    $next->update(['variant' => 'card', 'sort_order' => 0]);
+                }
+            }
+        });
+
+        return $this->index($product->fresh());
+    }
 }

@@ -149,6 +149,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::post('/products/image-preview', [\App\Http\Controllers\Api\V1\Admin\ProductImageUrlController::class, 'preview'])->middleware(['feature:image_review', 'throttle:60,1']);
             Route::post('/products/{product}/images/from-url', \App\Http\Controllers\Api\V1\Admin\ProductImageUrlController::class)->middleware(['feature:image_review', 'throttle:30,1']);
             Route::patch('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'update'])->middleware('feature:image_review');
+            Route::delete('/products/{product}/images/{image}', [\App\Http\Controllers\Api\V1\Admin\ProductImageController::class, 'destroy'])->middleware('feature:image_review');
             Route::post('/catalog-image-candidates/{productId}/approve', [CatalogImageCandidateController::class, 'approve'])->middleware('feature:image_review');
             Route::get('/hair-quiz/products', [HairQuizController::class, 'index'])->middleware('feature:hair_quiz');
             Route::put('/hair-quiz/products/{product}', [HairQuizController::class, 'update'])->middleware('feature:hair_quiz');

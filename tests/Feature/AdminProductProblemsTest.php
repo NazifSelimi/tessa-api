@@ -132,4 +132,29 @@ class AdminProductProblemsTest extends TestCase
             ->assertJsonPath('drafts.mk', null);
         $this->assertSame(0, $small->translations()->count(), 'nothing is saved');
     }
+
+    #[Test]
+    public function a_photo_can_be_deleted_only_when_another_remains_and_the_next_becomes_main(): void
+    {
+        $admin = $this->admin();
+        $product = Product::factory()->create();
+        $first = $product->images()->first();
+        $this->withToken($admin)->deleteJson("/api/v1/admin/products/{$product->id}/images/{$first->id}")->assertStatus(422);
+
+        $second = $product->images()->create(['name' => 'test/second.webp', 'variant' => 'gallery', 'sort_order' => 10]);
+        $this->withToken($admin)->patchJson("/api/v1/admin/products/{$product->id}/images/{$first->id}", ['make_primary' => true])->assertOk();
+        $this->withToken($admin)->deleteJson("/api/v1/admin/products/{$product->id}/images/{$first->id}")
+            ->assertOk()->assertJsonCount(1, 'images')->assertJsonPath('images.0.id', $second->id)->assertJsonPath('images.0.is_primary', true);
+        $this->assertDatabaseMissing('images', ['id' => $first->id]);
+    }
+
+    #[Test]
+    public function a_product_with_past_orders_cannot_be_deleted(): void
+    {
+        $product = Product::factory()->create();
+        $order = \App\Models\Order::factory()->create();
+        \App\Models\Item::create(['product_id' => $product->id, 'order_id' => $order->id, 'quantity' => 1, 'price' => 100]);
+        $this->withToken($this->admin())->deleteJson("/api/v1/admin/products/{$product->id}")->assertStatus(400);
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
 }
