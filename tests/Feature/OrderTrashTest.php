@@ -83,4 +83,23 @@ class OrderTrashTest extends TestCase
         $this->asAdmin()->deleteJson("/api/v1/admin/orders/{$order->id}")->assertNotFound();
         $this->assertNotSoftDeleted($order);
     }
+
+    #[Test]
+    public function trashing_an_active_order_returns_its_stock_and_restoring_takes_it_again()
+    {
+        $product = \App\Models\Product::factory()->create(['quantity' => 10]);
+        $order = Order::factory()->create(['status' => Order::STATUS_PENDING]);
+        $order->items()->create(['product_id' => $product->id, 'quantity' => 4, 'price' => 100]);
+
+        $this->asAdmin()->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
+        $this->assertSame(14, $product->fresh()->quantity);
+
+        $this->asAdmin()->postJson("/api/v1/admin/orders/{$order->id}/restore")->assertOk();
+        $this->assertSame(10, $product->fresh()->quantity);
+
+        // A cancelled order already gave its stock back: trashing it changes nothing.
+        $order->update(['status' => Order::STATUS_CANCELLED]);
+        $this->asAdmin()->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
+        $this->assertSame(10, $product->fresh()->quantity);
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderService;
 use App\Services\ReferralService;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\DB;
@@ -14,14 +15,23 @@ use Illuminate\Support\Facades\DB;
  */
 class AdminOrderTrashController extends Controller
 {
-    public function __construct(private readonly ReferralService $referrals) {}
+    public function __construct(
+        private readonly ReferralService $referrals,
+        private readonly OrderService $orders,
+    ) {}
 
     public function trash(int $id)
     {
-        $order = Order::findOrFail($id);
-        DB::transaction(function () use ($order) {
+        $order = DB::transaction(function () use ($id) {
+            $order = Order::query()->lockForUpdate()->findOrFail($id);
             $order->delete();
+            // A trashed order no longer holds stock (a cancelled one already gave it back).
+            if ($order->status !== Order::STATUS_CANCELLED) {
+                $this->orders->moveStock($order, +1);
+            }
             $this->referrals->syncOrder($order);
+
+            return $order;
         });
 
         return ApiResponse::ok(['id' => (string) $order->id], 200, null, "Order #{$order->id} moved to the Trash");
@@ -29,10 +39,15 @@ class AdminOrderTrashController extends Controller
 
     public function restore(int $id)
     {
-        $order = Order::onlyTrashed()->findOrFail($id);
-        DB::transaction(function () use ($order) {
+        $order = DB::transaction(function () use ($id) {
+            $order = Order::onlyTrashed()->lockForUpdate()->findOrFail($id);
             $order->restore();
+            if ($order->status !== Order::STATUS_CANCELLED) {
+                $this->orders->moveStock($order, -1);
+            }
             $this->referrals->syncOrder($order);
+
+            return $order;
         });
 
         return ApiResponse::ok(['id' => (string) $order->id], 200, null, "Order #{$order->id} restored");
