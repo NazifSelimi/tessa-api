@@ -65,7 +65,7 @@ class CartQuoteController extends Controller
         $quote = $this->pricing->quote($user, $lines, $validated['bundle_ids'] ?? [], $coupon, false);
         $quote['couponError'] = $couponError;
         $quote['isReferralCode'] = (bool) $coupon?->isReferral();
-        $quote['couponRequiresLogin'] = $couponError === ReferralService::GUEST_ERROR;
+        $quote['couponRequiresLogin'] = $couponError === __(ReferralService::GUEST_ERROR);
 
         // Store credit is a way to pay, not a discount: it does not touch the profit floor.
         $quote['storeCreditAvailable'] = $user ? $this->referrals->balance($user) : 0.0;

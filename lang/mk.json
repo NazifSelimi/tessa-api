@@ -1,0 +1,18 @@
+{
+    ":name is no longer available.": ":name повеќе не е достапен.",
+    "Only :count left of :name.": "Останаа само :count од :name.",
+    "Only pending orders can be cancelled.": "Може да се откажат само нарачки на чекање.",
+    "Coupon not found.": "Кодот не постои.",
+    "Coupon is expired or has been fully used.": "Кодот е истечен или веќе искористен.",
+    "Sign in or create an account to use this stylist code.": "Најавете се или креирајте профил за да го користите овој код.",
+    "Use 4 to 20 letters (A–Z), numbers or dashes.": "Користете 4 до 20 букви (A–Z), бројки или цртички.",
+    "This code is already taken.": "Овој код е веќе зафатен.",
+    "Stylist codes are not available right now.": "Кодовите на стилисти моментално не се достапни.",
+    "Referral codes are for clients; salon accounts already get salon prices.": "Кодовите за препорака се за клиенти; бизнис профилите веќе имаат салонски цени.",
+    "This referral code is for your first order only.": "Овој код важи само за првата нарачка.",
+    "Your session has expired. Please sign in again.": "Сесијата истече. Најавете се повторно.",
+    "The current password is incorrect.": "Тековната лозинка не е точна.",
+    "Password updated successfully.": "Лозинката е променета.",
+    "If an account exists with that email, a reset link has been sent.": "Ако постои профил со таа е-пошта, испратен е линк за нова лозинка.",
+    "This phone number is already linked to an account.": "Овој телефонски број веќе е поврзан со профил."
+}

@@ -69,7 +69,7 @@ class OrderService
                 // The admin may have hidden it from this buyer (or it is in review / unpriced for them).
                 if (!$product->loadMissing(['images', 'brand'])->isAvailableTo($user)) {
                     throw ValidationException::withMessages([
-                        'items' => ["Product ID {$product->id} is not available."]
+                        'items' => [__(':name is no longer available.', ['name' => $product->name])]
                     ]);
                 }
                 $qty = (int) $item['qty'];
@@ -78,7 +78,7 @@ class OrderService
 
                 if (!$product->inStock($requested[$product->id])) {
                     throw ValidationException::withMessages([
-                        'items' => ["Insufficient stock for product ID {$product->id}."]
+                        'items' => [__('Only :count left of :name.', ['count' => max(0, (int) $product->quantity), 'name' => $product->name])]
                     ]);
                 }
 
@@ -190,7 +190,7 @@ class OrderService
 
         if ($order->status !== Order::STATUS_PENDING) {
             throw ValidationException::withMessages([
-                'order' => ['Only pending orders can be cancelled.']
+                'order' => [__('Only pending orders can be cancelled.')]
             ]);
         }
 
@@ -233,13 +233,13 @@ class OrderService
 
         if (!$coupon) {
             throw ValidationException::withMessages([
-                'coupon_code' => ['Coupon not found.'],
+                'coupon_code' => [__('Coupon not found.')],
             ]);
         }
 
         if (!$coupon->isValid()) {
             throw ValidationException::withMessages([
-                'coupon_code' => ['Coupon is expired or has been fully used.'],
+                'coupon_code' => [__('Coupon is expired or has been fully used.')],
             ]);
         }
 

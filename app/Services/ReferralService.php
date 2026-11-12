@@ -115,11 +115,11 @@ class ReferralService
 
         if (!preg_match('/^[A-Z0-9-]{4,20}$/', $code)) {
             throw ValidationException::withMessages([
-                'code' => ['Use 4 to 20 letters (A–Z), numbers or dashes.'],
+                'code' => [__('Use 4 to 20 letters (A–Z), numbers or dashes.')],
             ]);
         }
         if (Coupon::query()->where('code', $code)->whereKeyNot($coupon->id)->exists()) {
-            throw ValidationException::withMessages(['code' => ['This code is already taken.']]);
+            throw ValidationException::withMessages(['code' => [__('This code is already taken.')]]);
         }
 
         $coupon->update(['code' => $code]);
@@ -139,24 +139,24 @@ class ReferralService
         }
 
         if (!app(FeatureService::class)->enabled('referrals')) {
-            throw ValidationException::withMessages(['coupon_code' => ['Stylist codes are not available right now.']]);
+            throw ValidationException::withMessages(['coupon_code' => [__('Stylist codes are not available right now.')]]);
         }
 
         // Codes are tied to a client account, so first-order checks and the
         // stylist's commission always point at a real customer.
         if (!$buyer) {
-            throw ValidationException::withMessages(['coupon_code' => [self::GUEST_ERROR]]);
+            throw ValidationException::withMessages(['coupon_code' => [__(self::GUEST_ERROR)]]);
         }
 
         if ($buyer->isStylist() || $buyer->isAdmin()) {
             throw ValidationException::withMessages([
-                'coupon_code' => ['Referral codes are for clients; salon accounts already get salon prices.'],
+                'coupon_code' => [__('Referral codes are for clients; salon accounts already get salon prices.')],
             ]);
         }
 
         if ($coupon->first_order_only && $this->hasOrderedBefore($buyer, $email, $phone)) {
             throw ValidationException::withMessages([
-                'coupon_code' => ['This referral code is for your first order only.'],
+                'coupon_code' => [__('This referral code is for your first order only.')],
             ]);
         }
     }

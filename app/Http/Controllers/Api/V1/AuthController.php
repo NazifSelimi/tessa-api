@@ -199,15 +199,15 @@ class AuthController extends Controller
         $user = $request->user();
 
         if (!Hash::check($request->input('current_password'), $user->password)) {
-            return ApiResponse::error('The current password is incorrect.', 422, [
-                'current_password' => ['The current password is incorrect.'],
+            return ApiResponse::error(__('The current password is incorrect.'), 422, [
+                'current_password' => [__('The current password is incorrect.')],
             ]);
         }
 
         $user->password = Hash::make($request->input('password'));
         $user->save();
 
-        return ApiResponse::ok(null, 200, [], 'Password updated successfully.');
+        return ApiResponse::ok(null, 200, [], __('Password updated successfully.'));
     }
 
     public function forgotPassword(ForgotPasswordRequest $request)
@@ -239,7 +239,7 @@ class AuthController extends Controller
             null,
             200,
             [],
-            'If an account exists with that email, a reset link has been sent.'
+            __('If an account exists with that email, a reset link has been sent.')
         );
     }
 
@@ -551,7 +551,7 @@ class AuthController extends Controller
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'phone' => ['This phone number is already linked to an account.'],
+                'phone' => [__('This phone number is already linked to an account.')],
             ]);
         }
 

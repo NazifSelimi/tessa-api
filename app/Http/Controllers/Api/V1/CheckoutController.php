@@ -19,7 +19,7 @@ class CheckoutController extends Controller
     {
         $user = $request->bearerToken() ? ApiUserResolver::fromRequest($request) : $request->user();
         if ($request->bearerToken() && !$user) {
-            return ApiResponse::error('Your session has expired. Please sign in again.', 401);
+            return ApiResponse::error(__('Your session has expired. Please sign in again.'), 401);
         }
         $order = $this->checkoutAction->execute(
             $user,

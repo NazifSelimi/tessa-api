@@ -245,7 +245,7 @@ class Product extends Model
 
     public function getDescriptionAttribute(): ?string
     {
-        $locale = app()->getLocale();
+        $locale = \App\Support\ContentLocale::current();
 
         $translation = $this->translations
             ->firstWhere('locale', $locale);

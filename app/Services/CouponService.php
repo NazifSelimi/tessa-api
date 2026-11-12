@@ -100,7 +100,7 @@ class CouponService
         if (!$coupon) {
             return [
                 'valid' => false,
-                'error' => 'Coupon not found',
+                'error' => __('Coupon not found.'),
                 'errorCode' => 404,
             ];
         }
@@ -108,7 +108,7 @@ class CouponService
         if (!$coupon->isValid()) {
             return [
                 'valid' => false,
-                'error' => 'Coupon is expired or has been fully used',
+                'error' => __('Coupon is expired or has been fully used.'),
                 'errorCode' => 422,
             ];
         }
@@ -122,7 +122,7 @@ class CouponService
                 'valid' => false,
                 'error' => $error,
                 'errorCode' => 422,
-                'requiresLogin' => $error === ReferralService::GUEST_ERROR,
+                'requiresLogin' => $error === __(ReferralService::GUEST_ERROR),
             ];
         }
 

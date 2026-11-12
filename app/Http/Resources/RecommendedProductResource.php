@@ -16,7 +16,7 @@ class RecommendedProductResource extends JsonResource
 
         $description = null;
         if ($this->relationLoaded('translations') && $this->translations->isNotEmpty()) {
-            $locale = app()->getLocale();
+            $locale = \App\Support\ContentLocale::current();
             $translation = $this->translations->firstWhere('locale', $locale)
                 ?? $this->translations->first();
             $description = $translation?->description;
