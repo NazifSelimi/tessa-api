@@ -13,7 +13,13 @@ class HairConcern extends Model
     protected $fillable = [
         'name',
         'description',
+        'slug',
+        'group',
+        'gated',
+        'sort_order',
     ];
+
+    protected $casts = ['gated' => 'boolean', 'sort_order' => 'integer'];
 
     /* ========================================= */
     /* RELATIONSHIPS                             */

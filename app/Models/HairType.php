@@ -13,6 +13,8 @@ class HairType extends Model
     protected $fillable = [
         'name',
         'description',
+        'slug',
+        'group',
     ];
 
     /* ========================================= */

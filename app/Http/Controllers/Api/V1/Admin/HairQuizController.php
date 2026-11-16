@@ -24,6 +24,7 @@ class HairQuizController extends Controller
             'mode' => ['nullable', Rule::in(RecommendationService::QUIZ_MODES)],
             'tagged' => ['nullable', Rule::in(['yes', 'no'])],
             'stock' => ['nullable', Rule::in(['in', 'out'])],
+            'step' => ['nullable', Rule::in([...RecommendationService::STEPS, 'none'])],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
         ]);
@@ -50,6 +51,12 @@ class HairQuizController extends Controller
             $query->where('quantity', '<=', 0);
         }
 
+        if (($data['step'] ?? null) === 'none') {
+            $query->whereNull('quiz_step');
+        } elseif (filled($data['step'] ?? null)) {
+            $query->where('quiz_step', $data['step']);
+        }
+
         $page = $query->paginate($data['per_page'] ?? 25);
 
         return ApiResponse::ok(
@@ -63,6 +70,7 @@ class HairQuizController extends Controller
     {
         $data = $request->validate([
             'quiz_mode' => ['sometimes', Rule::in(RecommendationService::QUIZ_MODES)],
+            'quiz_step' => ['sometimes', 'nullable', Rule::in(RecommendationService::STEPS)],
             'hair_type_ids' => ['sometimes', 'array'],
             'hair_type_ids.*' => ['integer', 'distinct', 'exists:hair_types,id'],
             'hair_concern_ids' => ['sometimes', 'array'],
@@ -71,6 +79,11 @@ class HairQuizController extends Controller
 
         if (array_key_exists('quiz_mode', $data)) {
             $product->quiz_mode = $data['quiz_mode'];
+        }
+        if (array_key_exists('quiz_step', $data)) {
+            $product->quiz_step = $data['quiz_step'];
+        }
+        if ($product->isDirty()) {
             $product->save();
         }
         if (array_key_exists('hair_type_ids', $data)) {
@@ -86,16 +99,25 @@ class HairQuizController extends Controller
     /** Runs the real quiz ranking for a customer (no stylist-only products). */
     public function preview(Request $request)
     {
+        if (! $request->has('hair_type_ids') && $request->filled('hair_type_id')) {
+            $request->merge(['hair_type_ids' => [$request->input('hair_type_id')]]);
+        }
         $data = $request->validate([
-            'hair_type_id' => ['required', 'integer', 'exists:hair_types,id'],
+            'hair_type_ids' => ['required', 'array', 'min:1'],
+            'hair_type_ids.*' => ['integer', 'exists:hair_types,id'],
             'concerns' => ['nullable', 'array'],
             'concerns.*' => ['integer', 'exists:hair_concerns,id'],
+            'steps' => ['nullable', 'array'],
+            'steps.*' => ['string', Rule::in(array_keys(RecommendationService::ROUTINE_STEPS))],
         ]);
 
-        $result = $this->recommendations->getRecommendations((int) $data['hair_type_id'], $data['concerns'] ?? []);
+        $result = $this->recommendations->getRecommendations($data['hair_type_ids'], $data['concerns'] ?? [], $data['steps'] ?? []);
+        $routineIds = collect($result['routine'])->mapWithKeys(fn (array $entry) => [$entry['product']->id => $entry['step']]);
 
         return ApiResponse::ok(collect($result['products'])->map(fn (Product $product) => $this->row($product) + [
-            'score' => (int) $product->recommendation_score,
+            'score' => (int) round((float) $product->recommendation_score),
+            'matchedNeedIds' => $product->matched_need_ids ?? [],
+            'routineStep' => $routineIds[$product->id] ?? null,
         ])->values());
     }
 
@@ -110,6 +132,8 @@ class HairQuizController extends Controller
             'category' => $product->category?->name,
             'quantity' => (int) $product->quantity,
             'quizMode' => $product->quiz_mode ?? 'auto',
+            'quizStep' => $product->quiz_step,
+            'effectiveStep' => RecommendationService::stepOf($product),
             'hairTypeIds' => $product->hairTypes->pluck('id')->map(fn ($id) => (int) $id)->values(),
             'hairConcernIds' => $product->hairConcerns->pluck('id')->map(fn ($id) => (int) $id)->values(),
             'image' => $image ? ($image->url ?: asset('storage/images/' . $image->name)) : null,

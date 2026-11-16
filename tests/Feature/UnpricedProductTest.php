@@ -111,8 +111,8 @@ class UnpricedProductTest extends TestCase
     {
         $hairType = HairType::factory()->create();
         $concern = HairConcern::factory()->create();
-        $unpriced = $this->product(['price' => 0, 'stylist_price' => 690]);
-        $priced = $this->product(['price' => 500]);
+        $unpriced = $this->product(['price' => 0, 'stylist_price' => 690, 'quiz_step' => 'shampoo']);
+        $priced = $this->product(['price' => 500, 'quiz_step' => 'shampoo']);
         $unpriced->hairTypes()->attach($hairType);
         $priced->hairTypes()->attach($hairType);
 

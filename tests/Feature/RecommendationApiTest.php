@@ -45,7 +45,7 @@ class RecommendationApiTest extends TestCase
 
         // Product A: matches hair type (+5) + 2 concerns (+6) = 11
         $pA = Product::factory()->create([
-            'name' => 'Product A', 'brand_id' => $d['brand']->id,
+            'name' => 'Product A', 'brand_id' => $d['brand']->id, 'quantity' => 10,
             'category_id' => $d['shampoo']->id, 'price' => 25,
         ]);
         $pA->hairTypes()->attach($d['hairType']);
@@ -53,16 +53,16 @@ class RecommendationApiTest extends TestCase
 
         // Product B: matches hair type (+5) + 1 concern (+3) = 8
         $pB = Product::factory()->create([
-            'name' => 'Product B', 'brand_id' => $d['brand']->id,
+            'name' => 'Product B', 'brand_id' => $d['brand']->id, 'quantity' => 10,
             'category_id' => $d['conditioner']->id, 'price' => 30,
         ]);
         $pB->hairTypes()->attach($d['hairType']);
         $pB->hairConcerns()->attach([$d['concern1']->id]);
 
-        // Product C: matches hair type only (+5) = 5
+        // Product C: matches hair type only
         $pC = Product::factory()->create([
-            'name' => 'Product C', 'brand_id' => $d['brand']->id,
-            'category_id' => $d['treatment']->id, 'price' => 15,
+            'name' => 'Product C', 'brand_id' => $d['brand']->id, 'quantity' => 10,
+            'category_id' => $d['treatment']->id, 'price' => 15, 'quiz_step' => 'mask',
         ]);
         $pC->hairTypes()->attach($d['hairType']);
 
@@ -106,7 +106,7 @@ class RecommendationApiTest extends TestCase
         $d = $this->seedHairData();
 
         $p = Product::factory()->create([
-            'name' => 'Curly Shampoo', 'brand_id' => $d['brand']->id,
+            'name' => 'Curly Shampoo', 'brand_id' => $d['brand']->id, 'quantity' => 10,
             'category_id' => $d['shampoo']->id, 'price' => 20,
         ]);
         $p->hairTypes()->attach($d['hairType']);
@@ -127,31 +127,6 @@ class RecommendationApiTest extends TestCase
             ->assertJsonPath('data.bundles.0.name', 'Curly Care Bundle');
     }
 
-    #[Test]
-    public function it_generates_dynamic_bundle_when_no_static_bundles_exist()
-    {
-        $d = $this->seedHairData();
-
-        // Create one product per routine category
-        foreach (['shampoo' => $d['shampoo'], 'conditioner' => $d['conditioner'], 'treatment' => $d['treatment']] as $cat) {
-            $p = Product::factory()->create([
-                'brand_id' => $d['brand']->id, 'category_id' => $cat->id, 'price' => 20,
-            ]);
-            $p->hairTypes()->attach($d['hairType']);
-            $p->hairConcerns()->attach([$d['concern1']->id]);
-        }
-
-        $response = $this->postJson('/api/v1/recommendations', [
-            'hair_type_id' => $d['hairType']->id,
-            'concerns'     => [$d['concern1']->id],
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonCount(1, 'data.bundles')
-            ->assertJsonPath('data.bundles.0.isDynamic', true)
-            ->assertJsonPath('data.bundles.0.name', 'Your Personalised Routine');
-    }
-
     /* ------------------------------------------------- */
     /* TESTS – validation failures                       */
     /* ------------------------------------------------- */
@@ -162,7 +137,7 @@ class RecommendationApiTest extends TestCase
         $response = $this->postJson('/api/v1/recommendations', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['hair_type_id', 'concerns']);
+            ->assertJsonValidationErrors(['hair_type_ids', 'concerns']);
     }
 
     #[Test]
@@ -176,7 +151,7 @@ class RecommendationApiTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['hair_type_id']);
+            ->assertJsonValidationErrors(['hair_type_ids.0']);
     }
 
     #[Test]
@@ -201,14 +176,14 @@ class RecommendationApiTest extends TestCase
         $d = $this->seedHairData();
 
         $cheap = Product::factory()->create([
-            'name' => 'Cheap Product', 'brand_id' => $d['brand']->id,
+            'name' => 'Cheap Product', 'brand_id' => $d['brand']->id, 'quantity' => 10,
             'category_id' => $d['shampoo']->id, 'price' => 15,
         ]);
         $cheap->hairTypes()->attach($d['hairType']);
         $cheap->hairConcerns()->attach([$d['concern1']->id]);
 
         $expensive = Product::factory()->create([
-            'name' => 'Expensive Product', 'brand_id' => $d['brand']->id,
+            'name' => 'Expensive Product', 'brand_id' => $d['brand']->id, 'quantity' => 10,
             'category_id' => $d['conditioner']->id, 'price' => 200,
         ]);
         $expensive->hairTypes()->attach($d['hairType']);
@@ -224,5 +199,124 @@ class RecommendationApiTest extends TestCase
         $names = collect($response->json('data.products'))->pluck('name')->all();
         $this->assertContains('Cheap Product', $names);
         $this->assertNotContains('Expensive Product', $names);
+    }
+
+    /* ------------------------------------------------- */
+    /* TESTS – quiz v2: multi-select, gating, routine     */
+    /* ------------------------------------------------- */
+
+    private function need(string $slug, bool $gated = false, string $group = 'lengths'): HairConcern
+    {
+        return HairConcern::query()->create(['name' => ucfirst($slug) . ' ' . uniqid(), 'slug' => $slug . '_' . uniqid(), 'group' => $group, 'gated' => $gated]);
+    }
+
+    private function type(string $slug, string $group): HairType
+    {
+        return HairType::query()->create(['name' => ucfirst($slug) . ' ' . uniqid(), 'slug' => $slug . '_' . uniqid(), 'group' => $group]);
+    }
+
+    private function care(string $name, string $step, array $needs = [], array $types = [], array $extra = []): Product
+    {
+        $product = Product::factory()->create(array_merge([
+            'name' => $name, 'price' => 500, 'quantity' => 10, 'quiz_step' => $step,
+        ], $extra));
+        $product->hairConcerns()->attach(collect($needs)->pluck('id'));
+        $product->hairTypes()->attach(collect($types)->pluck('id'));
+
+        return $product;
+    }
+
+    private function ask(array $types, array $needs, array $steps = []): \Illuminate\Testing\TestResponse
+    {
+        return $this->postJson('/api/v1/recommendations', [
+            'hair_type_ids' => collect($types)->pluck('id')->all(),
+            'concerns' => collect($needs)->pluck('id')->all(),
+            'steps' => $steps,
+        ])->assertOk();
+    }
+
+    #[Test]
+    public function gated_toners_only_show_for_people_who_asked_for_them()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $dry = $this->need('dryness');
+        $yellow = $this->need('brassy_yellow', true, 'colour');
+        $this->care('Violet Toner Shampoo', 'shampoo', [$yellow, $dry]);
+        $this->care('Hydra Shampoo', 'shampoo', [$dry]);
+
+        $names = collect($this->ask([$straight], [$dry])->json('data.products'))->pluck('name');
+        $this->assertSame(['Hydra Shampoo'], $names->all());
+
+        $names = collect($this->ask([$straight], [$dry, $yellow])->json('data.products'))->pluck('name');
+        $this->assertSame('Violet Toner Shampoo', $names->first());
+    }
+
+    #[Test]
+    public function hair_type_tags_restrict_per_group_and_untagged_products_suit_everyone()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $curly = $this->type('curly', 'pattern');
+        $fine = $this->type('fine', 'thickness');
+        $thick = $this->type('thick', 'thickness');
+        $frizz = $this->need('frizz');
+        $volume = $this->need('volume', false, 'style');
+
+        $this->care('Curl Cream', 'style', [$frizz], [$curly]);
+        $this->care('Volume Shampoo', 'shampoo', [$volume], [$fine]);
+        $this->care('Smooth Serum', 'leave_in', [$frizz]);
+
+        $names = collect($this->ask([$straight, $thick], [$frizz, $volume])->json('data.products'))->pluck('name')->all();
+        $this->assertSame(['Smooth Serum'], $names);
+
+        $names = collect($this->ask([$curly, $fine], [$frizz, $volume])->json('data.products'))->pluck('name')->all();
+        $this->assertEqualsCanonicalizing(['Curl Cream', 'Volume Shampoo', 'Smooth Serum'], $names);
+    }
+
+    #[Test]
+    public function it_builds_a_routine_with_one_product_per_step_and_collapses_sizes()
+    {
+        $wavy = $this->type('wavy', 'pattern');
+        $dry = $this->need('dryness');
+        $frizz = $this->need('frizz');
+        $brand = Brand::factory()->create();
+
+        $this->care('Argan Shampoo 1000ml', 'shampoo', [$dry], [], ['brand_id' => $brand->id]);
+        $this->care('Argan Shampoo 350ml', 'shampoo', [$dry], [], ['brand_id' => $brand->id]);
+        $this->care('Argan Mask 500ml', 'mask', [$dry, $frizz]);
+        $this->care('Frizz Spray', 'leave_in', [$frizz]);
+        $this->care('Hairspray', 'style', []);
+
+        $response = $this->ask([$wavy], [$dry, $frizz], ['shampoo', 'condition', 'leave_in', 'style']);
+
+        $routine = collect($response->json('data.routine'));
+        $this->assertSame(['shampoo', 'condition', 'leave_in'], $routine->pluck('step')->all());
+        $this->assertSame(['Argan Shampoo 350ml', 'Argan Mask 500ml', 'Frizz Spray'], $routine->pluck('product.name')->all());
+        $this->assertCount(1, collect($response->json('data.products'))->filter(fn ($p) => str_starts_with($p['name'], 'Argan Shampoo')));
+        $this->assertEqualsCanonicalizing([$dry->id, $frizz->id], $routine[1]['product']['matchedNeedIds']);
+    }
+
+    #[Test]
+    public function default_steps_add_a_scalp_treatment_for_scalp_needs()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $loss = $this->need('hair_loss', false, 'scalp');
+        $this->care('Energy Lotion', 'scalp', [$loss]);
+        $this->care('Energy Shampoo', 'shampoo', [$loss]);
+
+        $response = $this->ask([$straight], [$loss]);
+        $this->assertContains('scalp', $response->json('data.steps'));
+        $this->assertSame(['Energy Shampoo', 'Energy Lotion'], collect($response->json('data.routine'))->pluck('product.name')->all());
+    }
+
+    #[Test]
+    public function non_care_products_are_never_recommended()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $dry = $this->need('dryness');
+        $hydrogen = Category::factory()->create(['name' => 'Hydrogen Peroxide']);
+        $p = Product::factory()->create(['name' => 'Oxidant 6%', 'category_id' => $hydrogen->id, 'quantity' => 5, 'price' => 100]);
+        $p->hairConcerns()->attach($dry->id);
+
+        $this->assertSame([], $this->ask([$straight], [$dry])->json('data.products'));
     }
 }

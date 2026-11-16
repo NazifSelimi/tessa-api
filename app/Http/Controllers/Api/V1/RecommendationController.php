@@ -21,23 +21,22 @@ class RecommendationController extends Controller
     {
         $viewer = ApiUserResolver::fromRequest($request);
         $result = $this->recommendationService->getRecommendations(
-            hairTypeId:  $request->validated('hair_type_id'),
-            concerns:    $request->validated('concerns'),
+            hairTypeIds: $request->validated('hair_type_ids'),
+            needIds:     $request->validated('concerns') ?? [],
+            steps:       $request->validated('steps') ?? [],
             budgetRange: $request->validated('budget_range'),
             // Admins preview the quiz as a stylist would see it.
             audience: $viewer?->isAdmin() ? 'stylists' : Product::audienceOf($viewer),
         );
 
         return ApiResponse::ok([
-            'products' => RecommendedProductResource::collection(
-                collect($result['products'])
-            )->resolve(),
-            'bundles' => collect($result['bundles'])->map(function ($bundle) {
-                if (is_array($bundle)) {
-                    return $bundle; // dynamic virtual bundle
-                }
-                return (new BundleResource($bundle))->resolve();
-            })->values(),
+            'products' => RecommendedProductResource::collection(collect($result['products']))->resolve(),
+            'routine' => collect($result['routine'])->map(fn (array $entry) => [
+                'step' => $entry['step'],
+                'product' => (new RecommendedProductResource($entry['product']))->resolve(),
+            ])->values(),
+            'steps' => $result['steps'],
+            'bundles' => $result['bundles']->map(fn ($bundle) => (new BundleResource($bundle))->resolve())->values(),
         ]);
     }
 }

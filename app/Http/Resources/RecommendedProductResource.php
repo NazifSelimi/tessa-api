@@ -43,7 +43,11 @@ class RecommendedProductResource extends JsonResource
                 'id' => (string) $this->category->id, 'name' => $this->category->name,
             ] : null),
             'image'               => $primaryImage,
-            'recommendationScore' => (int) $this->recommendation_score,
+            'recommendationScore' => (int) round((float) $this->recommendation_score),
+            'quizStep'            => $this->quiz_step_effective ?? $this->quiz_step,
+            'matchedNeedIds'      => array_values($this->matched_need_ids ?? []),
+            'matchedTypeIds'      => array_values($this->matched_type_ids ?? []),
+            'familyId'            => $this->product_family_id ? (string) $this->product_family_id : null,
             'sale'                => $this->whenLoaded('sale', fn () => $this->sale ? [
                 'price'     => (float) $this->sale->sale_price,
                 'startDate' => $this->sale->start_date,

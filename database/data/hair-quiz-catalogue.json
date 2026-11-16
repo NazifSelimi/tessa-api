@@ -1,0 +1,1538 @@
+{
+ "about": "Hair quiz catalogue: what each care product does. Apply with php artisan quiz:apply-catalogue. Needs/types are slugs (hair_concerns.slug / hair_types.slug); empty types = suits every hair type.",
+ "products": {
+  "306": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1628": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1629": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1630": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1631": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1632": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1633": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1634": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1635": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1636": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "303": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "304": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "307": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "309": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "301": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "310": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "308": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "311": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Fanola Color Mask: direct-pigment mask, refreshes/tints colour"
+  },
+  "1714": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Color Mask Antigiallo: anti-yellow pigment mask"
+  },
+  "1715": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1716": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1717": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1718": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1719": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1720": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1721": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "1722": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_refresh",
+    "color_protection"
+   ],
+   "note": "Oro Therapy Color Mask: tinting mask"
+  },
+  "575": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "bond_repair",
+    "breakage",
+    "color_protection",
+    "frizz"
+   ],
+   "note": "Fiber Fix N.6 bond leave-in for coloured/bleached hair"
+  },
+  "372": {
+   "step": "conditioner",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage"
+   ],
+   "note": "Nutri Care restructuring conditioner, dry damaged hair"
+  },
+  "579": {
+   "step": "conditioner",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "volume"
+   ],
+   "note": "Volume conditioner, light, for fine flat hair"
+  },
+  "333": {
+   "step": "conditioner",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "volume"
+   ],
+   "note": "Volume conditioner, light, for fine flat hair"
+  },
+  "295": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "dryness",
+    "frizz",
+    "shine"
+   ],
+   "note": "Botugen filler: reconstructive treatment for damaged hair"
+  },
+  "380": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "breakage",
+    "shine",
+    "frizz"
+   ],
+   "note": "Nutri Care crystals: seals split ends, shine"
+  },
+  "312": {
+   "step": "style",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "frizz"
+   ],
+   "note": "Curl Control fluid"
+  },
+  "277": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Oro Puro illuminating fluid (24k gold)"
+  },
+  "1734": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "frizz",
+    "heat_protection",
+    "shine"
+   ],
+   "note": "Smoothing & straightening fluid, for blow-dry / flat iron"
+  },
+  "1742": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "shine",
+    "frizz",
+    "dryness"
+   ],
+   "note": "Serical cotton oil drops, shine serum"
+  },
+  "302": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "shine",
+    "breakage",
+    "frizz"
+   ],
+   "note": "Glossing crystals: silicone serum, split ends + shine"
+  },
+  "1763": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz",
+    "shine"
+   ],
+   "note": "Macadamia nourishing fluid"
+  },
+  "286": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz",
+    "shine"
+   ],
+   "note": "Macadamia nourishing fluid"
+  },
+  "275": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine",
+    "breakage"
+   ],
+   "note": "Argan regenerating fluid"
+  },
+  "421": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "color_protection",
+    "shine"
+   ],
+   "note": "Real Color fluid for coloured hair"
+  },
+  "297": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "frizz",
+    "heat_protection",
+    "shine"
+   ],
+   "note": "Smoothing fluid"
+  },
+  "566": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising lotion: anti hair-loss scalp treatment"
+  },
+  "565": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising lotion: anti hair-loss scalp treatment"
+  },
+  "1759": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising lotion: anti hair-loss scalp treatment"
+  },
+  "570": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising lotion: anti hair-loss scalp treatment"
+  },
+  "370": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "breakage",
+    "dryness",
+    "bond_repair"
+   ],
+   "note": "Nutri Care restructuring ampoules for damaged lengths"
+  },
+  "280": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss",
+    "shine"
+   ],
+   "note": "Oro Puro lotion ampoules: strengthening"
+  },
+  "279": {
+   "step": "scalp",
+   "types": [],
+   "needs": [
+    "hair_loss",
+    "shine"
+   ],
+   "note": "Oro Puro lotion ampoules: strengthening"
+  },
+  "264": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "breakage",
+    "frizz",
+    "bond_repair"
+   ],
+   "note": "Real Keratin leave-in lotion"
+  },
+  "293": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Botugen reconstructive mask"
+  },
+  "373": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Botugen reconstructive mask"
+  },
+  "314": {
+   "step": "mask",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Curly hair mask"
+  },
+  "576": {
+   "step": "mask",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Curly hair mask"
+  },
+  "574": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "bond_repair",
+    "breakage",
+    "color_protection"
+   ],
+   "note": "Fiber Fix N.5 bond mask"
+  },
+  "359": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness"
+   ],
+   "note": "Frequent multivitamin mask, everyday"
+  },
+  "335": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "frizz",
+    "breakage",
+    "shine"
+   ],
+   "note": "Keraterm keratin anti-frizz mask"
+  },
+  "334": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "frizz",
+    "breakage",
+    "shine"
+   ],
+   "note": "Keraterm keratin anti-frizz mask"
+  },
+  "392": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_orange",
+    "color_protection"
+   ],
+   "note": "No Orange: blue pigment neutralises orange on brown/dark blonde"
+  },
+  "364": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_orange",
+    "color_protection"
+   ],
+   "note": "No Orange: blue pigment neutralises orange on brown/dark blonde"
+  },
+  "395": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_red",
+    "color_protection"
+   ],
+   "note": "No Red: green pigment neutralises red on brown hair"
+  },
+  "366": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_red",
+    "color_protection"
+   ],
+   "note": "No Red: green pigment neutralises red on brown hair"
+  },
+  "423": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow: violet pigment for blonde/grey/white"
+  },
+  "409": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow: violet pigment for blonde/grey/white"
+  },
+  "1705": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage"
+   ],
+   "note": "Nutri Care restructuring mask"
+  },
+  "383": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage"
+   ],
+   "note": "Nutri Care restructuring mask"
+  },
+  "283": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Oro Puro gold mask, illuminating"
+  },
+  "396": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Oro Puro gold mask, illuminating"
+  },
+  "1750": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine"
+   ],
+   "note": "Serical honey mask, nourishing"
+  },
+  "1748": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness"
+   ],
+   "note": "Hydrating mask"
+  },
+  "1762": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness"
+   ],
+   "note": "Hydrating mask"
+  },
+  "1749": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "hair_loss",
+    "breakage"
+   ],
+   "note": "Serical onion mask, strengthening, against hair fall"
+  },
+  "272": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine",
+    "frizz"
+   ],
+   "note": "Real Argan mask"
+  },
+  "271": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine",
+    "frizz"
+   ],
+   "note": "Real Argan mask"
+  },
+  "420": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_protection",
+    "shine"
+   ],
+   "note": "Real Color Goji mask, coloured hair"
+  },
+  "419": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "color_protection",
+    "shine"
+   ],
+   "note": "Real Color Goji mask, coloured hair"
+  },
+  "263": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "frizz"
+   ],
+   "note": "Real Keratin reconstructing mask"
+  },
+  "262": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "frizz"
+   ],
+   "note": "Real Keratin reconstructing mask"
+  },
+  "282": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz"
+   ],
+   "note": "Real Macadamia mask"
+  },
+  "281": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz"
+   ],
+   "note": "Real Macadamia mask"
+  },
+  "402": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "Real Silver: anti-yellow for grey/blonde"
+  },
+  "401": {
+   "step": "mask",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "Real Silver: anti-yellow for grey/blonde"
+  },
+  "369": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "dryness"
+   ],
+   "note": "Botugen reconstructive shampoo"
+  },
+  "291": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "dryness"
+   ],
+   "note": "Botugen reconstructive shampoo"
+  },
+  "382": {
+   "step": "shampoo",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Curly hair shampoo"
+  },
+  "313": {
+   "step": "shampoo",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Curly hair shampoo"
+  },
+  "577": {
+   "step": "shampoo",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "dryness",
+    "frizz"
+   ],
+   "note": "Curly hair shampoo"
+  },
+  "563": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising shampoo against hair loss"
+  },
+  "564": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising shampoo against hair loss"
+  },
+  "568": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising shampoo against hair loss"
+  },
+  "569": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "hair_loss"
+   ],
+   "note": "Energising shampoo against hair loss"
+  },
+  "386": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "hair_loss",
+    "oiliness"
+   ],
+   "note": "Energy shampoo"
+  },
+  "573": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "bond_repair",
+    "breakage",
+    "color_protection"
+   ],
+   "note": "Fiber Fix N.4 bond shampoo"
+  },
+  "360": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "shine"
+   ],
+   "note": "Frequent: gentle everyday shampoo"
+  },
+  "389": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "frizz",
+    "breakage",
+    "shine"
+   ],
+   "note": "Keraterm keratin anti-frizz shampoo"
+  },
+  "361": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "frizz",
+    "breakage",
+    "shine"
+   ],
+   "note": "Keraterm keratin anti-frizz shampoo"
+  },
+  "391": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_orange",
+    "color_protection"
+   ],
+   "note": "No Orange shampoo"
+  },
+  "365": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_orange",
+    "color_protection"
+   ],
+   "note": "No Orange shampoo"
+  },
+  "393": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_red",
+    "color_protection"
+   ],
+   "note": "No Red shampoo"
+  },
+  "367": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_red",
+    "color_protection"
+   ],
+   "note": "No Red shampoo"
+  },
+  "422": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow shampoo"
+  },
+  "571": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow shampoo"
+  },
+  "410": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow shampoo"
+  },
+  "1695": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "No Yellow shampoo"
+  },
+  "426": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage"
+   ],
+   "note": "Nutri Care restructuring shampoo"
+  },
+  "385": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage"
+   ],
+   "note": "Nutri Care restructuring shampoo"
+  },
+  "1660": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dandruff",
+    "oiliness"
+   ],
+   "note": "Purity/Purifying anti-dandruff (piroctone olamine)"
+  },
+  "1637": {
+   "step": "shampoo",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "oiliness",
+    "dandruff"
+   ],
+   "note": "Vitamins Pure Balance: oily scalp + dandruff"
+  },
+  "578": {
+   "step": "shampoo",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "volume"
+   ],
+   "note": "Volume shampoo for fine hair"
+  },
+  "332": {
+   "step": "shampoo",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "volume"
+   ],
+   "note": "Volume shampoo for fine hair"
+  },
+  "284": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness"
+   ],
+   "note": "Oro Puro gold shampoo, illuminating"
+  },
+  "397": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "shine",
+    "dryness"
+   ],
+   "note": "Oro Puro gold shampoo, illuminating"
+  },
+  "1706": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "breakage",
+    "frizz"
+   ],
+   "note": "Rubino Puro keratin shampoo"
+  },
+  "1793": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "color_protection"
+   ],
+   "note": "Shampoo for coloured hair"
+  },
+  "1791": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "color_protection"
+   ],
+   "note": "Shampoo for coloured hair"
+  },
+  "1789": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness"
+   ],
+   "note": "Hydra Star hydrating shampoo"
+  },
+  "270": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine"
+   ],
+   "note": "Real Argan shampoo"
+  },
+  "267": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "shine"
+   ],
+   "note": "Real Argan shampoo"
+  },
+  "417": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "color_protection",
+    "shine"
+   ],
+   "note": "Real Color Goji shampoo"
+  },
+  "418": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "color_protection",
+    "shine"
+   ],
+   "note": "Real Color Goji shampoo"
+  },
+  "260": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "frizz"
+   ],
+   "note": "Real Keratin shampoo"
+  },
+  "257": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "breakage",
+    "bond_repair",
+    "frizz"
+   ],
+   "note": "Real Keratin shampoo"
+  },
+  "278": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz"
+   ],
+   "note": "Real Macadamia shampoo"
+  },
+  "276": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz"
+   ],
+   "note": "Real Macadamia shampoo"
+  },
+  "400": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "Real Silver anti-yellow shampoo"
+  },
+  "399": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "brassy_yellow",
+    "color_protection"
+   ],
+   "note": "Real Silver anti-yellow shampoo"
+  },
+  "1764": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "dryness",
+    "breakage",
+    "curl_definition"
+   ],
+   "note": "Restructuring shampoo for dry, curly, treated hair"
+  },
+  "1790": {
+   "step": "shampoo",
+   "types": [],
+   "needs": [
+    "oiliness"
+   ],
+   "note": "Shampoo for oily hair"
+  },
+  "294": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "breakage",
+    "frizz",
+    "bond_repair"
+   ],
+   "note": "Botugen filler spray"
+  },
+  "559": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "560": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "1644": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "1645": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "1646": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "292": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "1711": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Hairspray"
+  },
+  "561": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold",
+    "volume"
+   ],
+   "note": "Volumizing hairspray"
+  },
+  "1643": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold",
+    "volume"
+   ],
+   "note": "Volumizing hairspray"
+  },
+  "562": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "volume",
+    "hold"
+   ],
+   "note": "Mousse"
+  },
+  "1639": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "volume",
+    "hold"
+   ],
+   "note": "Mousse"
+  },
+  "387": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "frizz",
+    "heat_protection",
+    "shine"
+   ],
+   "note": "Keraterm spray"
+  },
+  "368": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz",
+    "breakage",
+    "heat_protection",
+    "shine"
+   ],
+   "note": "Nutri Care 10-in-1 leave-in"
+  },
+  "273": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz",
+    "shine"
+   ],
+   "note": "Oro Puro bi-phase conditioner spray"
+  },
+  "1733": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "shine"
+   ],
+   "note": "Oro Puro perfumed protective spray"
+  },
+  "1743": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "breakage",
+    "dryness"
+   ],
+   "note": "Serical restructuring spray"
+  },
+  "274": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz",
+    "shine"
+   ],
+   "note": "Real Argan leave-in conditioner spray"
+  },
+  "285": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "dryness",
+    "frizz"
+   ],
+   "note": "Real Macadamia spray"
+  },
+  "1752": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "shine"
+   ],
+   "note": "Shine spray"
+  },
+  "319": {
+   "step": "style",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "frizz"
+   ],
+   "note": "Curl defining cream"
+  },
+  "298": {
+   "step": "style",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "frizz"
+   ],
+   "note": "Curl defining cream"
+  },
+  "1648": {
+   "step": "style",
+   "types": [
+    "wavy",
+    "curly",
+    "coily"
+   ],
+   "needs": [
+    "curl_definition",
+    "hold"
+   ],
+   "note": "Curl mousse"
+  },
+  "1638": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "texture"
+   ],
+   "note": "Wax / paste"
+  },
+  "1727": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "texture"
+   ],
+   "note": "Wax / paste"
+  },
+  "296": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "texture"
+   ],
+   "note": "Wax / paste"
+  },
+  "1709": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "texture",
+    "shine"
+   ],
+   "note": "Water-based wax"
+  },
+  "1710": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Gel"
+  },
+  "1745": {
+   "step": "style",
+   "types": [],
+   "needs": [
+    "hold"
+   ],
+   "note": "Gel"
+  },
+  "299": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "frizz",
+    "shine"
+   ],
+   "note": "Anti-frizz glossing spray"
+  },
+  "305": {
+   "step": "leave_in",
+   "types": [],
+   "needs": [
+    "heat_protection"
+   ],
+   "note": "Thermal protective spray"
+  },
+  "300": {
+   "step": "style",
+   "types": [
+    "fine",
+    "normal"
+   ],
+   "needs": [
+    "volume"
+   ],
+   "note": "Volumizing root spray"
+  }
+ },
+ "hidden": {
+  "424": "10L salon size",
+  "425": "10L salon size",
+  "261": "10L salon size",
+  "1761": "10L salon size",
+  "1746": "10L salon size",
+  "1753": "5L salon size",
+  "1754": "10L salon size",
+  "1755": "10L salon size",
+  "357": "Fiber Fix N.3: salon step after colouring",
+  "358": "professional intro kit",
+  "371": "set",
+  "388": "set",
+  "1739": "chemical straightening kit (professional)"
+ }
+}
