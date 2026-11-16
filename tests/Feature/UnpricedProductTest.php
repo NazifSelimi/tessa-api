@@ -115,6 +115,8 @@ class UnpricedProductTest extends TestCase
         $priced = $this->product(['price' => 500, 'quiz_step' => 'shampoo']);
         $unpriced->hairTypes()->attach($hairType);
         $priced->hairTypes()->attach($hairType);
+        $unpriced->hairConcerns()->attach($concern);
+        $priced->hairConcerns()->attach($concern);
 
         $ids = collect($this->postJson('/api/v1/recommendations', [
             'hair_type_id' => $hairType->id,

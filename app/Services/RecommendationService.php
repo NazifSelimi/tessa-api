@@ -71,11 +71,14 @@ class RecommendationService
 
     private const MAX_PRODUCTS = 16;
 
+    /** Needs of gentle everyday care, preferred when a person asks for nothing special. */
+    private const EVERYDAY_NEEDS = ['dryness', 'shine', 'frizz'];
+
     /**
      * @param  list<int>  $hairTypeIds
      * @param  list<int>  $needIds
      * @param  list<string>  $steps  keys of ROUTINE_STEPS; empty = chosen from the needs
-     * @return array{products: list<Product>, routine: list<array{step: string, product: Product}>, bundles: Collection, steps: list<string>}
+     * @return array{products: list<Product>, routine: list<array{step: string, product: Product, companion: Product|null}>, bundles: Collection, steps: list<string>}
      */
     public function getRecommendations(
         array $hairTypeIds,
@@ -94,7 +97,7 @@ class RecommendationService
         return [
             // Only products that answer the profile; the routine may also use a
             // plain shampoo/conditioner that simply suits the hair type.
-            'products' => $products->filter(fn (Product $p) => $p->recommendation_score > 0)->take(self::MAX_PRODUCTS)->values()->all(),
+            'products' => $products->filter(fn (Product $p) => $p->matched_need_ids !== [] || $p->quiz_mode === 'featured')->take(self::MAX_PRODUCTS)->values()->all(),
             'routine' => $routine,
             'bundles' => $this->matchingBundles($hairTypeIds, $needIds, $audience),
             'steps' => $steps,
@@ -175,6 +178,7 @@ class RecommendationService
         $typeGroups = HairType::query()->pluck('group', 'id');
         $chosenTypesByGroup = collect($hairTypeIds)->groupBy(fn ($id) => $typeGroups[$id] ?? 'pattern');
         $gatedNeeds = HairConcern::query()->where('gated', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $refreshNeed = (int) HairConcern::query()->where('slug', 'color_refresh')->value('id');
 
         $scored = $query->get()->map(function (Product $product) use ($hairTypeIds, $needIds, $chosenTypesByGroup, $typeGroups, $gatedNeeds) {
             $step = self::stepOf($product);
@@ -219,10 +223,25 @@ class RecommendationService
         })->filter();
 
         // One result per product line: the best-scoring size, then the size
-        // closest to a retail bottle; a colour line shows one shade.
+        // closest to a retail bottle. Colour masks of one brand are one result
+        // whose other shades are listed (the person picks the shade).
         return $scored
-            ->groupBy(fn (Product $p) => $p->product_family_id ? 'family:' . $p->product_family_id : 'name:' . $p->brand_id . ':' . self::baseName($p->name))
-            ->map(fn (Collection $sizes) => $sizes->sort(fn (Product $a, Product $b) => [$b->recommendation_score, self::sizeDistance($a)] <=> [$a->recommendation_score, self::sizeDistance($b)])->first())
+            ->groupBy(function (Product $p) use ($refreshNeed, $gatedNeeds) {
+                $needs = $p->hairConcerns->pluck('id')->map(fn ($id) => (int) $id);
+                if ($refreshNeed && $needs->contains($refreshNeed)) {
+                    return 'refresh:' . $p->brand_id . ':' . $needs->intersect($gatedNeeds)->sort()->implode(',');
+                }
+
+                return $p->product_family_id ? 'family:' . $p->product_family_id : 'name:' . $p->brand_id . ':' . self::baseName($p->name);
+            })
+            ->map(function (Collection $group, string $key) {
+                $best = $group->sort(fn (Product $a, Product $b) => [$b->recommendation_score, self::sizeDistance($a)] <=> [$a->recommendation_score, self::sizeDistance($b)])->first();
+                $best->setAttribute('shade_options', str_starts_with($key, 'refresh:')
+                    ? $group->sortBy('name')->map(fn (Product $p) => ['id' => (string) $p->id, 'name' => $p->name])->values()->all()
+                    : []);
+
+                return $best;
+            })
             ->sort(fn (Product $a, Product $b) => [$b->recommendation_score, $a->name] <=> [$a->recommendation_score, $b->name])
             ->values();
     }
@@ -230,25 +249,45 @@ class RecommendationService
     /**
      * Best product per requested step. A step only gets a product that answers
      * at least one need, except shampoo and conditioner/mask, which fall back to
-     * the best product that suits the hair type.
+     * gentle everyday care that suits the hair type.
+     *
+     * Toners and colour masks are used once or twice a week, so when one wins a
+     * step the best regular product for that step comes with it ("companion").
      *
      * @param  list<string>  $steps
-     * @return list<array{step: string, product: Product}>
+     * @return list<array{step: string, product: Product, companion: Product|null}>
      */
     protected function buildRoutine(Collection $ranked, array $steps): array
     {
+        $gated = HairConcern::query()->where('gated', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $mild = HairConcern::query()->whereIn('slug', self::EVERYDAY_NEEDS)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $isGated = fn (Product $p) => $p->hairConcerns->pluck('id')->intersect($gated)->isNotEmpty();
         $routine = [];
         $used = [];
 
         foreach ($steps as $step) {
             $fits = $ranked->filter(fn (Product $p) => in_array($p->quiz_step_effective, self::ROUTINE_STEPS[$step], true) && ! isset($used[$p->id]));
-            $pick = $fits->first(fn (Product $p) => $p->matched_need_ids !== [])
-                ?? (in_array($step, ['shampoo', 'condition'], true) ? $fits->first() : null);
-
-            if ($pick !== null) {
-                $used[$pick->id] = true;
-                $routine[] = ['step' => $step, 'product' => $pick];
+            $pick = $fits->first(fn (Product $p) => $p->matched_need_ids !== []);
+            if ($pick === null && in_array($step, ['shampoo', 'condition'], true)) {
+                // Nothing answers a need: the least specialised product, most stocked first.
+                $pick = $fits->reject($isGated)
+                    ->sortBy(fn (Product $p) => [$p->hairConcerns->pluck('id')->diff($mild)->count(), -$p->quantity])
+                    ->first();
             }
+            if ($pick === null) {
+                continue;
+            }
+            $used[$pick->id] = true;
+
+            $companion = null;
+            if ($isGated($pick)) {
+                $companion = $fits->first(fn (Product $p) => ! isset($used[$p->id]) && ! $isGated($p) && $p->matched_need_ids !== []);
+                if ($companion !== null) {
+                    $used[$companion->id] = true;
+                }
+            }
+
+            $routine[] = ['step' => $step, 'product' => $pick, 'companion' => $companion];
         }
 
         return $routine;

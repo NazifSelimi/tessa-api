@@ -73,10 +73,12 @@ class RecommendationApiTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonCount(3, 'data.products');
+            ->assertJsonCount(2, 'data.products');
 
+        // Product C only suits the hair type: it may fill a routine step but is
+        // not listed as a match.
         $names = collect($response->json('data.products'))->pluck('name')->all();
-        $this->assertEquals(['Product A', 'Product B', 'Product C'], $names);
+        $this->assertEquals(['Product A', 'Product B'], $names);
     }
 
     #[Test]
@@ -318,5 +320,35 @@ class RecommendationApiTest extends TestCase
         $p->hairConcerns()->attach($dry->id);
 
         $this->assertSame([], $this->ask([$straight], [$dry])->json('data.products'));
+    }
+
+    #[Test]
+    public function a_toner_in_the_routine_comes_with_a_regular_product_for_the_other_washes()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $yellow = $this->need('brassy_yellow', true, 'colour');
+        $bond = $this->need('bond_repair');
+        $this->care('Violet Shampoo', 'shampoo', [$yellow]);
+        $this->care('Bond Shampoo', 'shampoo', [$bond]);
+
+        $routine = $this->ask([$straight], [$yellow, $bond], ['shampoo'])->json('data.routine');
+        $this->assertSame('Violet Shampoo', $routine[0]['product']['name']);
+        $this->assertSame('Bond Shampoo', $routine[0]['companion']['name']);
+    }
+
+    #[Test]
+    public function colour_masks_of_one_brand_are_one_result_with_their_shades()
+    {
+        $straight = $this->type('straight', 'pattern');
+        $refresh = HairConcern::query()->firstOrCreate(['slug' => 'color_refresh'], ['name' => 'Refresh colour', 'group' => 'colour', 'gated' => true]);
+        $brand = Brand::factory()->create();
+        foreach (['Color Mask Red 30ml', 'Color Mask Blue 30ml', 'Color Mask Pink 200ml'] as $name) {
+            $this->care($name, 'mask', [$refresh], [], ['brand_id' => $brand->id]);
+        }
+
+        $products = $this->ask([$straight], [$refresh])->json('data.products');
+        $this->assertCount(1, $products);
+        $this->assertSame('Color Mask Pink 200ml', $products[0]['name']);
+        $this->assertCount(3, $products[0]['shadeOptions']);
     }
 }

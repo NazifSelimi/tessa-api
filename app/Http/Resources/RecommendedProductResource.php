@@ -48,6 +48,8 @@ class RecommendedProductResource extends JsonResource
             'matchedNeedIds'      => array_values($this->matched_need_ids ?? []),
             'matchedTypeIds'      => array_values($this->matched_type_ids ?? []),
             'familyId'            => $this->product_family_id ? (string) $this->product_family_id : null,
+            // Colour masks: the shades of this line the person can choose from.
+            'shadeOptions'        => array_values($this->shade_options ?? []),
             'sale'                => $this->whenLoaded('sale', fn () => $this->sale ? [
                 'price'     => (float) $this->sale->sale_price,
                 'startDate' => $this->sale->start_date,

@@ -34,6 +34,7 @@ class RecommendationController extends Controller
             'routine' => collect($result['routine'])->map(fn (array $entry) => [
                 'step' => $entry['step'],
                 'product' => (new RecommendedProductResource($entry['product']))->resolve(),
+                'companion' => $entry['companion'] ? (new RecommendedProductResource($entry['companion']))->resolve() : null,
             ])->values(),
             'steps' => $result['steps'],
             'bundles' => $result['bundles']->map(fn ($bundle) => (new BundleResource($bundle))->resolve())->values(),

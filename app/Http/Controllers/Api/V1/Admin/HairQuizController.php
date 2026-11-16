@@ -112,7 +112,10 @@ class HairQuizController extends Controller
         ]);
 
         $result = $this->recommendations->getRecommendations($data['hair_type_ids'], $data['concerns'] ?? [], $data['steps'] ?? []);
-        $routineIds = collect($result['routine'])->mapWithKeys(fn (array $entry) => [$entry['product']->id => $entry['step']]);
+        $routineIds = collect($result['routine'])->flatMap(fn (array $entry) => array_filter([
+            $entry['product']->id => $entry['step'],
+            $entry['companion']?->id => $entry['companion'] ? $entry['step'] : null,
+        ]));
 
         return ApiResponse::ok(collect($result['products'])->map(fn (Product $product) => $this->row($product) + [
             'score' => (int) round((float) $product->recommendation_score),
