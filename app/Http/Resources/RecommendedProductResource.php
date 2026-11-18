@@ -32,7 +32,7 @@ class RecommendedProductResource extends JsonResource
                 fn () => (float) $this->stylist_price,
             ),
             'stylistOnly'         => (bool) $this->stylist_only,
-            'quantity'            => (int) $this->quantity,
+            'quantity'            => \App\Support\PublicStock::shown($request, (int) $this->quantity),
             'inStock'             => $this->quantity > 0,
             'brandId'             => (string) $this->brand_id,
             'brand'               => $this->whenLoaded('brand', fn () => $this->brand ? [

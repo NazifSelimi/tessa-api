@@ -129,4 +129,21 @@ class ProductApiTest extends TestCase
         $response->assertStatus(200);
         $this->assertCount(8, $response->json('data'));
     }
+
+    #[Test]
+    public function only_admins_see_the_exact_stock_level()
+    {
+        $product = Product::factory()->create([
+            'brand_id' => Brand::factory()->create()->id,
+            'category_id' => Category::factory()->create()->id,
+            'quantity' => 112,
+        ]);
+
+        $this->getJson("/api/v1/products/{$product->id}")->assertOk()
+            ->assertJsonPath('data.quantity', 50)->assertJsonPath('data.inStock', true);
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->withToken($admin->createToken('t')->plainTextToken)->getJson("/api/v1/products/{$product->id}")
+            ->assertOk()->assertJsonPath('data.quantity', 112);
+    }
 }

@@ -71,7 +71,7 @@ class ProductResource extends JsonResource
             'hairTypeIds' => $this->whenLoaded('hairTypes', fn () => $this->hairTypes->pluck('id')->map(fn ($id) => (int) $id)->values()),
             'hairConcernIds' => $this->whenLoaded('hairConcerns', fn () => $this->hairConcerns->pluck('id')->map(fn ($id) => (int) $id)->values()),
             'catalogGuidance' => ProductCatalogGuidance::forProduct($categoryName, $this->name),
-            'quantity' => (int) $this->quantity,
+            'quantity' => \App\Support\PublicStock::shown($request, (int) $this->quantity),
             'inStock' => $this->quantity > 0,
 
             'brandId' => (string) $this->brand_id,
