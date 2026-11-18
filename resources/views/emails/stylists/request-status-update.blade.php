@@ -7,7 +7,7 @@
 
 @section('content')
     <h1 style="font-size:24px; margin:0 0 8px; color:#242124;">{{ __('emails.stylist.title_' . $key) }}</h1>
-    <p style="font-size:15px; line-height:1.6; margin:0 0 4px;">{{ $user->first_name ? __('emails.hi', ['name' => $user->first_name]) : __('emails.hi_plain') }}</p>
+    <p style="font-size:15px; line-height:1.6; margin:0 0 4px;">{{ $user?->first_name ? __('emails.hi', ['name' => $user->first_name]) : __('emails.hi_plain') }}</p>
     <p style="font-size:15px; line-height:1.6; margin:0;">{{ __('emails.stylist.' . $key) }}</p>
     @if ($key === 'rejected' && $reason)
         <p style="font-size:14px; line-height:1.6; margin:16px 0 0; padding:12px 14px; background:#faf6f4; border-radius:10px;"><strong>{{ __('emails.stylist.reason') }}:</strong> {{ $reason }}</p>
