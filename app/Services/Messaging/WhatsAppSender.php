@@ -44,7 +44,7 @@ class WhatsAppSender
     public function orderStatus(Order $order): array
     {
         $status = self::STATUS_KEYS[$order->status] ?? null;
-        if (! $status || ! MessagingSettings::premiumAllowed() || ! $this->settings->enabled() || ! $this->settings->connected()) {
+        if (! $status || ! MessagingSettings::autoAllowed() || ! $this->settings->enabled() || ! $this->settings->connected()) {
             return ['ok' => false, 'skipped' => 'off'];
         }
         $template = $this->settings->statusTemplates()[$status];

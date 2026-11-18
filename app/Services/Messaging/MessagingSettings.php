@@ -26,15 +26,14 @@ class MessagingSettings
     ];
 
     /**
-     * Automatic WhatsApp is a Premium plan feature. The only place the gate lives:
-     * routes use `feature:whatsapp_auto` and the sender asks premiumAllowed().
-     * Until plan tiers exist, FeatureService treats the unknown key as on.
+     * Automatic WhatsApp has its own switch (Admin → Features). The only place
+     * the gate lives: routes use `feature:whatsapp_auto` and the sender asks autoAllowed().
      */
-    public const PREMIUM_FEATURE = 'whatsapp_auto';
+    public const AUTO_FEATURE = 'whatsapp_auto';
 
-    public static function premiumAllowed(): bool
+    public static function autoAllowed(): bool
     {
-        return app(FeatureService::class)->enabled(self::PREMIUM_FEATURE);
+        return app(FeatureService::class)->enabled(self::AUTO_FEATURE);
     }
 
     public const DEFAULT_API_VERSION = 'v23.0';

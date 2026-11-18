@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\FeatureService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class AdminFeatureController extends Controller
 {
@@ -17,26 +16,18 @@ class AdminFeatureController extends Controller
         return ApiResponse::ok($this->features->adminList());
     }
 
-    /** Switches, per-feature plan levels and the shop's plan (no billing: set by hand). */
+    /** On/off switches. */
     public function update(Request $request)
     {
         $data = $request->validate([
-            'features' => ['sometimes', 'array'],
+            'features' => ['required', 'array'],
             'features.*' => ['boolean'],
-            'plans' => ['sometimes', 'array'],
-            'plans.*' => [Rule::in(FeatureService::PLANS)],
-            'shop_plan' => ['sometimes', Rule::in(FeatureService::PLANS)],
         ]);
-        $keys = array_keys($this->features->registry());
-        $unknown = array_diff(array_merge(array_keys($data['features'] ?? []), array_keys($data['plans'] ?? [])), $keys);
+        $unknown = array_diff(array_keys($data['features']), array_keys($this->features->registry()));
         if ($unknown !== []) {
             return ApiResponse::error('Unknown feature: ' . implode(', ', $unknown), 422);
         }
-        $this->features->update($data['features'] ?? []);
-        $this->features->updatePlanLevels($data['plans'] ?? []);
-        if (isset($data['shop_plan'])) {
-            $this->features->setShopPlan($data['shop_plan']);
-        }
+        $this->features->update($data['features']);
 
         return ApiResponse::ok($this->features->adminList(), 200, null, 'Features saved');
     }

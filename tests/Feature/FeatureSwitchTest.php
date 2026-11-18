@@ -18,8 +18,6 @@ class FeatureSwitchTest extends TestCase
     {
         parent::setUp();
         Setting::put('features', '{}');
-        Setting::put('features.plans', '{}');
-        Setting::put('business.plan', 'premium');
         $this->admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     }
 
@@ -35,8 +33,8 @@ class FeatureSwitchTest extends TestCase
     {
         $this->getJson('/api/v1/features')->assertOk()
             ->assertJsonPath('data.hair_quiz.enabled', true)
-            ->assertJsonPath('data.hair_quiz.plan', 'basic')
-            ->assertJsonPath('data.order_delete.included', true);
+            ->assertJsonMissingPath('data.hair_quiz.plan')
+            ->assertJsonMissingPath('data.order_delete.included');
     }
 
     #[Test]
@@ -53,21 +51,15 @@ class FeatureSwitchTest extends TestCase
     }
 
     #[Test]
-    public function a_basic_plan_locks_pro_and_premium_features()
+    public function there_are_no_plans_so_a_leftover_plan_setting_locks_nothing()
     {
-        $this->asAdmin()->putJson('/api/v1/admin/features', ['shop_plan' => 'basic'])->assertOk()
-            ->assertJsonPath('data.plan', 'basic');
+        Setting::put('business.plan', 'basic');
+        Setting::put('features.plans', json_encode(['admin_emails' => 'premium']));
 
-        $this->getJson('/api/v1/features')
-            ->assertJsonPath('data.admin_emails.included', false)
-            ->assertJsonPath('data.admin_emails.enabled', true) // still switched on, just not in the plan
-            ->assertJsonPath('data.hair_quiz.included', true);
-        $this->asAdmin()->getJson('/api/v1/admin/emails/logs')->assertNotFound();
-
-        // Moving one feature down to Basic unlocks it without changing the plan.
-        $this->asAdmin()->putJson('/api/v1/admin/features', ['plans' => ['admin_emails' => 'basic']])->assertOk();
+        $this->getJson('/api/v1/features')->assertJsonPath('data.admin_emails.enabled', true);
         $this->asAdmin()->getJson('/api/v1/admin/emails/logs')->assertOk();
-        $this->asAdmin()->putJson('/api/v1/admin/features', ['shop_plan' => 'gold'])->assertStatus(422);
+        $this->asAdmin()->getJson('/api/v1/admin/features')->assertOk()->assertJsonMissingPath('data.plan');
+        $this->asAdmin()->putJson('/api/v1/admin/features', ['shop_plan' => 'basic'])->assertStatus(422);
     }
 
     #[Test]

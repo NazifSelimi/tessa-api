@@ -227,9 +227,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
                 Route::get('/templates', 'templates');
                 Route::put('/templates', 'saveTemplates');
                 Route::post('/audience', 'audience');
-                Route::get('/whatsapp', 'whatsapp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
-                Route::put('/whatsapp', 'saveWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
-                Route::post('/whatsapp/test', 'testWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::PREMIUM_FEATURE);
+                Route::get('/whatsapp', 'whatsapp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::AUTO_FEATURE);
+                Route::put('/whatsapp', 'saveWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::AUTO_FEATURE);
+                Route::post('/whatsapp/test', 'testWhatsApp')->middleware('feature:'.\App\Services\Messaging\MessagingSettings::AUTO_FEATURE);
             });
 
             // Email: mailbox settings are always reachable; writing emails and the outbox can be switched off.
