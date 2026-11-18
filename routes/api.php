@@ -294,7 +294,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
             // Referral code for clients and the store credit it earns
             Route::get('/referral', [StylistReferralController::class, 'show'])->middleware('feature:referrals');
-            Route::put('/referral', [StylistReferralController::class, 'update'])->middleware('feature:referrals');
+            Route::put('/referral', [StylistReferralController::class, 'update'])->middleware(['feature:referrals', 'throttle:10,1']);
         });
     });
 });

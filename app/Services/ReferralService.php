@@ -148,6 +148,18 @@ class ReferralService
             throw ValidationException::withMessages(['coupon_code' => [__(self::GUEST_ERROR)]]);
         }
 
+        // A code only pays out while its owner is still an active business account.
+        $owner = User::query()->find($coupon->stylist_id);
+        if (!$owner || !$owner->isStylist()) {
+            throw ValidationException::withMessages(['coupon_code' => [__('Coupon is expired or has been fully used.')]]);
+        }
+
+        if ($buyer->is($owner)) {
+            throw ValidationException::withMessages([
+                'coupon_code' => [__('Referral codes are for clients; salon accounts already get salon prices.')],
+            ]);
+        }
+
         if ($buyer->isStylist() || $buyer->isAdmin()) {
             throw ValidationException::withMessages([
                 'coupon_code' => [__('Referral codes are for clients; salon accounts already get salon prices.')],
@@ -358,18 +370,26 @@ class ReferralService
     private function hasOrderedBefore(?User $buyer, ?string $email, ?string $phone): bool
     {
         $phoneKey = $this->phoneKey($phone);
-        if (!$buyer && !$email && !$phoneKey) {
+        $emailKey = $this->emailKey($email);
+        if (!$buyer && !$emailKey && !$phoneKey) {
             return false;
         }
 
         $orders = Order::query()
             ->where('status', '!=', Order::STATUS_CANCELLED)
-            ->where(function ($query) use ($buyer, $email, $phoneKey) {
+            ->where(function ($query) use ($buyer, $emailKey, $phoneKey) {
                 if ($buyer) {
                     $query->orWhere('user_id', $buyer->id);
                 }
-                if ($email) {
-                    $query->orWhereHas('info', fn ($info) => $info->where('email', $email));
+                if ($emailKey) {
+                    // Narrow in SQL (same first letter and domain), compare normalised below.
+                    [$local, $domain] = explode('@', $emailKey, 2);
+                    $domains = $domain === 'gmail.com' ? ['gmail.com', 'googlemail.com'] : [$domain];
+                    $query->orWhereHas('info', fn ($info) => $info->where(function ($q) use ($local, $domains) {
+                        foreach ($domains as $d) {
+                            $q->orWhere('email', 'like', $local[0] . '%@' . $d);
+                        }
+                    }));
                 }
                 if ($phoneKey) {
                     // Narrow in SQL, then compare normalised numbers ("070 123 456" = "+38970123456").
@@ -380,8 +400,31 @@ class ReferralService
             ->get();
 
         return $orders->contains(fn (Order $order) => ($buyer && $order->user_id === $buyer->id)
-            || ($email && strcasecmp((string) $order->info?->email, $email) === 0)
+            || ($emailKey && $this->emailKey($order->info?->email) === $emailKey)
             || ($phoneKey && $this->phoneKey($order->info?->phone) === $phoneKey));
+    }
+
+    /**
+     * One key per mailbox: "Ana.Test+2@gmail.com" and "anatest@googlemail.com" are
+     * the same person, so a new alias does not unlock another first-order code.
+     */
+    private function emailKey(?string $email): ?string
+    {
+        $email = strtolower(trim((string) $email));
+        if (!str_contains($email, '@')) {
+            return null;
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+        $local = explode('+', $local, 2)[0];
+        if ($domain === 'googlemail.com') {
+            $domain = 'gmail.com';
+        }
+        if ($domain === 'gmail.com') {
+            $local = str_replace('.', '', $local);
+        }
+
+        return $local === '' ? null : $local . '@' . $domain;
     }
 
     /** Last 8 digits: the same Macedonian number with or without +389 / leading 0. */

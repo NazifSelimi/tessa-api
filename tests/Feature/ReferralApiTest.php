@@ -163,6 +163,32 @@ class ReferralApiTest extends TestCase
     }
 
     #[Test]
+    public function a_new_email_alias_does_not_unlock_a_first_order_code_again()
+    {
+        $this->code();
+        $this->checkout([], null, ['email' => 'mila.petrova@gmail.com', 'phone' => '071 111 222'])->assertStatus(201);
+
+        foreach (['milapetrova+2@gmail.com', 'Mila.Petrova@googlemail.com', 'm.i.l.a.petrova+shop@gmail.com'] as $alias) {
+            $this->checkout(['coupon_code' => 'ANA10'], $this->client, ['email' => $alias, 'phone' => '072 333 444'])
+                ->assertStatus(422);
+        }
+    }
+
+    #[Test]
+    public function a_code_stops_working_when_its_owner_is_no_longer_a_salon_account()
+    {
+        $this->code();
+        $this->stylist->forceFill(['role' => User::ROLE_USER])->save();
+
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(422);
+
+        $this->stylist->forceFill(['role' => User::ROLE_STYLIST])->save();
+        $this->stylist->delete();
+
+        $this->checkout(['coupon_code' => 'ANA10'], $this->client)->assertStatus(422);
+    }
+
+    #[Test]
     public function a_code_can_be_used_on_every_order_when_it_is_not_first_order_only()
     {
         $this->code()->update(['first_order_only' => false]);
