@@ -137,8 +137,26 @@ class AdminEmailController extends Controller
         } catch (Throwable $e) {
             $log->update(['status' => EmailLog::STATUS_FAILED, 'error' => mb_substr($e->getMessage(), 0, 2000)]);
 
-            return ApiResponse::error('The mail server refused: ' . self::explain($e->getMessage()), 422, ['raw' => $e->getMessage()]);
+            return ApiResponse::error('The mail server refused: ' . self::explain(self::safeError($e->getMessage()) ?? ''), 422);
         }
+    }
+
+    /**
+     * A short reason that is safe to show: no stack trace, no server paths,
+     * no class names. Programming errors become a plain sentence.
+     */
+    public static function safeError(?string $error): ?string
+    {
+        if ($error === null || trim($error) === '') {
+            return null;
+        }
+        $line = trim(strtok($error, "\n") ?: '');
+        if (preg_match('/Attempt to read property|Call to a member function|Undefined (variable|property|array key|index)|Class .* not found|Stack trace|\.php\b|^\[?(Illuminate|App|Symfony)\\\\/i', $line)) {
+            return 'The email could not be built (some customer or order details were missing). Use Retry, or remove it from the outbox.';
+        }
+        $line = preg_replace('#(?:[A-Za-z]:)?/[\w.\-/]+\.php(?::\d+)?#', '', $line);
+
+        return mb_substr(trim((string) preg_replace('/\s+/', ' ', $line)), 0, 300) ?: 'The email could not be sent.';
     }
 
     /** Turns common SMTP errors into advice an owner can act on. */
@@ -304,7 +322,7 @@ class AdminEmailController extends Controller
                         'to_email' => $address,
                         'subject' => $this->emails->subjectOf($mailable),
                         'status' => EmailLog::STATUS_FAILED,
-                        'error' => 'Before the outbox: ' . mb_substr(strtok((string) $job->exception, "\n"), 0, 1500),
+                        'error' => 'Before the outbox: ' . self::safeError(strtok((string) $job->exception, "\n") ?: null),
                         'attempts' => 3,
                         'payload' => serialize($mailable),
                         'order_id' => $mailable->order->id ?? null,
@@ -575,7 +593,9 @@ class AdminEmailController extends Controller
         try {
             return ApiResponse::ok(['subject' => $this->emails->subjectOf($mail), 'html' => $mail->render()]);
         } catch (Throwable $e) {
-            return ApiResponse::error('Preview failed: ' . $e->getMessage(), 500);
+            report($e);
+
+            return ApiResponse::error('Preview failed: ' . (self::safeError($e->getMessage()) ?? 'unknown error'), 500);
         }
     }
 
@@ -592,7 +612,7 @@ class AdminEmailController extends Controller
             'status' => $log->status,
             'delivery' => $log->delivery,
             'redirectedTo' => $log->redirected_to,
-            'error' => $log->error,
+            'error' => self::safeError($log->error),
             'attempts' => $log->attempts,
             'orderId' => $log->order_id ? (string) $log->order_id : null,
             'userId' => $log->user_id ? (string) $log->user_id : null,

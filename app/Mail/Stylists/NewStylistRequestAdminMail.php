@@ -25,7 +25,7 @@ class NewStylistRequestAdminMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New business account application — ' . trim($this->user->first_name . ' ' . $this->user->last_name),
+            subject: 'New business account application — ' . (trim(($this->user?->first_name ?? '') . ' ' . ($this->user?->last_name ?? '')) ?: 'new applicant'),
         );
     }
 

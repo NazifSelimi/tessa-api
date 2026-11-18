@@ -67,6 +67,30 @@ class EmailOutboxTest extends TestCase
     }
 
     #[Test]
+    public function guest_order_confirmation_renders_without_a_user()
+    {
+        $html = (new OrderConfirmationMail($this->guestOrder()))->locale('mk')->render();
+
+        $this->assertStringContainsString('Mila', $html);
+    }
+
+    #[Test]
+    public function the_outbox_never_shows_stack_traces_or_server_paths()
+    {
+        $trace = 'Attempt to read property "first_name" on null in /var/www/tessa/app/Mail/X.php:12';
+        EmailLog::query()->forceCreate([
+            'type' => 'order-confirmation', 'to_email' => 'a@example.com', 'subject' => 'S',
+            'status' => EmailLog::STATUS_FAILED, 'error' => $trace . "\n#0 /var/www/vendor/x.php(10): foo()",
+        ]);
+
+        $body = $this->asAdmin()->getJson('/api/v1/admin/emails/logs?status=failed')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('/var/www', $body);
+        $this->assertStringNotContainsString('first_name', $body);
+        $this->assertStringContainsString('could not be built', $body);
+    }
+
+    #[Test]
     public function customer_emails_are_in_the_customers_language()
     {
         $mail = (new OrderConfirmationMail($this->guestOrder()))->locale('mk');
