@@ -47,6 +47,10 @@ class CheckBearerToken
         }
 
         $token = PersonalAccessToken::findToken($plain);
+        // AI assistant tokens are for the MCP endpoint only, never a full admin key.
+        if ($token && str_starts_with((string) $token->name, AccessTokens::AI_PREFIX)) {
+            return response()->json(['success' => false, 'message' => 'This token only works for the AI assistant.'], 403);
+        }
         if ($token) {
             AccessTokens::extend($token, $user);
         }

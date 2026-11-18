@@ -17,6 +17,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 final class AccessTokens
 {
+    public const AI_PREFIX = 'ai-assistant: ';
+
     public static function issue(User $user, string $name): string
     {
         return $user->createToken($name, ['*'], self::expiryFor($user))->plainTextToken;
@@ -34,7 +36,7 @@ final class AccessTokens
     /** Push the expiry forward, at most one database write per token per day. */
     public static function extend(PersonalAccessToken $token, User $user): void
     {
-        if (str_starts_with((string) $token->name, 'ai-assistant: ') || !$token->expires_at) {
+        if (str_starts_with((string) $token->name, self::AI_PREFIX) || !$token->expires_at) {
             return;
         }
 

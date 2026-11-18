@@ -107,4 +107,14 @@ class AccessTokenLifetimeTest extends TestCase
         $this->assertNull(PersonalAccessToken::findToken($phone));
         $this->assertNotNull(PersonalAccessToken::findToken($laptop));
     }
+
+    #[Test]
+    public function an_ai_assistant_token_cannot_be_used_as_an_admin_key()
+    {
+        $admin = $this->user(User::ROLE_ADMIN);
+        $plain = $admin->createToken(\App\Support\AccessTokens::AI_PREFIX . 'laptop', ['*'], now()->addYear())->plainTextToken;
+
+        $this->withToken($plain)->getJson('/api/v1/admin/orders')->assertStatus(403);
+        $this->withToken($plain)->getJson('/api/v1/auth/me')->assertStatus(403);
+    }
 }
