@@ -7,6 +7,7 @@ use App\Http\Resources\BundleResource;
 use App\Models\Bundle;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminBundleController extends Controller
 {
@@ -37,9 +38,36 @@ class AdminBundleController extends Controller
 
     public function destroy(Bundle $bundle)
     {
+        $this->forgetImage($bundle);
         $bundle->delete();
 
         return ApiResponse::ok(null, 200, [], 'Offer deleted successfully.');
+    }
+
+    /** Saves the bundle's picture made in Post Studio; the old picture file is removed. */
+    public function uploadImage(Request $request, Bundle $bundle)
+    {
+        $request->validate(['image' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120']]);
+        $path = $request->file('image')->store('bundles', 'public');
+        $this->forgetImage($bundle);
+        $bundle->update(['image_path' => $path]);
+
+        return ApiResponse::ok(new BundleResource($bundle->load('products.images')), 200, null, 'Bundle picture saved');
+    }
+
+    public function deleteImage(Bundle $bundle)
+    {
+        $this->forgetImage($bundle);
+        $bundle->update(['image_path' => null]);
+
+        return ApiResponse::ok(new BundleResource($bundle->load('products.images')), 200, null, 'Bundle picture removed');
+    }
+
+    private function forgetImage(Bundle $bundle): void
+    {
+        if ($bundle->image_path) {
+            Storage::disk('public')->delete($bundle->image_path);
+        }
     }
 
     private function validated(Request $request, bool $updating = false): array

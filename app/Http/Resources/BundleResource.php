@@ -20,6 +20,8 @@ class BundleResource extends JsonResource
             'id'                 => (string) $this->id,
             'name'               => $this->name,
             'description'        => $this->description,
+            // Picture made in Post Studio (Bundles tab); null until one is saved.
+            'image'              => $this->image_path ? asset('storage/' . $this->image_path) : null,
             'isDynamic'          => (bool) $this->is_dynamic,
             'discountPercentage' => $this->discount_percentage ? (float) $this->discount_percentage : null,
             'promotionType'      => $this->promotion_type,
