@@ -101,6 +101,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::post('/auth/logout-others', [AuthController::class, 'logoutOthers'])->middleware('throttle:5,1');
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
         Route::put('/auth/password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
 

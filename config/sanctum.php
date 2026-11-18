@@ -47,7 +47,15 @@ return [
     |
     */
 
-    'expiration' => 60 * 24, // 24 hours
+    // No global cut-off: every token carries its own expires_at, which
+    // App\Support\AccessTokens sets and moves forward while it is used.
+    'expiration' => null,
+
+    // Days a sign-in lasts without being used (phones stay signed in).
+    'lifetime_days' => [
+        'default' => (int) env('TOKEN_LIFETIME_DAYS', 90),
+        'admin' => (int) env('ADMIN_TOKEN_LIFETIME_DAYS', 14),
+    ],
 
     /*
     |--------------------------------------------------------------------------

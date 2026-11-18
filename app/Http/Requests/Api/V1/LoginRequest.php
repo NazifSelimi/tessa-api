@@ -32,7 +32,7 @@ class LoginRequest extends FormRequest
         $identifier = $this->identifier();
         $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_login';
 
-        if (! Auth::attempt([$field => $field === 'email' ? Str::lower($identifier) : $this->normalizePhone($identifier), 'password' => $this->password])) {
+        if (! Auth::once([$field => $field === 'email' ? Str::lower($identifier) : $this->normalizePhone($identifier), 'password' => $this->password])) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

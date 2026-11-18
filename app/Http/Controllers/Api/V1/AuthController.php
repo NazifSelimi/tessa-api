@@ -12,6 +12,8 @@ use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordResetMail;
 use App\Models\User;
+use App\Support\AccessTokens;
+use Laravel\Sanctum\PersonalAccessToken;
 use App\Support\ApiResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +38,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        $token = $user->createToken('api')->plainTextToken;
+        $token = AccessTokens::issue($user, 'api');
 
         return ApiResponse::ok([
             'token' => $token,
@@ -60,7 +62,7 @@ class AuthController extends Controller
         $this->synchronizePhoneLogin($user, $data['phone']);
         $user->save();
 
-        $token = $user->createToken('api')->plainTextToken;
+        $token = AccessTokens::issue($user, 'api');
 
         return ApiResponse::ok([
             'token' => $token,
@@ -116,7 +118,7 @@ class AuthController extends Controller
         try {
             $socialProfile = $this->fetchSocialUserProfile($provider, $code);
             [$user, $isNewUser] = $this->resolveSocialUser($provider, $socialProfile);
-            $token = $user->createToken($provider . '-oauth')->plainTextToken;
+            $token = AccessTokens::issue($user, $provider . '-oauth');
 
             return $this->redirectSocialSuccess(
                 $provider,
@@ -149,6 +151,22 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return ApiResponse::ok(['logged_out' => true]);
+    }
+
+    public function logoutOthers(Request $request)
+    {
+        return ApiResponse::ok(['signed_out' => $this->revokeOtherTokens($request)]);
+    }
+
+    /** Deletes the user's sign-in tokens except the current one (AI tokens are kept). */
+    private function revokeOtherTokens(Request $request): int
+    {
+        $current = $request->user()->currentAccessToken();
+
+        return $request->user()->tokens()
+            ->when($current instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($current->getKey()))
+            ->where('name', 'not like', 'ai-assistant: %')
+            ->delete();
     }
 
     public function updateProfile(ProfileUpdateRequest $request)
@@ -206,6 +224,9 @@ class AuthController extends Controller
 
         $user->password = Hash::make($request->input('password'));
         $user->save();
+
+        // A new password signs out every other phone/browser; this one stays in.
+        $this->revokeOtherTokens($request);
 
         return ApiResponse::ok(null, 200, [], __('Password updated successfully.'));
     }

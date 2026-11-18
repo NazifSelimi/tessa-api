@@ -104,7 +104,7 @@ class StylistInvitationController extends Controller
         $user = $this->invitations->activate($invitation, $request->validated());
 
         return ApiResponse::ok([
-            'token' => $user->createToken('stylist-activation')->plainTextToken,
+            'token' => \App\Support\AccessTokens::issue($user, 'stylist-activation'),
             'user' => new UserResource($user),
         ], 201, [], 'Stylist account activated successfully.');
     }
