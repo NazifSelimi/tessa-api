@@ -32,18 +32,23 @@ class ProductImageController extends Controller
             'alt' => ['nullable', 'string', 'max:255'],
         ]);
         $path = $request->file('image')->store('images/admin-review', 'public');
+        // The shop shows a 1200 px WebP copy; the uploaded file is kept as it is.
+        $web = app(\App\Services\ImageService::class)->webCopy($path);
         try {
-            DB::transaction(function () use ($product, $data, $path, $request) {
+            DB::transaction(function () use ($product, $data, $path, $web, $request) {
                 Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
                 $product->images()->create([
-                    'name' => substr($path, strlen('images/')), 'alt' => $data['alt'] ?? $product->name,
+                    'name' => substr($web ?? $path, strlen('images/')), 'alt' => $data['alt'] ?? $product->name,
                     'variant' => 'gallery', 'sort_order' => (int) $product->images()->max('sort_order') + 10,
                     'review_status' => 'needs_review', 'background' => 'unknown',
-                    'metadata' => ['source' => 'admin-upload', 'uploaded_by' => $request->user()->id, 'uploaded_at' => now()->toIso8601String()],
+                    'metadata' => array_filter([
+                        'source' => 'admin-upload', 'uploaded_by' => $request->user()->id, 'uploaded_at' => now()->toIso8601String(),
+                        'original_upload' => $web ? substr($path, strlen('images/')) : null,
+                    ]),
                 ]);
             });
         } catch (\Throwable $error) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('public')->delete(array_filter([$path, $web]));
             throw $error;
         }
         return $this->index($product);

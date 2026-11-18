@@ -175,4 +175,23 @@ class AdminProductProblemsTest extends TestCase
         $this->withToken($admin)->postJson("/api/v1/admin/products/{$product->id}/fix-checked", ['checked' => false])->assertOk();
         $this->assertNull($product->fresh()->fix_checked_at);
     }
+
+    #[Test]
+    public function an_uploaded_photo_is_shown_as_a_web_sized_copy_and_the_upload_is_kept(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $product = Product::factory()->create();
+
+        $this->withToken($this->admin())->post("/api/v1/admin/products/{$product->id}/images", [
+            'image' => \Illuminate\Http\UploadedFile::fake()->image('big.png', 3000, 3000),
+        ], ['Accept' => 'application/json'])->assertOk();
+
+        $image = \App\Models\Image::query()->where('name', 'like', 'uploads/web/%')->latest('id')->firstOrFail();
+        $this->assertStringStartsWith('uploads/web/', $image->name);
+        $this->assertStringEndsWith('.webp', $image->name);
+        $this->assertStringStartsWith('admin-review/', $image->metadata['original_upload']);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists('images/' . $image->name);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists('images/' . $image->metadata['original_upload']);
+        $this->assertSame(1200, getimagesize(\Illuminate\Support\Facades\Storage::disk('public')->path('images/' . $image->name))[0]);
+    }
 }

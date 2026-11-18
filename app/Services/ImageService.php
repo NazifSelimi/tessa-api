@@ -46,6 +46,34 @@ class ImageService
     }
 
     /**
+     * A web-sized WebP copy of a file on the public disk (the file itself is left
+     * untouched). Returns the copy's path on the public disk, or null without GD
+     * or when the file is not an image.
+     */
+    public function webCopy(string $publicPath, string $folder = 'images/uploads/web', int $maxWidth = 1200, int $quality = 82): ?string
+    {
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagewebp')) {
+            return null;
+        }
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        $absolute = $disk->path(ltrim($publicPath, '/'));
+        $data = is_file($absolute) ? file_get_contents($absolute) : false;
+        $src = $data !== false ? @imagecreatefromstring($data) : false;
+        if (!$src instanceof \GdImage) {
+            return null;
+        }
+        imagepalettetotruecolor($src);
+        imagealphablending($src, false);
+        imagesavealpha($src, true);
+        $image = $this->resizeGdIfNeeded($src, $maxWidth);
+        $relative = trim($folder, '/') . '/' . Str::uuid() . '.webp';
+        $this->storeGdImage($image, $disk->path($relative), $quality);
+        imagedestroy($image);
+
+        return $relative;
+    }
+
+    /**
      * Store the untouched original plus any derived catalog assets.
      *
      * @return array<int, array<string, mixed>>
