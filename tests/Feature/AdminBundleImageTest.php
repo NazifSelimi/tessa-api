@@ -63,6 +63,7 @@ class AdminBundleImageTest extends TestCase
         $customer = User::factory()->create()->createToken('t')->plainTextToken;
         $this->withToken($customer)->post($url, ['image' => $this->png('a.png')], ['Accept' => 'application/json'])->assertStatus(403);
 
+        $this->app['auth']->forgetGuards(); // the guard remembers the customer otherwise
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
         $this->withToken($admin)->post($url, ['image' => UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])->assertStatus(422);
         $this->assertNull($bundle->fresh()->image_path);
