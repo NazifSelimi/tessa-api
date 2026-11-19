@@ -1,0 +1,1712 @@
+{
+ "audience": "stylist",
+ "promotion_type": "percentage",
+ "discount_percentage": 15,
+ "ends_at": "2026-12-02 23:59:59",
+ "offers": [
+  {
+   "name": "Fanola природни темни + оксидант 6%",
+   "description": "6 Fanola бои 1.0–7.0 и 900ml оксидант 6%.",
+   "products": [
+    {
+     "product_id": 1,
+     "quantity": 1
+    },
+    {
+     "product_id": 557,
+     "quantity": 1
+    },
+    {
+     "product_id": 3,
+     "quantity": 1
+    },
+    {
+     "product_id": 4,
+     "quantity": 1
+    },
+    {
+     "product_id": 8,
+     "quantity": 1
+    },
+    {
+     "product_id": 10,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "Fanola интензивни природни + 6%",
+   "description": "6 Fanola .00 нијанси за 100% покривање седи, со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 15,
+     "quantity": 1
+    },
+    {
+     "product_id": 12,
+     "quantity": 1
+    },
+    {
+     "product_id": 14,
+     "quantity": 1
+    },
+    {
+     "product_id": 41,
+     "quantity": 1
+    },
+    {
+     "product_id": 37,
+     "quantity": 1
+    },
+    {
+     "product_id": 23,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "Fanola пепелави + оксидант 9%",
+   "description": "6 пепелави Fanola нијанси (.1) и Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 20,
+     "quantity": 1
+    },
+    {
+     "product_id": 6,
+     "quantity": 1
+    },
+    {
+     "product_id": 9,
+     "quantity": 1
+    },
+    {
+     "product_id": 11,
+     "quantity": 1
+    },
+    {
+     "product_id": 18,
+     "quantity": 1
+    },
+    {
+     "product_id": 7,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola интензивни пепелави + 9%",
+   "description": "Fanola .11 од 5 до 10 и Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 50,
+     "quantity": 1
+    },
+    {
+     "product_id": 7,
+     "quantity": 1
+    },
+    {
+     "product_id": 19,
+     "quantity": 1
+    },
+    {
+     "product_id": 29,
+     "quantity": 1
+    },
+    {
+     "product_id": 5,
+     "quantity": 1
+    },
+    {
+     "product_id": 28,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola бисерни + оксидант 9%",
+   "description": "Fanola .13 бисерни нијанси и Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 48,
+     "quantity": 1
+    },
+    {
+     "product_id": 47,
+     "quantity": 1
+    },
+    {
+     "product_id": 34,
+     "quantity": 1
+    },
+    {
+     "product_id": 21,
+     "quantity": 1
+    },
+    {
+     "product_id": 36,
+     "quantity": 1
+    },
+    {
+     "product_id": 345,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola ладни кафеави + 6%",
+   "description": "Fanola .14 нијанси и 900ml оксидант 6%.",
+   "products": [
+    {
+     "product_id": 39,
+     "quantity": 1
+    },
+    {
+     "product_id": 22,
+     "quantity": 1
+    },
+    {
+     "product_id": 17,
+     "quantity": 1
+    },
+    {
+     "product_id": 33,
+     "quantity": 1
+    },
+    {
+     "product_id": 61,
+     "quantity": 1
+    },
+    {
+     "product_id": 69,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "Fanola виолетови + оксидант 6%",
+   "description": "Fanola .29 и .2F нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 68,
+     "quantity": 1
+    },
+    {
+     "product_id": 32,
+     "quantity": 1
+    },
+    {
+     "product_id": 26,
+     "quantity": 1
+    },
+    {
+     "product_id": 46,
+     "quantity": 1
+    },
+    {
+     "product_id": 57,
+     "quantity": 1
+    },
+    {
+     "product_id": 1656,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "Fanola чоколадни и црвени + 6%",
+   "description": "Fanola .8 чоколадни и .66 црвени, со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 1652,
+     "quantity": 1
+    },
+    {
+     "product_id": 1653,
+     "quantity": 1
+    },
+    {
+     "product_id": 1654,
+     "quantity": 1
+    },
+    {
+     "product_id": 1655,
+     "quantity": 1
+    },
+    {
+     "product_id": 78,
+     "quantity": 1
+    },
+    {
+     "product_id": 65,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "Fanola светли руси + оксидант 12%",
+   "description": "Fanola 10-ки и Hydrogen 12% 1L за светлење.",
+   "products": [
+    {
+     "product_id": 16,
+     "quantity": 1
+    },
+    {
+     "product_id": 18,
+     "quantity": 1
+    },
+    {
+     "product_id": 36,
+     "quantity": 1
+    },
+    {
+     "product_id": 53,
+     "quantity": 1
+    },
+    {
+     "product_id": 94,
+     "quantity": 1
+    },
+    {
+     "product_id": 73,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola супер руси 11 + 12%",
+   "description": "Fanola 11.x супер руси и Hydrogen 12% 1L.",
+   "products": [
+    {
+     "product_id": 341,
+     "quantity": 1
+    },
+    {
+     "product_id": 346,
+     "quantity": 1
+    },
+    {
+     "product_id": 345,
+     "quantity": 1
+    },
+    {
+     "product_id": 344,
+     "quantity": 1
+    },
+    {
+     "product_id": 343,
+     "quantity": 1
+    },
+    {
+     "product_id": 342,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola супер руси 12 + 12%",
+   "description": "Fanola 12.x и 11.x супер руси со Hydrogen 12% 1L.",
+   "products": [
+    {
+     "product_id": 337,
+     "quantity": 1
+    },
+    {
+     "product_id": 336,
+     "quantity": 1
+    },
+    {
+     "product_id": 339,
+     "quantity": 1
+    },
+    {
+     "product_id": 340,
+     "quantity": 1
+    },
+    {
+     "product_id": 341,
+     "quantity": 1
+    },
+    {
+     "product_id": 346,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola салонски старт 10 бои",
+   "description": "10 најбарани Fanola бои, Hydrogen 9% 1L и оксидант 6%.",
+   "products": [
+    {
+     "product_id": 1,
+     "quantity": 1
+    },
+    {
+     "product_id": 3,
+     "quantity": 1
+    },
+    {
+     "product_id": 4,
+     "quantity": 1
+    },
+    {
+     "product_id": 8,
+     "quantity": 1
+    },
+    {
+     "product_id": 10,
+     "quantity": 1
+    },
+    {
+     "product_id": 30,
+     "quantity": 1
+    },
+    {
+     "product_id": 11,
+     "quantity": 1
+    },
+    {
+     "product_id": 18,
+     "quantity": 1
+    },
+    {
+     "product_id": 6,
+     "quantity": 1
+    },
+    {
+     "product_id": 20,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 4
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy природни + активатор 6%",
+   "description": "6 Oro Therapy природни бои и Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 98,
+     "quantity": 1
+    },
+    {
+     "product_id": 100,
+     "quantity": 1
+    },
+    {
+     "product_id": 102,
+     "quantity": 1
+    },
+    {
+     "product_id": 108,
+     "quantity": 1
+    },
+    {
+     "product_id": 101,
+     "quantity": 1
+    },
+    {
+     "product_id": 151,
+     "quantity": 1
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy интензивни + 6%",
+   "description": "Oro .00 нијанси за покривање седи и Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 109,
+     "quantity": 1
+    },
+    {
+     "product_id": 125,
+     "quantity": 1
+    },
+    {
+     "product_id": 153,
+     "quantity": 1
+    },
+    {
+     "product_id": 1731,
+     "quantity": 1
+    },
+    {
+     "product_id": 190,
+     "quantity": 1
+    },
+    {
+     "product_id": 207,
+     "quantity": 1
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy пепелави + активатор 9%",
+   "description": "Oro .1 од 5 до 10 и Activator 9% 1L.",
+   "products": [
+    {
+     "product_id": 110,
+     "quantity": 1
+    },
+    {
+     "product_id": 128,
+     "quantity": 1
+    },
+    {
+     "product_id": 156,
+     "quantity": 1
+    },
+    {
+     "product_id": 177,
+     "quantity": 1
+    },
+    {
+     "product_id": 192,
+     "quantity": 1
+    },
+    {
+     "product_id": 212,
+     "quantity": 1
+    },
+    {
+     "product_id": 268,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy бисерни + 9%",
+   "description": "Oro .13 и .14 нијанси со Activator 9% 1L.",
+   "products": [
+    {
+     "product_id": 130,
+     "quantity": 1
+    },
+    {
+     "product_id": 158,
+     "quantity": 1
+    },
+    {
+     "product_id": 179,
+     "quantity": 1
+    },
+    {
+     "product_id": 194,
+     "quantity": 1
+    },
+    {
+     "product_id": 216,
+     "quantity": 1
+    },
+    {
+     "product_id": 133,
+     "quantity": 1
+    },
+    {
+     "product_id": 268,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy кафеави + 6%",
+   "description": "Oro .14 и .2 кафеави нијанси со Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 103,
+     "quantity": 1
+    },
+    {
+     "product_id": 112,
+     "quantity": 1
+    },
+    {
+     "product_id": 161,
+     "quantity": 1
+    },
+    {
+     "product_id": 180,
+     "quantity": 1
+    },
+    {
+     "product_id": 104,
+     "quantity": 1
+    },
+    {
+     "product_id": 115,
+     "quantity": 1
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy златни + 6%",
+   "description": "Oro .3 и .31 златни нијанси со Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 116,
+     "quantity": 1
+    },
+    {
+     "product_id": 135,
+     "quantity": 1
+    },
+    {
+     "product_id": 163,
+     "quantity": 1
+    },
+    {
+     "product_id": 166,
+     "quantity": 1
+    },
+    {
+     "product_id": 183,
+     "quantity": 1
+    },
+    {
+     "product_id": 185,
+     "quantity": 1
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy бакарни и црвени + 6%",
+   "description": "Oro бакарни .4, црвени .6 и .5 со Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 143,
+     "quantity": 1
+    },
+    {
+     "product_id": 147,
+     "quantity": 1
+    },
+    {
+     "product_id": 170,
+     "quantity": 1
+    },
+    {
+     "product_id": 187,
+     "quantity": 1
+    },
+    {
+     "product_id": 119,
+     "quantity": 1
+    },
+    {
+     "product_id": 105,
+     "quantity": 1
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy махагони + 6%",
+   "description": "Oro .606 нијанси по 2 туби и Activator 6% 1L.",
+   "products": [
+    {
+     "product_id": 122,
+     "quantity": 2
+    },
+    {
+     "product_id": 149,
+     "quantity": 2
+    },
+    {
+     "product_id": 171,
+     "quantity": 2
+    },
+    {
+     "product_id": 266,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy руси + активатор 9%",
+   "description": "Oro 9-ки и 10-ки со Activator 9% 1L.",
+   "products": [
+    {
+     "product_id": 188,
+     "quantity": 1
+    },
+    {
+     "product_id": 196,
+     "quantity": 1
+    },
+    {
+     "product_id": 198,
+     "quantity": 1
+    },
+    {
+     "product_id": 203,
+     "quantity": 1
+    },
+    {
+     "product_id": 220,
+     "quantity": 1
+    },
+    {
+     "product_id": 222,
+     "quantity": 1
+    },
+    {
+     "product_id": 268,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy супер руси + 12%",
+   "description": "Oro 11-ки и светли руси со Activator 12% 1L.",
+   "products": [
+    {
+     "product_id": 1728,
+     "quantity": 1
+    },
+    {
+     "product_id": 228,
+     "quantity": 1
+    },
+    {
+     "product_id": 230,
+     "quantity": 1
+    },
+    {
+     "product_id": 182,
+     "quantity": 1
+    },
+    {
+     "product_id": 209,
+     "quantity": 1
+    },
+    {
+     "product_id": 200,
+     "quantity": 1
+    },
+    {
+     "product_id": 269,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy тонирање + 3%",
+   "description": "6 Oro нијанси за тонирање и Activator 3% 1L.",
+   "products": [
+    {
+     "product_id": 220,
+     "quantity": 1
+    },
+    {
+     "product_id": 196,
+     "quantity": 1
+    },
+    {
+     "product_id": 182,
+     "quantity": 1
+    },
+    {
+     "product_id": 216,
+     "quantity": 1
+    },
+    {
+     "product_id": 194,
+     "quantity": 1
+    },
+    {
+     "product_id": 224,
+     "quantity": 1
+    },
+    {
+     "product_id": 265,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line природни + оксидант 6%",
+   "description": "6 RR природни бои и 900ml оксидант 6%.",
+   "products": [
+    {
+     "product_id": 106,
+     "quantity": 1
+    },
+    {
+     "product_id": 107,
+     "quantity": 1
+    },
+    {
+     "product_id": 111,
+     "quantity": 1
+    },
+    {
+     "product_id": 113,
+     "quantity": 1
+    },
+    {
+     "product_id": 114,
+     "quantity": 1
+    },
+    {
+     "product_id": 138,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line интензивни + 6%",
+   "description": "RR .00 и .003 нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 353,
+     "quantity": 1
+    },
+    {
+     "product_id": 354,
+     "quantity": 1
+    },
+    {
+     "product_id": 117,
+     "quantity": 1
+    },
+    {
+     "product_id": 118,
+     "quantity": 1
+    },
+    {
+     "product_id": 120,
+     "quantity": 1
+    },
+    {
+     "product_id": 123,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line покривање седи + 6%",
+   "description": "RR .01 нијанси за седа коса и оксидант 6%.",
+   "products": [
+    {
+     "product_id": 131,
+     "quantity": 1
+    },
+    {
+     "product_id": 132,
+     "quantity": 1
+    },
+    {
+     "product_id": 134,
+     "quantity": 1
+    },
+    {
+     "product_id": 136,
+     "quantity": 1
+    },
+    {
+     "product_id": 159,
+     "quantity": 1
+    },
+    {
+     "product_id": 160,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line пепелави + оксидант 9%",
+   "description": "RR .11 нијанси и Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 142,
+     "quantity": 1
+    },
+    {
+     "product_id": 144,
+     "quantity": 1
+    },
+    {
+     "product_id": 146,
+     "quantity": 1
+    },
+    {
+     "product_id": 148,
+     "quantity": 1
+    },
+    {
+     "product_id": 150,
+     "quantity": 1
+    },
+    {
+     "product_id": 162,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line златни + 6%",
+   "description": "RR .3 и .32 златни нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 164,
+     "quantity": 1
+    },
+    {
+     "product_id": 165,
+     "quantity": 1
+    },
+    {
+     "product_id": 167,
+     "quantity": 1
+    },
+    {
+     "product_id": 168,
+     "quantity": 1
+    },
+    {
+     "product_id": 152,
+     "quantity": 1
+    },
+    {
+     "product_id": 155,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line бакарни + 6%",
+   "description": "RR .4 и .44 бакарни нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 181,
+     "quantity": 1
+    },
+    {
+     "product_id": 184,
+     "quantity": 1
+    },
+    {
+     "product_id": 186,
+     "quantity": 1
+    },
+    {
+     "product_id": 189,
+     "quantity": 1
+    },
+    {
+     "product_id": 176,
+     "quantity": 1
+    },
+    {
+     "product_id": 178,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line црвени + 6%",
+   "description": "RR .66, .55 и .5 црвени нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 210,
+     "quantity": 1
+    },
+    {
+     "product_id": 211,
+     "quantity": 1
+    },
+    {
+     "product_id": 213,
+     "quantity": 1
+    },
+    {
+     "product_id": 214,
+     "quantity": 1
+    },
+    {
+     "product_id": 218,
+     "quantity": 1
+    },
+    {
+     "product_id": 219,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line кафеави + 6%",
+   "description": "RR .7 и .71 кафеави нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 221,
+     "quantity": 1
+    },
+    {
+     "product_id": 225,
+     "quantity": 1
+    },
+    {
+     "product_id": 227,
+     "quantity": 1
+    },
+    {
+     "product_id": 242,
+     "quantity": 1
+    },
+    {
+     "product_id": 1779,
+     "quantity": 1
+    },
+    {
+     "product_id": 1783,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line беж нијанси + 6%",
+   "description": "RR .34, .43 и .31 беж нијанси со оксидант 6%.",
+   "products": [
+    {
+     "product_id": 204,
+     "quantity": 1
+    },
+    {
+     "product_id": 206,
+     "quantity": 1
+    },
+    {
+     "product_id": 208,
+     "quantity": 1
+    },
+    {
+     "product_id": 172,
+     "quantity": 1
+    },
+    {
+     "product_id": 174,
+     "quantity": 1
+    },
+    {
+     "product_id": 1774,
+     "quantity": 1
+    },
+    {
+     "product_id": 321,
+     "quantity": 6
+    }
+   ]
+  },
+  {
+   "name": "RR Line руси + оксидант 9%",
+   "description": "RR 9-ки и 10-ки со Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 140,
+     "quantity": 1
+    },
+    {
+     "product_id": 201,
+     "quantity": 1
+    },
+    {
+     "product_id": 157,
+     "quantity": 1
+    },
+    {
+     "product_id": 141,
+     "quantity": 1
+    },
+    {
+     "product_id": 217,
+     "quantity": 1
+    },
+    {
+     "product_id": 215,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line супер руси + 12%",
+   "description": "RR 11-ки и 12-ки со Hydrogen 12% 1L.",
+   "products": [
+    {
+     "product_id": 229,
+     "quantity": 1
+    },
+    {
+     "product_id": 1765,
+     "quantity": 1
+    },
+    {
+     "product_id": 231,
+     "quantity": 1
+    },
+    {
+     "product_id": 233,
+     "quantity": 1
+    },
+    {
+     "product_id": 234,
+     "quantity": 1
+    },
+    {
+     "product_id": 243,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line платина + 12%",
+   "description": "RR платинести и пепелави нијанси со Hydrogen 12% 1L.",
+   "products": [
+    {
+     "product_id": 1768,
+     "quantity": 1
+    },
+    {
+     "product_id": 244,
+     "quantity": 1
+    },
+    {
+     "product_id": 1766,
+     "quantity": 1
+    },
+    {
+     "product_id": 1767,
+     "quantity": 1
+    },
+    {
+     "product_id": 148,
+     "quantity": 1
+    },
+    {
+     "product_id": 150,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow ICE руси + Violet 25vol",
+   "description": "No Yellow 8, 9 и 10 ICE по 2 туби и Hydrogen Violet 25vol.",
+   "products": [
+    {
+     "product_id": 255,
+     "quantity": 2
+    },
+    {
+     "product_id": 254,
+     "quantity": 2
+    },
+    {
+     "product_id": 253,
+     "quantity": 2
+    },
+    {
+     "product_id": 407,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow пастел тонери + 5vol",
+   "description": "6 No Yellow тонери и Hydrogen Violet 5vol 1L.",
+   "products": [
+    {
+     "product_id": 1700,
+     "quantity": 1
+    },
+    {
+     "product_id": 1701,
+     "quantity": 1
+    },
+    {
+     "product_id": 1702,
+     "quantity": 1
+    },
+    {
+     "product_id": 1703,
+     "quantity": 1
+    },
+    {
+     "product_id": 1704,
+     "quantity": 1
+    },
+    {
+     "product_id": 259,
+     "quantity": 1
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow супер светлење + 25vol",
+   "description": "No Yellow S.1202, S.1322 по 2 и ML.00 со Violet 25vol.",
+   "products": [
+    {
+     "product_id": 252,
+     "quantity": 2
+    },
+    {
+     "product_id": 251,
+     "quantity": 2
+    },
+    {
+     "product_id": 250,
+     "quantity": 1
+    },
+    {
+     "product_id": 407,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow розе тонери + 5vol",
+   "description": "T.ROSE и T.ROSEGOLD по 3 туби и Hydrogen Violet 5vol.",
+   "products": [
+    {
+     "product_id": 1702,
+     "quantity": 3
+    },
+    {
+     "product_id": 1703,
+     "quantity": 3
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow сребрени тонери + 5vol",
+   "description": "T.11, T.VIO и T.BLUE по 2 туби и Hydrogen Violet 5vol.",
+   "products": [
+    {
+     "product_id": 259,
+     "quantity": 2
+    },
+    {
+     "product_id": 1704,
+     "quantity": 2
+    },
+    {
+     "product_id": 1700,
+     "quantity": 2
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola бел блонд + оксиданти",
+   "description": "2× White Bleaching 500g, Hydrogen 9% и 12% 1L.",
+   "products": [
+    {
+     "product_id": 580,
+     "quantity": 2
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Виолетов блонд + оксиданти",
+   "description": "2× Violet Bleaching 500g, Hydrogen 9% и 12% 1L.",
+   "products": [
+    {
+     "product_id": 581,
+     "quantity": 2
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Fanola блонд + супер руси",
+   "description": "White Bleaching 500g, Fanola 12.1, 12.2, 12.7 и Hydrogen 12%.",
+   "products": [
+    {
+     "product_id": 580,
+     "quantity": 1
+    },
+    {
+     "product_id": 337,
+     "quantity": 1
+    },
+    {
+     "product_id": 339,
+     "quantity": 1
+    },
+    {
+     "product_id": 340,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Виолетов блонд + No Yellow тонери",
+   "description": "Violet Bleaching 500g, тонери T.11, T.VIO, T.ROSE и Violet 5vol.",
+   "products": [
+    {
+     "product_id": 581,
+     "quantity": 1
+    },
+    {
+     "product_id": 259,
+     "quantity": 1
+    },
+    {
+     "product_id": 1704,
+     "quantity": 1
+    },
+    {
+     "product_id": 1702,
+     "quantity": 1
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow 9 Tone блонд + 25vol",
+   "description": "9 Tone Bleaching Powder 500g и 2× Hydrogen Violet 25vol.",
+   "products": [
+    {
+     "product_id": 390,
+     "quantity": 1
+    },
+    {
+     "product_id": 407,
+     "quantity": 2
+    }
+   ]
+  },
+  {
+   "name": "No Yellow 9 Tone + ICE руси",
+   "description": "9 Tone Bleaching Powder, 8/9/10 ICE и Violet 25vol.",
+   "products": [
+    {
+     "product_id": 390,
+     "quantity": 1
+    },
+    {
+     "product_id": 255,
+     "quantity": 1
+    },
+    {
+     "product_id": 254,
+     "quantity": 1
+    },
+    {
+     "product_id": 253,
+     "quantity": 1
+    },
+    {
+     "product_id": 407,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow блонд крем + 25vol",
+   "description": "Violet Bleaching Cream 500g и Hydrogen Violet 25vol.",
+   "products": [
+    {
+     "product_id": 408,
+     "quantity": 1
+    },
+    {
+     "product_id": 407,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow Black Lightening + тонер",
+   "description": "Black Lightening Cream 500g, Violet 25vol и тонер T.11.",
+   "products": [
+    {
+     "product_id": 394,
+     "quantity": 1
+    },
+    {
+     "product_id": 407,
+     "quantity": 1
+    },
+    {
+     "product_id": 259,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow Green Lightener + 5vol",
+   "description": "Green Lightener 450g и Hydrogen Violet 5vol 1L.",
+   "products": [
+    {
+     "product_id": 405,
+     "quantity": 1
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow Violet Lightener + 5vol",
+   "description": "Violet Lightener 450g и Hydrogen Violet 5vol 1L.",
+   "products": [
+    {
+     "product_id": 411,
+     "quantity": 1
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro De-Color + активатор 9%",
+   "description": "De-Color Keratin Blue Bleaching 500g и Activator 9% 1L.",
+   "products": [
+    {
+     "product_id": 287,
+     "quantity": 1
+    },
+    {
+     "product_id": 268,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro De-Color + активатор 12%",
+   "description": "De-Color Keratin Blue Bleaching 500g и Activator 12% 1L.",
+   "products": [
+    {
+     "product_id": 287,
+     "quantity": 1
+    },
+    {
+     "product_id": 269,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro De-Color + супер руси",
+   "description": "De-Color 500g, Oro 11.0, 11.1, 11.7 и Activator 12%.",
+   "products": [
+    {
+     "product_id": 287,
+     "quantity": 1
+    },
+    {
+     "product_id": 1728,
+     "quantity": 1
+    },
+    {
+     "product_id": 228,
+     "quantity": 1
+    },
+    {
+     "product_id": 230,
+     "quantity": 1
+    },
+    {
+     "product_id": 269,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro платина кит",
+   "description": "De-Color 500g, Activator 3% и Oro 10.21, 9.21 за тонирање.",
+   "products": [
+    {
+     "product_id": 287,
+     "quantity": 1
+    },
+    {
+     "product_id": 265,
+     "quantity": 1
+    },
+    {
+     "product_id": 220,
+     "quantity": 1
+    },
+    {
+     "product_id": 196,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line блонд + 9%",
+   "description": "Blue Bleaching Powder 500g и Hydrogen 9% 1L.",
+   "products": [
+    {
+     "product_id": 582,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line блонд + супер руси",
+   "description": "Blue Bleaching 500g, RR 12.0, 12.1, 12.2 и Hydrogen 12%.",
+   "products": [
+    {
+     "product_id": 582,
+     "quantity": 1
+    },
+    {
+     "product_id": 233,
+     "quantity": 1
+    },
+    {
+     "product_id": 234,
+     "quantity": 1
+    },
+    {
+     "product_id": 243,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Балајаж кит Fanola",
+   "description": "White Bleaching 500g, Hydrogen 9% и Fanola 10.1, 10.13, 9.13 за тон.",
+   "products": [
+    {
+     "product_id": 580,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 18,
+     "quantity": 1
+    },
+    {
+     "product_id": 36,
+     "quantity": 1
+    },
+    {
+     "product_id": 21,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Виолетов блонд + RR тонери",
+   "description": "Violet Bleaching 500g, RR 10.11, 11.1, 12.1 и Hydrogen 12%.",
+   "products": [
+    {
+     "product_id": 581,
+     "quantity": 1
+    },
+    {
+     "product_id": 150,
+     "quantity": 1
+    },
+    {
+     "product_id": 231,
+     "quantity": 1
+    },
+    {
+     "product_id": 234,
+     "quantity": 1
+    },
+    {
+     "product_id": 318,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Мега блонд пакет",
+   "description": "3× Violet Bleaching 500g и 2× Hydrogen 12% 1L.",
+   "products": [
+    {
+     "product_id": 581,
+     "quantity": 3
+    },
+    {
+     "product_id": 318,
+     "quantity": 2
+    }
+   ]
+  },
+  {
+   "name": "Нежно светлење Fanola",
+   "description": "White Bleaching 500g, Hydrogen 3% и 9% 1L.",
+   "products": [
+    {
+     "product_id": 580,
+     "quantity": 1
+    },
+    {
+     "product_id": 315,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    }
+   ]
+  }
+ ]
+}
