@@ -18,6 +18,7 @@ class ImportBundleOffersTest extends TestCase
         $withPhoto = Product::factory()->create(['visible_to_stylists' => true]);
         $withPhoto->images()->create(['name' => 'a.jpg', 'variant' => 'detail', 'sort_order' => 0]);
         $noPhoto = Product::factory()->create(['visible_to_stylists' => true]);
+        $noPhoto->images()->delete(); // the factory may add a photo
 
         $file = 'storage/framework/testing/offers-test.json';
         file_put_contents(base_path($file), json_encode([
