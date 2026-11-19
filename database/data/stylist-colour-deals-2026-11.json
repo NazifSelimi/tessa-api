@@ -1,0 +1,214 @@
+{
+ "audience": "stylist",
+ "promotion_type": "mix_match",
+ "ends_at": "2026-12-02 23:59:59",
+ "deactivate": [
+  "Fanola природни темни + оксидант 6%",
+  "Fanola интензивни природни + 6%",
+  "Fanola пепелави + оксидант 9%",
+  "Fanola интензивни пепелави + 9%",
+  "Fanola бисерни + оксидант 9%",
+  "Fanola ладни кафеави + 6%",
+  "Fanola виолетови + оксидант 6%",
+  "Fanola чоколадни и црвени + 6%",
+  "Fanola светли руси + оксидант 12%",
+  "Fanola супер руси 11 + 12%",
+  "Fanola супер руси 12 + 12%",
+  "Fanola салонски старт 10 бои",
+  "Oro Therapy природни + активатор 6%",
+  "Oro Therapy интензивни + 6%",
+  "Oro Therapy пепелави + активатор 9%",
+  "Oro Therapy бисерни + 9%",
+  "Oro Therapy кафеави + 6%",
+  "Oro Therapy златни + 6%",
+  "Oro Therapy бакарни и црвени + 6%",
+  "Oro Therapy махагони + 6%",
+  "Oro Therapy руси + активатор 9%",
+  "Oro Therapy супер руси + 12%",
+  "Oro Therapy тонирање + 3%",
+  "RR Line природни + оксидант 6%",
+  "RR Line интензивни + 6%",
+  "RR Line покривање седи + 6%",
+  "RR Line пепелави + оксидант 9%",
+  "RR Line златни + 6%",
+  "RR Line бакарни + 6%",
+  "RR Line црвени + 6%",
+  "RR Line кафеави + 6%",
+  "RR Line беж нијанси + 6%",
+  "RR Line руси + оксидант 9%",
+  "RR Line супер руси + 12%",
+  "RR Line платина + 12%",
+  "No Yellow ICE руси + Violet 25vol",
+  "No Yellow пастел тонери + 5vol",
+  "No Yellow супер светлење + 25vol",
+  "No Yellow розе тонери + 5vol",
+  "No Yellow сребрени тонери + 5vol",
+  "Fanola блонд + супер руси",
+  "Виолетов блонд + No Yellow тонери",
+  "No Yellow 9 Tone + ICE руси",
+  "No Yellow Black Lightening + тонер",
+  "Oro De-Color + супер руси",
+  "Oro платина кит",
+  "RR Line блонд + супер руси",
+  "Балајаж кит Fanola",
+  "Виолетов блонд + RR тонери"
+ ],
+ "offers": [
+  {
+   "name": "Fanola бои по избор",
+   "description": "Изберете било кои Fanola нијанси. 10 бои = оксидант гратис, 20 = +1 боја гратис, 30 = +3 бои гратис.",
+   "promotion_type": "mix_match",
+   "product_family_id": 1,
+   "tiers": [
+    {
+     "min": 10,
+     "free": 0,
+     "gift": true
+    },
+    {
+     "min": 20,
+     "free": 1,
+     "gift": true
+    },
+    {
+     "min": 30,
+     "free": 3,
+     "gift": true
+    }
+   ],
+   "products": [
+    {
+     "product_id": 318,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 315,
+     "quantity": 1
+    },
+    {
+     "product_id": 572,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy бои по избор",
+   "description": "Изберете било кои Oro Therapy нијанси. 10 бои = активатор гратис, 20 = +1 боја, 30 = +3 бои гратис.",
+   "promotion_type": "mix_match",
+   "product_family_id": 2,
+   "tiers": [
+    {
+     "min": 10,
+     "free": 0,
+     "gift": true
+    },
+    {
+     "min": 20,
+     "free": 1,
+     "gift": true
+    },
+    {
+     "min": 30,
+     "free": 3,
+     "gift": true
+    }
+   ],
+   "products": [
+    {
+     "product_id": 266,
+     "quantity": 1
+    },
+    {
+     "product_id": 268,
+     "quantity": 1
+    },
+    {
+     "product_id": 269,
+     "quantity": 1
+    },
+    {
+     "product_id": 265,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "RR Line бои по избор",
+   "description": "Изберете било кои RR Line нијанси. 10 бои = оксидант гратис, 20 = +1 боја, 30 = +3 бои гратис.",
+   "promotion_type": "mix_match",
+   "product_family_id": 3,
+   "tiers": [
+    {
+     "min": 10,
+     "free": 0,
+     "gift": true
+    },
+    {
+     "min": 20,
+     "free": 1,
+     "gift": true
+    },
+    {
+     "min": 30,
+     "free": 3,
+     "gift": true
+    }
+   ],
+   "products": [
+    {
+     "product_id": 318,
+     "quantity": 1
+    },
+    {
+     "product_id": 317,
+     "quantity": 1
+    },
+    {
+     "product_id": 315,
+     "quantity": 1
+    },
+    {
+     "product_id": 572,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow бои по избор",
+   "description": "Изберете било кои No Yellow бои и тонери. 6 = Violet оксидант гратис, 12 = +1, 18 = +2 гратис.",
+   "promotion_type": "mix_match",
+   "product_family_id": 4,
+   "tiers": [
+    {
+     "min": 6,
+     "free": 0,
+     "gift": true
+    },
+    {
+     "min": 12,
+     "free": 1,
+     "gift": true
+    },
+    {
+     "min": 18,
+     "free": 2,
+     "gift": true
+    }
+   ],
+   "products": [
+    {
+     "product_id": 407,
+     "quantity": 1
+    },
+    {
+     "product_id": 406,
+     "quantity": 1
+    }
+   ]
+  }
+ ]
+}

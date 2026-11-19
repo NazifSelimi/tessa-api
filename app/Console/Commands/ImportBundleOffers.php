@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
  * Creates the bundle offers listed in a JSON file (database/data/*.json).
  * Offers whose name already exists are left as they are, so it can run twice.
  * An offer with a product that has no photo or is hidden from its audience is
- * saved as a draft, for an admin to fix and switch on.
+ * saved as a draft, for an admin to fix and switch on. Names under
+ * "deactivate" are switched to draft (not deleted).
  */
 class ImportBundleOffers extends Command
 {
@@ -63,24 +64,37 @@ class ImportBundleOffers extends Command
 
                 if ($this->option('dry-run')) continue;
 
+                $type = $offer['promotion_type'] ?? $data['promotion_type'] ?? 'percentage';
                 $bundle = Bundle::create([
                     'name' => $offer['name'],
                     'description' => $offer['description'] ?? null,
-                    'audience' => $audience,
-                    'promotion_type' => $data['promotion_type'] ?? 'percentage',
-                    'discount_percentage' => $data['discount_percentage'] ?? null,
+                    'audience' => $offer['audience'] ?? $audience,
+                    'promotion_type' => $type,
+                    // "Pick any colours": the colour line and reward steps; products are the gift choices.
+                    'product_family_id' => $type === Bundle::MIX_MATCH ? ($offer['product_family_id'] ?? null) : null,
+                    'tiers' => $type === Bundle::MIX_MATCH ? ($offer['tiers'] ?? null) : null,
+                    'discount_percentage' => $offer['discount_percentage'] ?? $data['discount_percentage'] ?? null,
                     'is_active' => $live,
                     'is_featured' => false,
                     'starts_at' => now(),
                     'ends_at' => $data['ends_at'] ?? null,
                 ]);
                 $bundle->products()->sync(collect($offer['products'])->mapWithKeys(fn ($line) => [
-                    $line['product_id'] => ['quantity' => $line['quantity'], 'is_bonus' => false, 'bonus_quantity' => 0],
+                    $line['product_id'] => $type === Bundle::MIX_MATCH
+                        ? ['quantity' => 1, 'is_bonus' => true, 'bonus_quantity' => 1]
+                        : ['quantity' => $line['quantity'], 'is_bonus' => false, 'bonus_quantity' => 0],
                 ])->all());
             }
         });
 
-        $this->info(($this->option('dry-run') ? 'Dry run: ' : '') . "{$created} live, {$drafts} drafts, {$skipped} already there.");
+        // Offers this list replaces become drafts (kept, so they can be switched back on).
+        $hidden = 0;
+        foreach ($data['deactivate'] ?? [] as $name) {
+            $query = Bundle::query()->where('name', $name)->where('is_active', true);
+            $hidden += $this->option('dry-run') ? $query->count() : $query->update(['is_active' => false]);
+        }
+
+        $this->info(($this->option('dry-run') ? 'Dry run: ' : '') . "{$created} live, {$drafts} drafts, {$skipped} already there, {$hidden} older offers set to draft.");
 
         return self::SUCCESS;
     }
