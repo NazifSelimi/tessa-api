@@ -16,7 +16,7 @@ class BundleController extends Controller
         $viewer = ApiUserResolver::fromRequest($request);
 
         $bundles = Bundle::query()
-            ->with(['products.images'])
+            ->with(['products.images', 'family'])
             ->where('is_dynamic', false)
             ->where('is_active', true)
             ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))

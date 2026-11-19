@@ -99,7 +99,9 @@ class PricingService
         $prices = [];
         $quotedLines = [];
 
+        $familyOf = [];
         foreach ($lines as ['product' => $product, 'qty' => $qty]) {
+            $familyOf[$product->id] = $product->product_family_id;
             $unitPrice = $product->resolvePrice($isStylist);
             if ($unitPrice <= 0) {
                 throw ValidationException::withMessages([
@@ -126,6 +128,12 @@ class PricingService
 
         ['discount' => $bundleDiscount, 'applied' => $appliedBundles, 'skipped' => $skippedBundles]
             = $this->bundleDiscount($bundleIds, $quantities, $prices, $user, $strict);
+
+        // "Pick any colours" offers apply by themselves once the cart reaches a step.
+        ['discount' => $dealDiscount, 'applied' => $dealIds, 'progress' => $colourDeals]
+            = $this->colourDeals($user, $quantities, $prices, $familyOf);
+        $bundleDiscount += $dealDiscount;
+        $appliedBundles = array_merge($appliedBundles, $dealIds);
 
         $couponDiscount = $coupon ? $coupon->calculateDiscount(max(0, $subtotal - $bundleDiscount)) : 0.0;
 
@@ -166,6 +174,7 @@ class PricingService
             'discountLimited' => $limited,
             'appliedBundleIds' => $appliedBundles,
             'skippedBundles' => $skippedBundles,
+            'colourDeals' => $colourDeals,
             'couponCode' => $coupon?->code,
             'shipping' => $shipping,
             'amountToFreeShipping' => round(max(0, self::FREE_SHIPPING_FROM - $subtotal), 2),
@@ -298,6 +307,90 @@ class PricingService
         ];
     }
 
+    /**
+     * "Pick any colours" offers: every shade of the offer's colour line in the
+     * cart counts. The highest step reached gives its free colours (the
+     * cheapest units) and, when the step includes it, one gift product from the
+     * offer's list that is in the cart (an oxidant or activator). Also returns
+     * how far each offer is, so the cart can say "4 more for a free oxidant".
+     */
+    private function colourDeals(?User $user, array $quantities, array $prices, array $familyOf): array
+    {
+        $result = ['discount' => 0.0, 'applied' => [], 'progress' => []];
+        $families = array_filter(array_unique(array_values($familyOf)));
+        if (! $families || ! app(FeatureService::class)->enabled('bundles')) {
+            return $result;
+        }
+
+        $deals = Bundle::query()->with(['products', 'family'])
+            ->where('promotion_type', Bundle::MIX_MATCH)
+            ->whereIn('product_family_id', $families)
+            ->get()
+            ->filter(fn (Bundle $deal) => $deal->isRunning() && $deal->isAvailableFor($user));
+
+        $giftUsed = [];
+        foreach ($deals as $deal) {
+            $tiers = $deal->sortedTiers();
+            $pool = array_filter($quantities, fn ($qty, $id) => (int) ($familyOf[$id] ?? 0) === (int) $deal->product_family_id, ARRAY_FILTER_USE_BOTH);
+            $count = array_sum($pool);
+            if (! $tiers || $count === 0) {
+                continue;
+            }
+
+            $reached = null;
+            $next = null;
+            foreach ($tiers as $tier) {
+                if ($count >= $tier['min']) {
+                    $reached = $tier;
+                } elseif (! $next) {
+                    $next = $tier;
+                }
+            }
+
+            $saving = 0.0;
+            $giftProductId = null;
+            if ($reached) {
+                if ($reached['free'] > 0) {
+                    $units = [];
+                    foreach ($pool as $id => $qty) {
+                        array_push($units, ...array_fill(0, $qty, (float) $prices[$id]));
+                    }
+                    sort($units);
+                    $saving += array_sum(array_slice($units, 0, $reached['free']));
+                }
+                if ($reached['gift']) {
+                    foreach ($deal->products as $option) {
+                        if (($quantities[$option->id] ?? 0) > ($giftUsed[$option->id] ?? 0)) {
+                            $giftUsed[$option->id] = ($giftUsed[$option->id] ?? 0) + 1;
+                            $giftProductId = (string) $option->id;
+                            $saving += (float) $prices[$option->id];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ($saving > 0) {
+                $result['discount'] += $saving;
+                $result['applied'][] = (string) $deal->id;
+            }
+            $result['progress'][] = [
+                'bundleId' => (string) $deal->id,
+                'name' => $deal->name,
+                'familyName' => $deal->family?->name,
+                'count' => $count,
+                'reached' => $reached,
+                'next' => $next ? $next + ['need' => $next['min'] - $count] : null,
+                'saving' => round($saving, 2),
+                'giftProductId' => $giftProductId,
+                'giftOptions' => $deal->products->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+                'giftMissing' => (bool) ($reached['gift'] ?? false) && ! $giftProductId,
+            ];
+        }
+
+        return $result;
+    }
+
     private function wholeDenars(float $amount): float
     {
         return (float) floor($amount + 0.0001);
@@ -324,6 +417,8 @@ class PricingService
         foreach (array_diff(array_map('strval', $bundleIds), $bundles->pluck('id')->map(fn ($id) => (string) $id)->all()) as $missing) {
             $fail($missing, 'One or more selected offers are unavailable.');
         }
+        // Colour deals are priced by colourDeals(), whichever products the cart has.
+        $bundles = $bundles->reject(fn (Bundle $bundle) => $bundle->isMixMatch());
 
         $remaining = $quantities;
         $isStylist = $user?->isStylist() ?? false;

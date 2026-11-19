@@ -26,6 +26,16 @@ class BundleResource extends JsonResource
             'discountPercentage' => $this->discount_percentage ? (float) $this->discount_percentage : null,
             'promotionType'      => $this->promotion_type,
             'bundlePrice'        => $this->bundle_price ? (float) $this->bundle_price : null,
+            // "Pick any colours" offers: the colour line, its reward steps, and one shade to open the shade list from.
+            'familyId'           => $this->product_family_id ? (string) $this->product_family_id : null,
+            'familyName'         => $this->when((bool) $this->product_family_id, fn () => $this->family?->name),
+            'tiers'              => $this->isMixMatch() ? $this->sortedTiers() : null,
+            'familyProductId'    => $this->when($this->isMixMatch() && $this->product_family_id, function () {
+                $id = \App\Models\Product::query()->where('product_family_id', $this->product_family_id)
+                    ->orderByDesc('quantity')->orderBy('id')->value('id');
+
+                return $id ? (string) $id : null;
+            }),
             'audience'           => $this->audience,
             'isActive'           => (bool) $this->is_active,
             'isFeatured'         => (bool) $this->is_featured,

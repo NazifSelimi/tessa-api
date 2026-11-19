@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Bundle extends Model
@@ -18,6 +19,8 @@ class Bundle extends Model
         'discount_percentage',
         'audience',
         'promotion_type',
+        'product_family_id',
+        'tiers',
         'bundle_price',
         'is_active',
         'is_featured',
@@ -27,6 +30,7 @@ class Bundle extends Model
 
     protected $casts = [
         'is_dynamic' => 'boolean',
+        'tiers' => 'array',
         'discount_percentage' => 'decimal:2',
         'bundle_price' => 'decimal:2',
         'is_active' => 'boolean',
@@ -38,6 +42,40 @@ class Bundle extends Model
     /* ========================================= */
     /* RELATIONSHIPS                             */
     /* ========================================= */
+
+    public const MIX_MATCH = 'mix_match';
+
+    /** Colour line a "pick any colours" offer counts. */
+    public function family(): BelongsTo
+    {
+        return $this->belongsTo(ProductFamily::class, 'product_family_id');
+    }
+
+    public function isMixMatch(): bool
+    {
+        return $this->promotion_type === self::MIX_MATCH;
+    }
+
+    /** Reward steps, smallest first: [{min, free, gift}]. */
+    public function sortedTiers(): array
+    {
+        $tiers = array_values(array_filter($this->tiers ?? [], fn ($tier) => (int) ($tier['min'] ?? 0) > 0));
+        usort($tiers, fn ($a, $b) => (int) $a['min'] <=> (int) $b['min']);
+
+        return array_map(fn ($tier) => [
+            'min' => (int) $tier['min'],
+            'free' => max(0, (int) ($tier['free'] ?? 0)),
+            'gift' => (bool) ($tier['gift'] ?? false),
+        ], $tiers);
+    }
+
+    /** Running now: switched on and inside its dates. */
+    public function isRunning(): bool
+    {
+        return $this->is_active && ! $this->is_dynamic
+            && (! $this->starts_at || ! $this->starts_at->isFuture())
+            && (! $this->ends_at || ! $this->ends_at->isPast());
+    }
 
     public function products(): BelongsToMany
     {

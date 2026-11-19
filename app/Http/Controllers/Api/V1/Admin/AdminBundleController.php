@@ -14,13 +14,13 @@ class AdminBundleController extends Controller
     public function index()
     {
         return ApiResponse::ok(BundleResource::collection(
-            Bundle::query()->with(['products.images'])->latest()->get()
+            Bundle::query()->with(['products.images', 'family'])->latest()->get()
         )->resolve());
     }
 
     public function store(Request $request)
     {
-        $bundle = Bundle::create($this->validated($request));
+        $bundle = Bundle::create($this->clean($this->validated($request)));
         $this->syncProducts($bundle, $request->input('products', []));
 
         return ApiResponse::ok(new BundleResource($bundle->load('products.images')), 201);
@@ -28,7 +28,7 @@ class AdminBundleController extends Controller
 
     public function update(Request $request, Bundle $bundle)
     {
-        $bundle->update($this->validated($request, true));
+        $bundle->update($this->clean($this->validated($request, true)));
         if ($request->has('products')) {
             $this->syncProducts($bundle, $request->input('products', []));
         }
@@ -105,6 +105,25 @@ class AdminBundleController extends Controller
         }
     }
 
+    /** A colour line and steps only belong to "pick any colours" offers; tier free counts never exceed the step. */
+    private function clean(array $data): array
+    {
+        if (isset($data['promotion_type']) && $data['promotion_type'] !== Bundle::MIX_MATCH) {
+            $data['product_family_id'] = null;
+            $data['tiers'] = null;
+        }
+        if (! empty($data['tiers'])) {
+            $data['tiers'] = array_values(array_map(fn ($tier) => [
+                'min' => (int) $tier['min'],
+                'free' => min((int) ($tier['free'] ?? 0), (int) $tier['min']),
+                'gift' => (bool) ($tier['gift'] ?? false),
+            ], $data['tiers']));
+        }
+        unset($data['products']);
+
+        return $data;
+    }
+
     private function validated(Request $request, bool $updating = false): array
     {
         $required = $updating ? 'sometimes' : 'required';
@@ -113,14 +132,20 @@ class AdminBundleController extends Controller
             'name' => [$required, 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'audience' => [$required, 'in:' . implode(',', Bundle::AUDIENCES)],
-            'promotion_type' => [$required, 'in:percentage,fixed_price,bonus_items'],
+            'promotion_type' => [$required, 'in:percentage,fixed_price,bonus_items,mix_match'],
+            // "Pick any colours": the colour line and its reward steps; products = gift choices.
+            'product_family_id' => ['nullable', 'required_if:promotion_type,mix_match', 'integer', 'exists:product_families,id'],
+            'tiers' => ['nullable', 'required_if:promotion_type,mix_match', 'array', 'max:6'],
+            'tiers.*.min' => ['required', 'integer', 'min:1', 'max:500'],
+            'tiers.*.free' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'tiers.*.gift' => ['nullable', 'boolean'],
             'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'bundle_price' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'is_featured' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
-            'products' => [$updating ? 'sometimes' : 'required', 'array', 'min:1'],
+            'products' => [$updating ? 'sometimes' : 'required_unless:promotion_type,mix_match', 'array'],
             'products.*.product_id' => ['required', 'integer', 'distinct', 'exists:products,id'],
             'products.*.quantity' => ['required', 'integer', 'min:1'],
             'products.*.is_bonus' => ['nullable', 'boolean'],
