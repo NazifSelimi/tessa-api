@@ -167,6 +167,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::delete('/bundles/{bundle}', [AdminBundleController::class, 'destroy'])->middleware('feature:bundles');
             Route::post('/bundles/{bundle}/image', [AdminBundleController::class, 'uploadImage'])->middleware('feature:bundles');
             Route::delete('/bundles/{bundle}/image', [AdminBundleController::class, 'deleteImage'])->middleware('feature:bundles');
+            Route::post('/bundles/bulk', [AdminBundleController::class, 'bulk'])->middleware('feature:bundles');
             Route::post('/bundles/simulate', [AdminPricingController::class, 'simulateOffer'])->middleware('feature:bundles');
             Route::get('/pricing-settings', [AdminPricingController::class, 'settings']);
             Route::put('/pricing-settings', [AdminPricingController::class, 'updateSettings']);

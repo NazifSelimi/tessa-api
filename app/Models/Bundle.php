@@ -45,6 +45,18 @@ class Bundle extends Model
             ->withPivot('quantity', 'is_bonus', 'bonus_quantity');
     }
 
+    public const AUDIENCES = ['all', 'stylist', 'customer'];
+
+    /** Audiences whose offers this viewer sees (admins see all). */
+    public static function audiencesFor(?User $user): array
+    {
+        if ($user?->isAdmin()) {
+            return self::AUDIENCES;
+        }
+
+        return $user?->isStylist() ? ['all', 'stylist'] : ['all', 'customer'];
+    }
+
     public function isAvailableFor(?User $user): bool
     {
         if (!$this->is_active || $this->is_dynamic) {
@@ -59,6 +71,15 @@ class Bundle extends Model
             return false;
         }
 
-        return $this->audience !== 'stylist' || $user?->isStylist() || $user?->isAdmin();
+        if ($user?->isAdmin()) {
+            return true;
+        }
+
+        // all = everyone, stylist = salons only, customer = shoppers and guests only.
+        return match ($this->audience) {
+            'stylist' => (bool) $user?->isStylist(),
+            'customer' => ! $user?->isStylist(),
+            default => true,
+        };
     }
 }

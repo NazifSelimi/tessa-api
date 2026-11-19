@@ -241,7 +241,7 @@ class PricingService
             $profitAfter = $regular - $applied - $cost;
 
             $result[$audience] = [
-                'available' => $audience === 'retail' ? $bundle->audience !== 'stylist' : true,
+                'available' => $audience === 'retail' ? $bundle->audience !== 'stylist' : $bundle->audience !== 'customer',
                 'unpricedProducts' => $unpriced,
                 'regularPrice' => round($regular, 2),
                 'offerPrice' => round($regular - $saving, 2),

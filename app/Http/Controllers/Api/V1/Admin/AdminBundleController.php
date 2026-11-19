@@ -44,6 +44,41 @@ class AdminBundleController extends Controller
         return ApiResponse::ok(null, 200, [], 'Offer deleted successfully.');
     }
 
+    /** One change for many offers: switch on/off, feature, audience, discount, end date or delete. */
+    public function bulk(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', 'exists:bundles,id'],
+            'action' => ['required', 'in:activate,deactivate,feature,unfeature,audience,discount,ends_at,delete'],
+            'value' => ['nullable'],
+        ]);
+        $value = $data['value'] ?? null;
+        match ($data['action']) {
+            'audience' => $request->validate(['value' => ['required', 'in:' . implode(',', Bundle::AUDIENCES)]]),
+            'discount' => $request->validate(['value' => ['required', 'numeric', 'min:0', 'max:90']]),
+            'ends_at' => $request->validate(['value' => ['nullable', 'date']]),
+            default => null,
+        };
+
+        $bundles = Bundle::query()->whereIn('id', $data['ids'])->get();
+        foreach ($bundles as $bundle) {
+            match ($data['action']) {
+                'activate' => $bundle->update(['is_active' => true]),
+                'deactivate' => $bundle->update(['is_active' => false]),
+                'feature' => $bundle->update(['is_featured' => true]),
+                'unfeature' => $bundle->update(['is_featured' => false]),
+                'audience' => $bundle->update(['audience' => $value]),
+                // Only percentage offers have a % to change.
+                'discount' => $bundle->promotion_type === 'percentage' ? $bundle->update(['discount_percentage' => $value]) : null,
+                'ends_at' => $bundle->update(['ends_at' => $value ?: null]),
+                'delete' => (function () use ($bundle) { $this->forgetImage($bundle); $bundle->delete(); })(),
+            };
+        }
+
+        return ApiResponse::ok(['updated' => $bundles->count()], 200, null, "{$bundles->count()} offers updated");
+    }
+
     /** Saves the bundle's picture made in Post Studio; the old picture file is removed. */
     public function uploadImage(Request $request, Bundle $bundle)
     {
@@ -77,7 +112,7 @@ class AdminBundleController extends Controller
         return $request->validate([
             'name' => [$required, 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'audience' => [$required, 'in:all,stylist'],
+            'audience' => [$required, 'in:' . implode(',', Bundle::AUDIENCES)],
             'promotion_type' => [$required, 'in:percentage,fixed_price,bonus_items'],
             'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'bundle_price' => ['nullable', 'numeric', 'min:0'],
