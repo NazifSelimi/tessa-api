@@ -28,14 +28,17 @@ class ColourDealPricingTest extends TestCase
         Setting::put('pricing.cost_percentage', 65);
         Setting::put('pricing.min_margin_percentage', 15);
 
-        $this->family = ProductFamily::create(['name' => 'Test colour', 'slug' => 'test-colour-' . Str::random(6), 'is_active' => true]);
+        $this->oxidant = Product::factory()->create(['price' => 460, 'stylist_price' => 250, 'cost_price' => 90, 'quantity' => 100]);
+        $this->family = ProductFamily::create([
+            'name' => 'Test colour', 'slug' => 'test-colour-' . Str::random(6), 'is_active' => true,
+            'brand_id' => $this->oxidant->brand_id, 'category_id' => $this->oxidant->category_id,
+        ]);
         foreach (range(1, 3) as $i) {
             // Real cost well under the salon price, so the profit floor leaves room.
             $this->shades[] = Product::factory()->create([
                 'product_family_id' => $this->family->id, 'price' => 540, 'stylist_price' => 300, 'cost_price' => 150, 'quantity' => 100,
             ]);
         }
-        $this->oxidant = Product::factory()->create(['price' => 460, 'stylist_price' => 250, 'cost_price' => 90, 'quantity' => 100]);
 
         $this->deal = Bundle::create([
             'name' => 'Pick colours', 'audience' => 'stylist', 'promotion_type' => Bundle::MIX_MATCH, 'is_active' => true,
