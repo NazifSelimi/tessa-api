@@ -37,7 +37,7 @@ class AdminPricingController extends Controller
     public function simulateOffer(Request $request)
     {
         $validated = $request->validate([
-            'audience' => ['nullable', 'in:all,stylist'],
+            'audience' => ['nullable', 'in:' . implode(',', \App\Models\Bundle::AUDIENCES)],
             'promotion_type' => ['required', 'in:percentage,fixed_price,bonus_items'],
             'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'bundle_price' => ['nullable', 'numeric', 'min:0'],
