@@ -58,7 +58,7 @@ class AdminCouponController extends Controller
         $validated = validator($data, [
             'code' => ['required', 'string', 'max:50', 'unique:coupons,code', 'regex:/^[A-Z0-9-]+$/'],
             'type' => ['required', Rule::in(['percentage', 'fixed'])],
-            'value' => ['required', 'numeric', 'gt:0'],
+            'value' => ['required', 'numeric', 'gt:0', Rule::when(($data['type'] ?? null) === 'percentage', ['max:100'])],
             'quantity' => ['required', 'integer', 'min:0'],
             // The last valid day may be today (Skopje time).
             'expiration_date' => ['required', 'date', 'after_or_equal:' . $this->shopToday()],
@@ -84,7 +84,7 @@ class AdminCouponController extends Controller
         $validated = validator($data, [
             'code' => ['sometimes', 'string', 'max:50', 'regex:/^[A-Z0-9-]+$/', Rule::unique('coupons')->ignore($id)],
             'type' => ['sometimes', Rule::in(['percentage', 'fixed'])],
-            'value' => ['sometimes', 'numeric', 'gt:0'],
+            'value' => ['sometimes', 'numeric', 'gt:0', Rule::when($this->isPercentage($data, $id), ['max:100'])],
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'expiration_date' => ['sometimes', 'date'],
         ], $this->messages())->validate();
@@ -119,9 +119,16 @@ class AdminCouponController extends Controller
         return now(Coupon::SHOP_TIMEZONE)->toDateString();
     }
 
+    /** The type being saved, or the coupon's current type when it is not changed. */
+    private function isPercentage(array $data, $id): bool
+    {
+        return ($data['type'] ?? Coupon::query()->whereKey($id)->value('type')) === 'percentage';
+    }
+
     private function messages(): array
     {
         return [
+            'value.max' => __('A percentage coupon can be at most 100%.'),
             'expiration_date.after_or_equal' => __('The end date cannot be in the past.'),
         ];
     }

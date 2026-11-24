@@ -15,5 +15,6 @@
     "Password updated successfully.": "Лозинката е променета.",
     "If an account exists with that email, a reset link has been sent.": "Ако постои профил со таа е-пошта, испратен е линк за нова лозинка.",
     "This phone number is already linked to an account.": "Овој телефонски број веќе е поврзан со профил.",
+    "A percentage coupon can be at most 100%.": "Попустот во проценти може да биде најмногу 100%.",
     "The end date cannot be in the past.": "Датумот на истекување не може да биде во минатото."
 }
