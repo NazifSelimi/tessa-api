@@ -18,8 +18,10 @@ class PricingService
 {
     public const DEFAULT_COST_PERCENTAGE = 65.0;
     public const DEFAULT_MIN_MARGIN_PERCENTAGE = 15.0;
+    /** Defaults; the free-shipping amount and the discount cap are settings (owner rules Q1, Q6). */
     public const FREE_SHIPPING_FROM = 3000.0;
     public const SHIPPING_COST = 150.0;
+    public const DEFAULT_MAX_DISCOUNT_PERCENTAGE = 40.0;
 
     public function __construct(
         private readonly ReferralService $referrals
@@ -30,6 +32,19 @@ class PricingService
         return [
             'costPercentage' => (float) Setting::get('pricing.cost_percentage', self::DEFAULT_COST_PERCENTAGE),
             'minMarginPercentage' => (float) Setting::get('pricing.min_margin_percentage', self::DEFAULT_MIN_MARGIN_PERCENTAGE),
+            // All discounts together (offers + pick-any deals + coupon) never go above this % of the goods (Q1).
+            'maxDiscountPercentage' => (float) Setting::get('pricing.max_discount_percentage', config('tessa.max_discount_percentage', self::DEFAULT_MAX_DISCOUNT_PERCENTAGE)),
+        ] + $this->shippingSettings();
+    }
+
+    /** Free shipping (Q6). Public: the shop shows these numbers before a cart is priced. */
+    public function shippingSettings(): array
+    {
+        return [
+            'freeShippingFrom' => (float) Setting::get('shipping.free_from', self::FREE_SHIPPING_FROM),
+            // false (default, as before): count the goods before discounts; true: what the customer pays for them.
+            'freeShippingAfterDiscounts' => filter_var(Setting::get('shipping.free_after_discounts', false), FILTER_VALIDATE_BOOLEAN),
+            'shippingCost' => self::SHIPPING_COST,
         ];
     }
 
@@ -40,6 +55,15 @@ class PricingService
         }
         if (array_key_exists('minMarginPercentage', $values)) {
             Setting::put('pricing.min_margin_percentage', (float) $values['minMarginPercentage']);
+        }
+        if (array_key_exists('maxDiscountPercentage', $values)) {
+            Setting::put('pricing.max_discount_percentage', (float) $values['maxDiscountPercentage']);
+        }
+        if (array_key_exists('freeShippingFrom', $values)) {
+            Setting::put('shipping.free_from', (float) $values['freeShippingFrom']);
+        }
+        if (array_key_exists('freeShippingAfterDiscounts', $values)) {
+            Setting::put('shipping.free_after_discounts', $values['freeShippingAfterDiscounts'] ? '1' : '0');
         }
 
         return $this->settings();
@@ -143,14 +167,20 @@ class PricingService
 
         $couponDiscount = $coupon ? $coupon->calculateDiscount(max(0, $subtotal - $bundleDiscount)) : 0.0;
 
-        // Offers and coupon together may not take the order under the profit floor.
-        // The coupon gives way first, then the offers.
-        $maxDiscount = max(0, $subtotal - $floorTotal);
-        $limited = $bundleDiscount + $couponDiscount > $maxDiscount + 0.004;
-        if ($limited) {
+        // Offers and coupon together may not take the order under the profit floor,
+        // nor above the discount cap (Q1). The coupon gives way first, then the offers.
+        $floorRoom = max(0, $subtotal - $floorTotal);
+        $capRoom = $this->wholeDenars($subtotal * min(max($settings['maxDiscountPercentage'], 0), 100) / 100);
+        $maxDiscount = min($floorRoom, $capRoom);
+        $capBinds = $capRoom < $floorRoom;
+        $over = $bundleDiscount + $couponDiscount > $maxDiscount + 0.004;
+        if ($over) {
             $bundleDiscount = min($bundleDiscount, $maxDiscount);
             $couponDiscount = max(0, min($couponDiscount, $maxDiscount - $bundleDiscount));
         }
+        // "Limited" = the profit floor cut it; "capped" = the discount cap cut it ("Maximum discount reached").
+        $limited = $over && ! $capBinds;
+        $capped = $over && $capBinds;
 
         // Whole denars: prices are whole, so totals stay whole too. Rounding the
         // discount down also keeps it inside the profit floor.
@@ -163,11 +193,14 @@ class PricingService
         if ($coupon?->isReferral()) {
             ['discount' => $couponDiscount, 'commission' => $referralCommission, 'limited' => $cut]
                 = $this->fitReferral($coupon, $subtotal - $bundleDiscount, $couponDiscount, max(0, $maxDiscount - $bundleDiscount));
-            $limited = $limited || $cut;
+            $limited = $limited || ($cut && ! $capBinds);
+            $capped = $capped || ($cut && $capBinds);
         }
 
         $discount = $bundleDiscount + $couponDiscount;
-        $shipping = $subtotal >= self::FREE_SHIPPING_FROM ? 0.0 : self::SHIPPING_COST;
+        // Free shipping from the amount set in Admin, counted before or after discounts (Q6).
+        $shippingBase = $settings['freeShippingAfterDiscounts'] ? $subtotal - $discount : $subtotal;
+        $shipping = $shippingBase >= $settings['freeShippingFrom'] ? 0.0 : $settings['shippingCost'];
         $revenue = $subtotal - $discount;
         $profit = $revenue - $referralCommission - $cost;
 
@@ -178,12 +211,16 @@ class PricingService
             'couponDiscount' => $couponDiscount,
             'discount' => round($discount, 2),
             'discountLimited' => $limited,
+            'discountCapped' => $capped,
+            'maxDiscountPercentage' => $settings['maxDiscountPercentage'],
             'appliedBundleIds' => $appliedBundles,
             'skippedBundles' => $skippedBundles,
             'colourDeals' => $colourDeals,
             'couponCode' => $coupon?->code,
             'shipping' => $shipping,
-            'amountToFreeShipping' => round(max(0, self::FREE_SHIPPING_FROM - $subtotal), 2),
+            'amountToFreeShipping' => round(max(0, $settings['freeShippingFrom'] - $shippingBase), 2),
+            'freeShippingFrom' => $settings['freeShippingFrom'],
+            'freeShippingAfterDiscounts' => $settings['freeShippingAfterDiscounts'],
             'total' => round($revenue + $shipping, 2),
             // Admin-only figures; strip before sending to customers.
             'referralCommission' => $referralCommission,

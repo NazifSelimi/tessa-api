@@ -96,6 +96,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         ->name('admin.catalog-image-candidates.preview');
     Route::post('/checkout', [CheckoutController::class, 'checkout'])->middleware('throttle:10,1'); // order spam guard
     Route::post('/cart/quote', CartQuoteController::class);
+    // Delivery cost and free-shipping amount, set in Admin (owner rule Q6).
+    Route::get('/shop-settings', \App\Http\Controllers\Api\V1\ShopSettingsController::class);
 
     Route::middleware('auth:sanctum')->group(function () {
 

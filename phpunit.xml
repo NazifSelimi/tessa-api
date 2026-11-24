@@ -27,6 +27,8 @@
         <!-- Tests only ever run against the separate staging test database on the VPS. -->
         <env name="DB_DATABASE" value="tessa_staging_test" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- No discount cap for tests written before it (owner rule Q1); the cap tests set 40 themselves. -->
+        <env name="TESSA_MAX_DISCOUNT_PERCENTAGE" value="100"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

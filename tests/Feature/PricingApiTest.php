@@ -182,4 +182,101 @@ class PricingApiTest extends TestCase
             ->assertJsonPath('data.costPercentage', 60)
             ->assertJsonPath('data.minMarginPercentage', 20);
     }
+
+    private function quoteFor(array $items, ?string $coupon = null, ?User $user = null): array
+    {
+        $this->app['auth']->forgetGuards();
+        $request = $user ? $this->withToken($user->createToken('t')->plainTextToken) : $this;
+
+        return $request->postJson('/api/v1/cart/quote', ['items' => $items] + ($coupon ? ['coupon_code' => $coupon] : []))
+            ->assertOk()->json('data');
+    }
+
+    /** Q1: all discounts together never go above the cap (default 40% of the goods). */
+    #[Test]
+    public function all_discounts_together_stop_at_the_discount_cap()
+    {
+        Setting::put('features', '{}');                       // profit protection off, as in the shop
+        Setting::put('pricing.max_discount_percentage', 40);
+        $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'quantity' => 10]);
+        $this->coupon(['code' => 'HALFOFF', 'type' => 'percentage', 'value' => 50]);
+
+        $quote = $this->quoteFor([['product_id' => $product->id, 'qty' => 2]], 'HALFOFF');
+        // 2000 of goods, 50% coupon = 1000, but at most 40% = 800.
+        $this->assertEquals(800, $quote['discount']);
+        $this->assertTrue($quote['discountCapped']);
+        $this->assertFalse($quote['discountLimited']);
+        $this->assertEquals(1200, $quote['total']);   // 2000 of goods: free shipping (counted before discounts)
+
+        // Checkout charges the same.
+        $response = $this->checkout(['items' => [['product_id' => $product->id, 'qty' => 2]], 'coupon_code' => 'HALFOFF']);
+        $response->assertStatus(201);
+        $this->assertSame(800.0, (float) $response->json('data.discount'));
+    }
+
+    /** Q1: the default cap is 40% when nobody has set it. */
+    #[Test]
+    public function the_discount_cap_is_40_percent_by_default()
+    {
+        config(['tessa.max_discount_percentage' => 40.0]);
+        Setting::query()->whereKey('pricing.max_discount_percentage')->delete();
+
+        $this->assertSame(40.0, app(\App\Services\PricingService::class)->settings()['maxDiscountPercentage']);
+    }
+
+    /** Q6: the free-shipping amount is a setting, counted before (default) or after discounts. */
+    #[Test]
+    public function free_shipping_follows_the_admin_settings()
+    {
+        Setting::put('features', '{}');
+        Setting::put('pricing.max_discount_percentage', 100);
+        $product = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'quantity' => 10]);
+        $this->coupon(['code' => 'HALFSHIP', 'type' => 'percentage', 'value' => 50]);
+        $items = [['product_id' => $product->id, 'qty' => 3]];   // 3000 of goods, 1500 after the coupon
+
+        // Default: 3000, before discounts → free.
+        Setting::query()->whereKey(['shipping.free_from', 'shipping.free_after_discounts'])->delete();
+        $quote = $this->quoteFor($items, 'HALFSHIP');
+        $this->assertEquals(0, $quote['shipping']);
+        $this->assertEquals(3000, $quote['freeShippingFrom']);
+
+        // After discounts: 1500 < 3000 → 150, and 1500 more for free shipping.
+        Setting::put('shipping.free_after_discounts', '1');
+        $quote = $this->quoteFor($items, 'HALFSHIP');
+        $this->assertEquals(150, $quote['shipping']);
+        $this->assertEquals(1500, $quote['amountToFreeShipping']);
+
+        // A new amount from Admin.
+        Setting::put('shipping.free_after_discounts', '0');
+        Setting::put('shipping.free_from', 4000);
+        $quote = $this->quoteFor($items, 'HALFSHIP');
+        $this->assertEquals(150, $quote['shipping']);
+        $this->assertEquals(1000, $quote['amountToFreeShipping']);
+
+        // The shop reads the same numbers before a cart is priced.
+        $this->getJson('/api/v1/shop-settings')->assertOk()
+            ->assertJsonPath('data.freeShippingFrom', 4000.0)->assertJsonPath('data.shippingCost', 150.0);
+    }
+
+    /** Q1 + Q6: admins change the three settings; customers cannot. */
+    #[Test]
+    public function admins_set_free_shipping_and_the_discount_cap()
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->withToken($admin->createToken('t')->plainTextToken)->putJson('/api/v1/admin/pricing-settings', [
+            'freeShippingFrom' => 2500, 'freeShippingAfterDiscounts' => true, 'maxDiscountPercentage' => 35,
+        ])->assertOk()
+            ->assertJsonPath('data.freeShippingFrom', 2500.0)
+            ->assertJsonPath('data.freeShippingAfterDiscounts', true)
+            ->assertJsonPath('data.maxDiscountPercentage', 35.0);
+
+        $this->withToken($admin->createToken('t')->plainTextToken)
+            ->putJson('/api/v1/admin/pricing-settings', ['maxDiscountPercentage' => 150])->assertStatus(422);
+
+        $this->app['auth']->forgetGuards();
+        $customer = User::factory()->create();
+        $this->withToken($customer->createToken('t')->plainTextToken)
+            ->putJson('/api/v1/admin/pricing-settings', ['freeShippingFrom' => 1])->assertForbidden();
+    }
+
 }

@@ -26,6 +26,10 @@ class AdminPricingController extends Controller
         $validated = $request->validate([
             'costPercentage' => ['sometimes', 'numeric', 'min:1', 'max:100'],
             'minMarginPercentage' => ['sometimes', 'numeric', 'min:0', 'max:90'],
+            // Owner rules Q1 and Q6.
+            'maxDiscountPercentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'freeShippingFrom' => ['sometimes', 'numeric', 'min:0', 'max:1000000'],
+            'freeShippingAfterDiscounts' => ['sometimes', 'boolean'],
         ]);
 
         return ApiResponse::ok($this->pricing->updateSettings($validated));
