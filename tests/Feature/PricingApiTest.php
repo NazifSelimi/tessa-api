@@ -19,6 +19,8 @@ class PricingApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // These tests check the profit floor, which is a switch (off by default).
+        \App\Models\Setting::put('features', json_encode(['profit_protection' => true]));
         Setting::put('pricing.cost_percentage', 65);
         Setting::put('pricing.min_margin_percentage', 15);
     }

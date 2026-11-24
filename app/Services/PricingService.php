@@ -73,6 +73,11 @@ class PricingService
      */
     public function floorUnitPrice(float $unitPrice, ?float $unitCost, array $settings): float
     {
+        // Switched off on /admin/features: offers and coupons are not limited by cost.
+        if (! app(FeatureService::class)->enabled('profit_protection')) {
+            return 0.0;
+        }
+
         if ($unitCost === null) {
             return $unitPrice;
         }

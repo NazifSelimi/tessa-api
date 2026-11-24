@@ -32,6 +32,12 @@ return [
         'area' => 'shop',
         'default' => true,
     ],
+    'profit_protection' => [
+        'label' => 'Profit protection',
+        'description' => 'Offers and coupons never take an order below estimated cost + minimum profit (set on Offers & Bundles). Needs real cost prices: with the 65% estimate, salon prices leave no room and every salon discount becomes 0.',
+        'area' => 'admin',
+        'default' => false,
+    ],
     'quick_order' => [
         'label' => 'Business quick order',
         'description' => 'Business accounts order many products fast from one list.',

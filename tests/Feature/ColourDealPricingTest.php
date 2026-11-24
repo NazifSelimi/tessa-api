@@ -88,6 +88,22 @@ class ColourDealPricingTest extends TestCase
     }
 
     #[Test]
+    public function profit_protection_is_a_switch_that_is_off_by_default()
+    {
+        foreach ($this->shades as $shade) {
+            $shade->update(['cost_price' => null]); // no real cost: the 65% estimate is above the salon price
+        }
+        $this->oxidant->update(['cost_price' => null]);
+        $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
+
+        $this->assertEquals(3 * 300 + 250, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
+
+        Setting::put('features', json_encode(['profit_protection' => true]));
+        $this->app['auth']->forgetGuards();
+        $this->assertEquals(0, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
+    }
+
+    #[Test]
     public function shoppers_do_not_get_a_salon_colour_deal()
     {
         $this->app['auth']->forgetGuards();
