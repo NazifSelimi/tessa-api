@@ -32,6 +32,12 @@ return [
         'area' => 'shop',
         'default' => true,
     ],
+    'colour_deals' => [
+        'label' => 'Colour deals for salons (pick any shades)',
+        'description' => 'Salons pick any shades of a colour line; at 10 / 20 / 30 colours they get a free oxidant and free colours (set the steps on Offers & Bundles).',
+        'area' => 'shop',
+        'default' => false,
+    ],
     'profit_protection' => [
         'label' => 'Profit protection',
         'description' => 'Offers and coupons never take an order below estimated cost + minimum profit (set on Offers & Bundles). Needs real cost prices: with the 65% estimate, salon prices leave no room and every salon discount becomes 0.',

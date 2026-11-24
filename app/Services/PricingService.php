@@ -323,7 +323,7 @@ class PricingService
     {
         $result = ['discount' => 0.0, 'applied' => [], 'progress' => []];
         $families = array_filter(array_unique(array_values($familyOf)));
-        if (! $families || ! app(FeatureService::class)->enabled('bundles')) {
+        if (! $families || ! app(FeatureService::class)->enabled('colour_deals')) {
             return $result;
         }
 

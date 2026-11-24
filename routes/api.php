@@ -78,7 +78,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('hair-profile-options', HairProfileOptionController::class);
     Route::post('coupons/validate', [CouponController::class, 'validate'])->middleware('throttle:20,1'); // code guessing guard
     Route::post('recommendations', RecommendationController::class)->middleware('feature:hair_quiz');
-    Route::get('bundles', [BundleController::class, 'index'])->middleware('feature:bundles,empty');
+    Route::get('bundles', [BundleController::class, 'index']); // switches checked inside: offers and colour deals
     Route::get('features', \App\Http\Controllers\Api\V1\FeatureController::class);
     Route::get('business', [\App\Http\Controllers\Api\V1\Admin\AdminBusinessController::class, 'publicProfile']);
 

@@ -27,6 +27,7 @@ class ColourDealPricingTest extends TestCase
         parent::setUp();
         Setting::put('pricing.cost_percentage', 65);
         Setting::put('pricing.min_margin_percentage', 15);
+        Setting::put('features', json_encode(['colour_deals' => true]));
 
         $this->oxidant = Product::factory()->create(['price' => 460, 'stylist_price' => 250, 'cost_price' => 90, 'quantity' => 100]);
         $this->family = ProductFamily::create([
@@ -98,11 +99,24 @@ class ColourDealPricingTest extends TestCase
 
         $this->assertEquals(3 * 300 + 250, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
 
-        Setting::put('features', json_encode(['profit_protection' => true]));
+        Setting::put('features', json_encode(['colour_deals' => true, 'profit_protection' => true]));
         $this->app->forgetInstance(\App\Services\FeatureService::class);
         \Illuminate\Support\Facades\Cache::flush();
         $this->app['auth']->forgetGuards();
         $this->assertEquals(0, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
+    }
+
+    #[Test]
+    public function colour_deals_are_their_own_switch()
+    {
+        Setting::put('features', json_encode(['colour_deals' => false, 'bundles' => true]));
+        $this->app->forgetInstance(\App\Services\FeatureService::class);
+        \Illuminate\Support\Facades\Cache::flush();
+        $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
+        $this->assertEquals(0, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
+        $this->app['auth']->forgetGuards();
+        $names = collect($this->withToken($stylist->createToken('t2')->plainTextToken)->getJson('/api/v1/bundles')->json('data'))->pluck('name');
+        $this->assertNotContains('Pick colours', $names);
     }
 
     #[Test]
