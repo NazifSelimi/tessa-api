@@ -44,4 +44,26 @@ class ImportBundleOffersTest extends TestCase
 
         @unlink(base_path($file));
     }
+
+    /** NEW-4: the import keeps free units within the units of the offer, like the admin form. */
+    #[Test]
+    public function imported_free_units_never_exceed_the_offer_quantity()
+    {
+        $product = Product::factory()->create(['visible_to_stylists' => true]);
+        $product->images()->create(['name' => 'a.jpg', 'variant' => 'detail', 'sort_order' => 0]);
+
+        $file = 'storage/framework/testing/offers-bonus-test.json';
+        file_put_contents(base_path($file), json_encode([
+            'audience' => 'stylist', 'promotion_type' => 'bonus_items', 'ends_at' => '2030-01-01 00:00:00',
+            'offers' => [
+                ['name' => 'Test free 3 of 1', 'products' => [['product_id' => $product->id, 'quantity' => 1, 'bonus_quantity' => 3]]],
+            ],
+        ]));
+
+        $this->artisan('offers:import', ['file' => $file])->assertSuccessful();
+        $this->assertSame(1, (int) Bundle::where('name', 'Test free 3 of 1')->firstOrFail()->products()->first()->pivot->bonus_quantity);
+
+        @unlink(base_path($file));
+    }
+
 }
