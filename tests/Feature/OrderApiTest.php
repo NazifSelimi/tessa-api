@@ -308,4 +308,32 @@ class OrderApiTest extends TestCase
         $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'confirmed'])->assertOk();
         $this->assertSame(47, $product->fresh()->quantity);
     }
+
+    private function orderFor(Product $product, int $qty): array
+    {
+        return [
+            'items' => [['product_id' => $product->id, 'qty' => $qty]],
+            'shipping_address' => [
+                'firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.com', 'phone' => '070111222',
+                'address' => '1 Street', 'city' => 'Skopje', 'state' => 'MK', 'zip' => '1000',
+            ],
+            'payment_method' => 'cod',
+        ];
+    }
+
+    /** #20: "Only X left" never shows more than 50 to customers or salons; admins see the real number. */
+    #[Test]
+    public function the_stock_message_shows_at_most_50_to_non_admins()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 120, 'name' => 'Cap test mask']);
+
+        foreach ([User::ROLE_USER => 50, User::ROLE_STYLIST => 50, User::ROLE_ADMIN => 120] as $role => $shown) {
+            $this->app['auth']->forgetGuards();
+            $token = User::factory()->create(['role' => $role])->createToken('t')->plainTextToken;
+            $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 200))
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['items' => "Only {$shown} left of Cap test mask."]);
+        }
+        $this->assertSame(120, $product->fresh()->quantity);
+    }
 }

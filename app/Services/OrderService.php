@@ -7,6 +7,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\PublicStock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -77,8 +78,13 @@ class OrderService
                 $requested[$product->id] = ($requested[$product->id] ?? 0) + $qty;
 
                 if (!$product->inStock($requested[$product->id])) {
+                    // Exact stock is for admins; everyone else sees at most PublicStock::CAP (#20).
+                    $left = max(0, (int) $product->quantity);
+                    if (! $user?->isAdmin()) {
+                        $left = min($left, PublicStock::CAP);
+                    }
                     throw ValidationException::withMessages([
-                        'items' => [__('Only :count left of :name.', ['count' => max(0, (int) $product->quantity), 'name' => $product->name])]
+                        'items' => [__('Only :count left of :name.', ['count' => $left, 'name' => $product->name])]
                     ]);
                 }
 
