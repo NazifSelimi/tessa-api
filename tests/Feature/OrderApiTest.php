@@ -350,4 +350,28 @@ class OrderApiTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/orders', [])->assertStatus(429);
     }
 
+    /** #13 (owner rule Q5): an order to another name and address leaves the profile as it was. */
+    #[Test]
+    public function an_order_never_changes_the_customer_profile()
+    {
+        $user = User::factory()->create([
+            'first_name' => 'Ana', 'last_name' => 'Own', 'phone' => '070000001', 'address' => 'Home 1', 'city' => 'Skopje', 'postcode' => '1000',
+        ]);
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $order = $this->orderFor($product, 1);
+        $order['shipping_address'] = [
+            'firstName' => 'Gift', 'lastName' => 'Friend', 'email' => 'friend@example.com', 'phone' => '070999999',
+            'address' => 'Friend street 9', 'city' => 'Tetovo', 'state' => 'MK', 'zip' => '1200',
+        ];
+
+        $id = $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/orders', $order)
+            ->assertStatus(201)->json('data.id');
+
+        $fresh = $user->fresh();
+        $this->assertSame(['Ana', 'Own', '070000001', 'Home 1', 'Skopje', '1000'],
+            [$fresh->first_name, $fresh->last_name, $fresh->phone, $fresh->address, $fresh->city, (string) $fresh->postcode]);
+        // The delivery details are on the order.
+        $this->assertDatabaseHas('order_infos', ['order_id' => $id, 'first_name' => 'Gift', 'city' => 'Tetovo']);
+    }
+
 }

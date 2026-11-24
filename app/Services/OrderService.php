@@ -32,17 +32,9 @@ class OrderService
         $order = DB::transaction(function () use ($user, $payload) {
             $shipping = $payload['shipping_address'] ?? [];
 
-            if ($user) {
-                // Keep the saved profile in sync for authenticated customers.
-                $user->update([
-                    'first_name' => $shipping['firstName'] ?? $user->first_name,
-                    'last_name' => $shipping['lastName'] ?? $user->last_name,
-                    'phone' => $shipping['phone'] ?? $user->phone,
-                    'address' => $shipping['address'] ?? $user->address,
-                    'city' => $shipping['city'] ?? $user->city,
-                    'postcode' => $shipping['zipCode'] ?? $shipping['zip'] ?? $user->postcode,
-                ]);
-            }
+            // Checkout never changes the customer's profile: the delivery details
+            // are saved on the order only (owner rule Q5, #13). Ordering for someone
+            // else must not change your own name, phone or address.
 
             // Check the code before this order exists, or a signed-in client's
             // new order would count as "ordered before" for first-order codes.
