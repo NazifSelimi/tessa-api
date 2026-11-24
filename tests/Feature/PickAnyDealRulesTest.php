@@ -133,4 +133,32 @@ class PickAnyDealRulesTest extends TestCase
         $this->assertEquals(250, $quote['bundleDiscount']);
         $this->assertSame(10, $quote['colourDeals'][0]['count']);
     }
+
+    /** #24: changing a step's min must not lose that step's gifts. */
+    #[Test]
+    public function step_gifts_survive_when_the_admin_changes_the_step_min()
+    {
+        $any = $this->product();
+        $family = ProductFamily::create(['name' => 'Line Y', 'slug' => 'line-y-' . Str::random(6), 'is_active' => true, 'brand_id' => $any->brand_id, 'category_id' => $any->category_id]);
+        $shade = $this->product(['product_family_id' => $family->id, 'stylist_price' => 300]);
+        $oxidant = $this->product(['stylist_price' => 250]);
+        $token = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
+
+        $id = $this->withToken($token)->postJson('/api/v1/admin/bundles', [
+            'name' => 'Admin deal min change', 'audience' => 'stylist', 'promotion_type' => 'mix_match', 'is_active' => true,
+            'product_family_id' => $family->id,
+            'tiers' => [['min' => 10, 'free' => 0, 'gift' => false, 'gift_ids' => [$oxidant->id]]],
+            'products' => [['product_id' => $oxidant->id, 'quantity' => 1, 'bonus_quantity' => 1]],
+        ])->assertCreated()->json('data.id');
+
+        // The admin form sends min / free / gift only; the min goes from 10 to 12.
+        $this->withToken($token)->putJson("/api/v1/admin/bundles/{$id}", [
+            'tiers' => [['min' => 12, 'free' => 0, 'gift' => false]],
+        ])->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->assertEquals(0, $this->quote([$shade->id => 11, $oxidant->id => 1])['bundleDiscount']);
+        $this->assertEquals(250, $this->quote([$shade->id => 12, $oxidant->id => 1])['bundleDiscount']);
+    }
+
 }

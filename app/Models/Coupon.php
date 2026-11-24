@@ -40,21 +40,38 @@ class Coupon extends Model
         return $this->stylist_id !== null;
     }
 
+    /** The shop's own time zone: a coupon "valid until" a day works to the end of that day there. */
+    public const SHOP_TIMEZONE = 'Europe/Skopje';
+
+    /**
+     * True once the expiration day is over in Skopje. The date is stored
+     * without a time, so "valid until 24.11." still works all of 24.11.
+     */
+    public function isExpired(): bool
+    {
+        if (! $this->expiration_date) {
+            return false;
+        }
+
+        return \Illuminate\Support\Carbon::parse($this->expiration_date->toDateString(), self::SHOP_TIMEZONE)
+            ->endOfDay()
+            ->isPast();
+    }
+
     /**
      * Check if coupon is still valid (has remaining quantity and not expired).
      */
     public function isValid(): bool
     {
         if ($this->isReferral()) {
-            return $this->is_active !== false
-                && !($this->expiration_date && $this->expiration_date->isPast());
+            return $this->is_active !== false && ! $this->isExpired();
         }
 
         if ($this->quantity <= 0) {
             return false;
         }
 
-        if ($this->expiration_date && $this->expiration_date->isPast()) {
+        if ($this->isExpired()) {
             return false;
         }
 

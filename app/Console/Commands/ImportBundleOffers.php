@@ -99,8 +99,9 @@ class ImportBundleOffers extends Command
                         ? ['quantity' => 1, 'is_bonus' => true, 'bonus_quantity' => 1]
                         : [
                             'quantity' => $line['quantity'],
-                            'is_bonus' => ($line['bonus_quantity'] ?? 0) > 0,
-                            'bonus_quantity' => (int) ($line['bonus_quantity'] ?? 0),
+                            // Free units never exceed the units in the offer, as in the admin form.
+                            'is_bonus' => min((int) ($line['bonus_quantity'] ?? 0), (int) $line['quantity']) > 0,
+                            'bonus_quantity' => min((int) ($line['bonus_quantity'] ?? 0), (int) $line['quantity']),
                         ],
                 ])->union(collect($offer['pool'])->mapWithKeys(fn ($id) => [
                     $id => ['quantity' => 1, 'is_bonus' => false, 'bonus_quantity' => 0],

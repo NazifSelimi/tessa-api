@@ -115,8 +115,17 @@ class AdminBundleController extends Controller
         }
         if (! empty($data['tiers'])) {
             // The admin form edits min / free / gift only; a step's own gifts and gift count stay as they were.
-            $before = collect($current?->sortedTiers() ?? [])->keyBy('min');
-            $data['tiers'] = array_map(fn ($tier) => $tier + array_intersect_key($before->get((int) $tier['min'], []), ['gift_qty' => 1, 'gift_ids' => 1]), $data['tiers']);
+            // A step keeps them when its min changes: same min first, otherwise the step in the same place.
+            $before = array_values($current?->sortedTiers() ?? []);
+            $byMin = collect($before)->keyBy('min');
+            $data['tiers'] = array_map(
+                fn ($tier, $i) => $tier + array_intersect_key(
+                    $byMin->get((int) $tier['min'], $before[$i] ?? []),
+                    ['gift_qty' => 1, 'gift_ids' => 1],
+                ),
+                array_values($data['tiers']),
+                array_keys(array_values($data['tiers'])),
+            );
             $data['tiers'] = array_values(array_map(fn ($tier) => [
                 'min' => (int) $tier['min'],
                 'free' => min((int) ($tier['free'] ?? 0), (int) $tier['min']),

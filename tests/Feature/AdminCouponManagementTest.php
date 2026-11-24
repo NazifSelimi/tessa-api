@@ -146,4 +146,39 @@ class AdminCouponManagementTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    /** #14: a coupon may end today (its last day still works). */
+    public function test_a_coupon_can_be_created_that_ends_today()
+    {
+        Sanctum::actingAs($this->admin);
+
+        $this->postJson('/api/v1/admin/coupons', [
+            'code' => 'LASTDAY', 'type' => 'fixed', 'value' => 100, 'quantity' => 5,
+            'expiration_date' => now(Coupon::SHOP_TIMEZONE)->toDateString(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/admin/coupons', [
+            'code' => 'YESTERDAY', 'type' => 'fixed', 'value' => 100, 'quantity' => 5,
+            'expiration_date' => now(Coupon::SHOP_TIMEZONE)->subDay()->toDateString(),
+        ])->assertStatus(422)->assertJsonValidationErrors('expiration_date');
+    }
+
+    /** NEW-8: a percentage coupon is at most 100%, with the message in the shop language. */
+    public function test_a_percentage_coupon_cannot_be_more_than_100()
+    {
+        Sanctum::actingAs($this->admin);
+        $base = ['type' => 'percentage', 'quantity' => 5, 'expiration_date' => now()->addDays(5)->toDateString()];
+
+        $this->postJson('/api/v1/admin/coupons', $base + ['code' => 'TOOMUCH', 'value' => 150], ['Accept-Language' => 'mk'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['value' => 'Попустот во проценти може да биде најмногу 100%.']);
+        $this->postJson('/api/v1/admin/coupons', $base + ['code' => 'ALLOFF', 'value' => 100])->assertStatus(201);
+        // A fixed coupon of 150 MKD is fine.
+        $this->postJson('/api/v1/admin/coupons', ['type' => 'fixed', 'code' => 'FIXED150', 'value' => 150] + $base)->assertStatus(201);
+
+        // Editing: the coupon is already a percentage one, the type is not sent.
+        $coupon = Coupon::factory()->create(['type' => 'percentage', 'value' => 10]);
+        $this->putJson("/api/v1/admin/coupons/{$coupon->id}", ['value' => 120])->assertStatus(422);
+    }
+
 }
