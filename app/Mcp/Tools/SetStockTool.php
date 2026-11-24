@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Models\Product;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -20,12 +21,20 @@ class SetStockTool extends Tool
     public function handle(Request $request): Response
     {
         $data = $request->validate(['product_id' => ['required', 'integer'], 'quantity' => ['required', 'integer', 'between:0,100000']]);
-        $product = Product::find($data['product_id']);
+        // Lock the row while reading and writing, like checkout does (NEW-6).
+        [$product, $before] = DB::transaction(function () use ($data) {
+            $product = Product::query()->lockForUpdate()->find($data['product_id']);
+            if (! $product) {
+                return [null, 0];
+            }
+            $before = (int) $product->quantity;
+            $product->update(['quantity' => $data['quantity']]);
+
+            return [$product, $before];
+        });
         if (! $product) {
             return Response::error("Product #{$data['product_id']} does not exist.");
         }
-        $before = (int) $product->quantity;
-        $product->update(['quantity' => $data['quantity']]);
         Log::info('Stock set through the AI assistant', ['product_id' => $product->id, 'from' => $before, 'to' => $data['quantity'], 'user_id' => $request->user()?->id]);
 
         return Response::text("{$product->name}: stock changed from {$before} to {$data['quantity']}.");
