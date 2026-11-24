@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Support\AccessTokens;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Support\ApiResponse;
+use App\Support\PhoneLogin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -23,7 +24,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -556,31 +556,7 @@ class AuthController extends Controller
 
     private function synchronizePhoneLogin(User $user, string $phone): void
     {
-        // Production may still be on the pre-phone-first schema. Keeping this
-        // guard makes the API backwards-compatible while staging uses the
-        // normalized unique value required for phone-first stylist sign-in.
-        if (! Schema::hasColumn('users', 'phone_login')) {
-            return;
-        }
-
-        $normalized = preg_replace('/\D+/', '', $phone) ?: '';
-
-        if ($normalized === '') {
-            return;
-        }
-
-        $exists = User::query()
-            ->where('phone_login', $normalized)
-            ->when($user->exists, fn ($query) => $query->whereKeyNot($user->getKey()))
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'phone' => [__('This phone number is already linked to an account.')],
-            ]);
-        }
-
-        $user->phone_login = $normalized;
+        PhoneLogin::sync($user, $phone);
     }
 
     private function redirectSocialSuccess(string $provider, string $token, User $user, array $meta): RedirectResponse
