@@ -206,6 +206,12 @@ class OrderService
             if ($order->status === Order::STATUS_CANCELLED) {
                 return $order->load(['items.product.images', 'coupon', 'user', 'info']);
             }
+            // The admin may have shipped it between the first check and the lock (#9).
+            if ($order->status !== Order::STATUS_PENDING) {
+                throw ValidationException::withMessages([
+                    'order' => [__('Only pending orders can be cancelled.')]
+                ]);
+            }
 
             $order->status = Order::STATUS_CANCELLED;
             $order->save();

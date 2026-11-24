@@ -221,6 +221,25 @@ class MoneyStockProofTest extends TestCase
         $this->assertSame(-2, $product->fresh()->quantity);
     }
 
+    /** #9: a cancel that arrives after the order was shipped is refused, and stock stays. */
+    #[Test]
+    public function a_late_cancel_does_not_put_back_stock_of_a_shipped_order()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $id = $this->order(User::factory()->create(), $product, 4);            // 10 → 6
+        $stale = \App\Models\Order::findOrFail($id);                          // the customer's copy: still pending
+        \App\Models\Order::whereKey($id)->update(['status' => \App\Models\Order::STATUS_SHIPPED]); // the admin ships it
+
+        try {
+            app(\App\Services\OrderService::class)->cancelOrder($stale);
+            $this->fail('A shipped order must not be cancelled.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('order', $e->errors());
+        }
+        $this->assertSame(6, $product->fresh()->quantity);
+        $this->assertSame(\App\Models\Order::STATUS_SHIPPED, \App\Models\Order::findOrFail($id)->status);
+    }
+
     /** Bug #14: a coupon "valid until today" must still work today. */
     #[Test]
     public function a_coupon_works_on_its_last_day()
