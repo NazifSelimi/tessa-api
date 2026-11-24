@@ -99,6 +99,8 @@ class ColourDealPricingTest extends TestCase
         $this->assertEquals(3 * 300 + 250, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
 
         Setting::put('features', json_encode(['profit_protection' => true]));
+        $this->app->forgetInstance(\App\Services\FeatureService::class);
+        \Illuminate\Support\Facades\Cache::flush();
         $this->app['auth']->forgetGuards();
         $this->assertEquals(0, $this->quote([11, 10, 10], true, $stylist)['bundleDiscount']);
     }
