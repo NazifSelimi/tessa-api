@@ -11,6 +11,7 @@ use App\Services\ImageService;
 use App\Services\ProductService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminProductController extends Controller
@@ -250,21 +251,26 @@ class AdminProductController extends Controller
             'operation' => ['required', 'in:set,add,subtract'],
         ]);
 
-        $product = Product::findOrFail($id);
+        // Lock the row: a checkout taking stock at the same moment must not be overwritten (#10).
+        $product = DB::transaction(function () use ($id, $validated) {
+            $product = Product::query()->lockForUpdate()->findOrFail($id);
 
-        switch ($validated['operation']) {
-            case 'set':
-                $product->quantity = $validated['quantity'];
-                break;
-            case 'add':
-                $product->quantity += $validated['quantity'];
-                break;
-            case 'subtract':
-                $product->quantity = max(0, $product->quantity - $validated['quantity']);
-                break;
-        }
+            switch ($validated['operation']) {
+                case 'set':
+                    $product->quantity = $validated['quantity'];
+                    break;
+                case 'add':
+                    $product->quantity += $validated['quantity'];
+                    break;
+                case 'subtract':
+                    $product->quantity = max(0, $product->quantity - $validated['quantity']);
+                    break;
+            }
 
-        $product->save();
+            $product->save();
+
+            return $product;
+        });
 
         return ApiResponse::ok(
             [
