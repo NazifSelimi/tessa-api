@@ -296,11 +296,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Dashboard
             Route::get('/dashboard', [StylistDashboardController::class, 'index']);
             
-            // Distributor Codes
-            Route::get('/codes', [StylistCodeController::class, 'index']);
-            Route::post('/codes/generate', [StylistCodeController::class, 'generate']);
-            Route::get('/codes/{code}/stats', [StylistCodeController::class, 'stats']);
-            Route::put('/codes/{code}', [StylistCodeController::class, 'update']);
+            // Distributor Codes (switched off with the "distributors" feature, like the admin pages: #22)
+            Route::get('/codes', [StylistCodeController::class, 'index'])->middleware('feature:distributors');
+            Route::post('/codes/generate', [StylistCodeController::class, 'generate'])->middleware('feature:distributors');
+            Route::get('/codes/{code}/stats', [StylistCodeController::class, 'stats'])->middleware('feature:distributors');
+            Route::put('/codes/{code}', [StylistCodeController::class, 'update'])->middleware('feature:distributors');
             
             // Orders
             Route::get('/orders', [StylistOrderController::class, 'index']);

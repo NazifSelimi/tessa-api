@@ -131,7 +131,8 @@ class OrderService
 
             // Store credit pays part of the order; the user row lock keeps two
             // checkouts from spending the same balance.
-            if ($user && !empty($payload['use_store_credit'])) {
+            // Only while the referral feature is on (#22): with it off, credit is never spent.
+            if ($user && !empty($payload['use_store_credit']) && app(FeatureService::class)->enabled('referrals')) {
                 User::query()->whereKey($user->id)->lockForUpdate()->first();
                 // A negative balance (credit spent, then the client order was cancelled) is a
                 // debt future commission pays off; it never adds to what the stylist pays.
