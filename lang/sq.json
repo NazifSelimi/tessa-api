@@ -14,5 +14,6 @@
     "The current password is incorrect.": "Fjalëkalimi aktual nuk është i saktë.",
     "Password updated successfully.": "Fjalëkalimi u ndryshua.",
     "If an account exists with that email, a reset link has been sent.": "Nëse ekziston një llogari me këtë email, është dërguar një lidhje për rivendosje.",
-    "This phone number is already linked to an account.": "Ky numër telefoni është i lidhur tashmë me një llogari."
+    "This phone number is already linked to an account.": "Ky numër telefoni është i lidhur tashmë me një llogari.",
+    "The end date cannot be in the past.": "Data e skadimit nuk mund të jetë në të kaluarën."
 }

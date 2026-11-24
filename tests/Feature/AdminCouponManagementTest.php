@@ -146,4 +146,20 @@ class AdminCouponManagementTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    /** #14: a coupon may end today (its last day still works). */
+    public function test_a_coupon_can_be_created_that_ends_today()
+    {
+        Sanctum::actingAs($this->admin);
+
+        $this->postJson('/api/v1/admin/coupons', [
+            'code' => 'LASTDAY', 'type' => 'fixed', 'value' => 100, 'quantity' => 5,
+            'expiration_date' => now(Coupon::SHOP_TIMEZONE)->toDateString(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/admin/coupons', [
+            'code' => 'YESTERDAY', 'type' => 'fixed', 'value' => 100, 'quantity' => 5,
+            'expiration_date' => now(Coupon::SHOP_TIMEZONE)->subDay()->toDateString(),
+        ])->assertStatus(422)->assertJsonValidationErrors('expiration_date');
+    }
 }

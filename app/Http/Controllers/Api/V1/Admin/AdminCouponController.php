@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CouponResource;
+use App\Models\Coupon;
 use App\Services\CouponService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
@@ -59,8 +60,9 @@ class AdminCouponController extends Controller
             'type' => ['required', Rule::in(['percentage', 'fixed'])],
             'value' => ['required', 'numeric', 'gt:0'],
             'quantity' => ['required', 'integer', 'min:0'],
-            'expiration_date' => ['required', 'date', 'after:now'],
-        ])->validate();
+            // The last valid day may be today (Skopje time).
+            'expiration_date' => ['required', 'date', 'after_or_equal:' . $this->shopToday()],
+        ], $this->messages())->validate();
 
         $coupon = $this->couponService->create($validated);
 
@@ -85,7 +87,7 @@ class AdminCouponController extends Controller
             'value' => ['sometimes', 'numeric', 'gt:0'],
             'quantity' => ['sometimes', 'integer', 'min:0'],
             'expiration_date' => ['sometimes', 'date'],
-        ])->validate();
+        ], $this->messages())->validate();
 
         $coupon = $this->couponService->update($id, $validated);
 
@@ -109,5 +111,18 @@ class AdminCouponController extends Controller
         }
 
         return ApiResponse::ok(null, 200, [], 'Coupon deleted successfully');
+    }
+
+    /** Today's date in the shop's time zone. */
+    private function shopToday(): string
+    {
+        return now(Coupon::SHOP_TIMEZONE)->toDateString();
+    }
+
+    private function messages(): array
+    {
+        return [
+            'expiration_date.after_or_equal' => __('The end date cannot be in the past.'),
+        ];
     }
 }

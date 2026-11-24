@@ -129,4 +129,19 @@ class MoneyStockProofTest extends TestCase
         $this->assertEquals(900, $quote['bundleDiscount']);
         $this->assertSame(10, $quote['colourDeals'][0]['count']);
     }
+
+    /** Bug #14: a coupon "valid until today" must still work today. */
+    #[Test]
+    public function a_coupon_works_on_its_last_day()
+    {
+        // "Today" in the shop's time zone, so the test gives the same answer at any hour.
+        $today = now(Coupon::SHOP_TIMEZONE)->toDateString();
+        $coupon = Coupon::factory()->make(['quantity' => 5, 'expiration_date' => $today]);
+
+        // Before the fix: false from 00:00 of the last day.
+        $this->assertTrue($coupon->isValid());
+
+        $yesterday = now(Coupon::SHOP_TIMEZONE)->subDay()->toDateString();
+        $this->assertFalse(Coupon::factory()->make(['quantity' => 5, 'expiration_date' => $yesterday])->isValid());
+    }
 }

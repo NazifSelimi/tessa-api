@@ -20,18 +20,20 @@ class CouponService
         }
 
         if (!empty($filters['status'])) {
+            // A coupon works until the end of its last day, in Skopje time.
+            $today = now(Coupon::SHOP_TIMEZONE)->toDateString();
             if ($filters['status'] === 'active') {
                 $query->where('quantity', '>', 0)
-                    ->where(function ($q) {
+                    ->where(function ($q) use ($today) {
                         $q->whereNull('expiration_date')
-                          ->orWhere('expiration_date', '>', now());
+                          ->orWhere('expiration_date', '>=', $today);
                     });
             } elseif ($filters['status'] === 'expired') {
-                $query->where(function ($q) {
+                $query->where(function ($q) use ($today) {
                     $q->where('quantity', '<=', 0)
-                      ->orWhere(function ($q2) {
+                      ->orWhere(function ($q2) use ($today) {
                           $q2->whereNotNull('expiration_date')
-                             ->where('expiration_date', '<=', now());
+                             ->where('expiration_date', '<', $today);
                       });
                 });
             }
