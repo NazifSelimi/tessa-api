@@ -28,7 +28,7 @@ class AdminBundleController extends Controller
 
     public function update(Request $request, Bundle $bundle)
     {
-        $bundle->update($this->clean($this->validated($request, true)));
+        $bundle->update($this->clean($this->validated($request, true), $bundle));
         if ($request->has('products')) {
             $this->syncProducts($bundle, $request->input('products', []));
         }
@@ -106,17 +106,23 @@ class AdminBundleController extends Controller
     }
 
     /** A colour line and steps only belong to "pick any colours" offers; tier free counts never exceed the step. */
-    private function clean(array $data): array
+    private function clean(array $data, ?Bundle $current = null): array
     {
         if (isset($data['promotion_type']) && $data['promotion_type'] !== Bundle::MIX_MATCH) {
             $data['product_family_id'] = null;
+            $data['product_family_ids'] = null;
             $data['tiers'] = null;
         }
         if (! empty($data['tiers'])) {
+            // The admin form edits min / free / gift only; a step's own gifts and gift count stay as they were.
+            $before = collect($current?->sortedTiers() ?? [])->keyBy('min');
+            $data['tiers'] = array_map(fn ($tier) => $tier + array_intersect_key($before->get((int) $tier['min'], []), ['gift_qty' => 1, 'gift_ids' => 1]), $data['tiers']);
             $data['tiers'] = array_values(array_map(fn ($tier) => [
                 'min' => (int) $tier['min'],
                 'free' => min((int) ($tier['free'] ?? 0), (int) $tier['min']),
                 'gift' => (bool) ($tier['gift'] ?? false),
+                'gift_qty' => max(1, (int) ($tier['gift_qty'] ?? 1)),
+                'gift_ids' => array_values(array_map('intval', $tier['gift_ids'] ?? [])),
             ], $data['tiers']));
         }
         unset($data['products']);
@@ -134,11 +140,17 @@ class AdminBundleController extends Controller
             'audience' => [$required, 'in:' . implode(',', Bundle::AUDIENCES)],
             'promotion_type' => [$required, 'in:percentage,fixed_price,bonus_items,mix_match'],
             // "Pick any colours": the colour line and its reward steps; products = gift choices.
-            'product_family_id' => ['nullable', 'required_if:promotion_type,mix_match', 'integer', 'exists:product_families,id'],
+            // A colour line, or a product list (products not marked as gifts) is counted instead.
+            'product_family_id' => ['nullable', 'integer', 'exists:product_families,id'],
+            'product_family_ids' => ['nullable', 'array', 'max:10'],
+            'product_family_ids.*' => ['integer', 'exists:product_families,id'],
             'tiers' => ['nullable', 'required_if:promotion_type,mix_match', 'array', 'max:6'],
             'tiers.*.min' => ['required', 'integer', 'min:1', 'max:500'],
             'tiers.*.free' => ['nullable', 'integer', 'min:0', 'max:100'],
             'tiers.*.gift' => ['nullable', 'boolean'],
+            'tiers.*.gift_qty' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'tiers.*.gift_ids' => ['nullable', 'array', 'max:10'],
+            'tiers.*.gift_ids.*' => ['integer', 'exists:products,id'],
             'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'bundle_price' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
@@ -158,7 +170,7 @@ class AdminBundleController extends Controller
         $bundle->products()->sync(collect($products)->mapWithKeys(fn ($product) => [
             $product['product_id'] => [
                 'quantity' => $product['quantity'],
-                'is_bonus' => (bool) ($product['is_bonus'] ?? false),
+                'is_bonus' => (bool) ($product['is_bonus'] ?? ((int) ($product['bonus_quantity'] ?? 0) > 0)),
                 'bonus_quantity' => min(
                     (int) $product['quantity'],
                     (int) ($product['bonus_quantity'] ?? ((bool) ($product['is_bonus'] ?? false) ? $product['quantity'] : 0))

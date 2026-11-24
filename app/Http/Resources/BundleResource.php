@@ -36,6 +36,14 @@ class BundleResource extends JsonResource
 
                 return $id ? (string) $id : null;
             }),
+            // Every colour line the offer counts, each with one shade to open its shade list from.
+            'familyLines'        => $this->when($this->isMixMatch(), fn () => collect($this->familyIds())->map(function ($familyId) {
+                $family = \App\Models\ProductFamily::find($familyId);
+                $productId = \App\Models\Product::query()->where('product_family_id', $familyId)
+                    ->orderByDesc('quantity')->orderBy('id')->value('id');
+
+                return $family && $productId ? ['id' => (string) $familyId, 'name' => $family->name, 'productId' => (string) $productId] : null;
+            })->filter()->values()),
             'audience'           => $this->audience,
             'isActive'           => (bool) $this->is_active,
             'isFeatured'         => (bool) $this->is_featured,
@@ -48,7 +56,7 @@ class BundleResource extends JsonResource
                     'price'    => (float) $product->price,
                     'stylistPrice' => $this->when($salonPrices, fn () => (float) $product->stylist_price),
                     'quantity' => (int) $product->pivot->quantity,
-                    'isBonus'  => (bool) $product->pivot->is_bonus,
+                    'isBonus'  => \App\Models\Bundle::isGiftLine($product->pivot),
                     'bonusQuantity' => (int) $product->pivot->bonus_quantity,
                     'image'    => $product->images->isNotEmpty()
                         ? asset('storage/images/' . $product->images->first()->name)

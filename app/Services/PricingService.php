@@ -313,30 +313,42 @@ class PricingService
     }
 
     /**
-     * "Pick any colours" offers: every shade of the offer's colour line in the
-     * cart counts. The highest step reached gives its free colours (the
-     * cheapest units) and, when the step includes it, one gift product from the
-     * offer's list that is in the cart (an oxidant or activator). Also returns
-     * how far each offer is, so the cart can say "4 more for a free oxidant".
+     * "Pick any" offers: every product the offer counts (shades of its colour
+     * lines, or its own product list) adds to one total. The highest step
+     * reached gives its free units (the cheapest ones), its gifts that are in
+     * the cart (gift_ids: one of each; gift: gift_qty units from the offer's
+     * gift list, e.g. an oxidant). Also returns how far each offer is, so the
+     * cart can say "4 more for a free oxidant".
      */
     private function colourDeals(?User $user, array $quantities, array $prices, array $familyOf): array
     {
         $result = ['discount' => 0.0, 'applied' => [], 'progress' => []];
-        $families = array_filter(array_unique(array_values($familyOf)));
-        if (! $families || ! app(FeatureService::class)->enabled('colour_deals')) {
+        if (! $quantities || ! app(FeatureService::class)->enabled('colour_deals')) {
             return $result;
         }
 
         $deals = Bundle::query()->with(['products', 'family'])
             ->where('promotion_type', Bundle::MIX_MATCH)
-            ->whereIn('product_family_id', $families)
+            ->where('is_active', true)
             ->get()
             ->filter(fn (Bundle $deal) => $deal->isRunning() && $deal->isAvailableFor($user));
 
         $giftUsed = [];
+        $takeGift = function (int|string $id) use ($quantities, &$giftUsed): bool {
+            if (($quantities[$id] ?? 0) <= ($giftUsed[$id] ?? 0)) {
+                return false;
+            }
+            $giftUsed[$id] = ($giftUsed[$id] ?? 0) + 1;
+
+            return true;
+        };
+
         foreach ($deals as $deal) {
             $tiers = $deal->sortedTiers();
-            $pool = array_filter($quantities, fn ($qty, $id) => (int) ($familyOf[$id] ?? 0) === (int) $deal->product_family_id, ARRAY_FILTER_USE_BOTH);
+            $families = $deal->familyIds();
+            $listed = $deal->products->reject(fn ($product) => Bundle::isGiftLine($product->pivot))->pluck('id')->all();
+            $pool = array_filter($quantities, fn ($qty, $id) => in_array((int) ($familyOf[$id] ?? 0), $families, true)
+                || in_array($id, $listed), ARRAY_FILTER_USE_BOTH);
             $count = array_sum($pool);
             if (! $tiers || $count === 0) {
                 continue;
@@ -353,7 +365,8 @@ class PricingService
             }
 
             $saving = 0.0;
-            $giftProductId = null;
+            $giftIds = [];
+            $giftMissing = false;
             if ($reached) {
                 if ($reached['free'] > 0) {
                     $units = [];
@@ -363,15 +376,24 @@ class PricingService
                     sort($units);
                     $saving += array_sum(array_slice($units, 0, $reached['free']));
                 }
+                foreach ($reached['gift_ids'] as $id) {
+                    if ($takeGift($id)) {
+                        $giftIds[] = (string) $id;
+                        $saving += (float) $prices[$id];
+                    } else {
+                        $giftMissing = true;
+                    }
+                }
                 if ($reached['gift']) {
-                    foreach ($deal->products as $option) {
-                        if (($quantities[$option->id] ?? 0) > ($giftUsed[$option->id] ?? 0)) {
-                            $giftUsed[$option->id] = ($giftUsed[$option->id] ?? 0) + 1;
-                            $giftProductId = (string) $option->id;
+                    $wanted = $reached['gift_qty'];
+                    foreach ($deal->products->filter(fn ($product) => Bundle::isGiftLine($product->pivot)) as $option) {
+                        while ($wanted > 0 && $takeGift($option->id)) {
+                            $giftIds[] = (string) $option->id;
                             $saving += (float) $prices[$option->id];
-                            break;
+                            $wanted--;
                         }
                     }
+                    $giftMissing = $giftMissing || $wanted > 0;
                 }
             }
 
@@ -387,9 +409,15 @@ class PricingService
                 'reached' => $reached,
                 'next' => $next ? $next + ['need' => $next['min'] - $count] : null,
                 'saving' => round($saving, 2),
-                'giftProductId' => $giftProductId,
-                'giftOptions' => $deal->products->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
-                'giftMissing' => (bool) ($reached['gift'] ?? false) && ! $giftProductId,
+                'giftProductId' => $giftIds[0] ?? null,
+                'giftProductIds' => $giftIds,
+                'giftOptions' => $deal->products->filter(fn ($product) => Bundle::isGiftLine($product->pivot))
+                    ->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+                'giftMissing' => $giftMissing,
+                // Colour lines count "colours"; a product list counts "pieces". Gift names for the reward text.
+                'isColour' => (bool) $families,
+                'giftNames' => (object) $deal->products->filter(fn ($product) => Bundle::isGiftLine($product->pivot))
+                    ->mapWithKeys(fn ($product) => [(string) $product->id => $product->name])->all(),
             ];
         }
 

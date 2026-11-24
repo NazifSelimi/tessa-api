@@ -30,7 +30,20 @@ class ImportBundleOffers extends Command
             return self::FAILURE;
         }
 
-        $ids = collect($data['offers'])->flatMap(fn ($offer) => array_column($offer['products'], 'product_id'))->unique();
+        // "pool": products a "pick any" offer counts (Silver Star shampoo or mask); "products": its gifts or bundle items.
+        foreach ($data['offers'] as &$offer) {
+            $offer['products'] = $offer['products'] ?? [];
+            $offer['pool'] = $offer['pool'] ?? [];
+            $stepGifts = collect($offer['tiers'] ?? [])->flatMap(fn ($tier) => $tier['gift_ids'] ?? [])->unique()
+                ->reject(fn ($id) => in_array($id, array_column($offer['products'], 'product_id')));
+            // Step gifts are gift choices too, so the shop card can show them.
+            foreach ($stepGifts as $id) {
+                $offer['products'][] = ['product_id' => $id, 'quantity' => 1];
+            }
+        }
+        unset($offer);
+
+        $ids = collect($data['offers'])->flatMap(fn ($offer) => array_merge(array_column($offer['products'], 'product_id'), $offer['pool']))->unique();
         $products = Product::query()->whereIn('id', $ids)->withCount('images')->get()->keyBy('id');
         $missing = $ids->diff($products->keys());
         if ($missing->isNotEmpty()) {
@@ -51,16 +64,16 @@ class ImportBundleOffers extends Command
                     continue;
                 }
 
-                $problems = collect($offer['products'])->map(function ($line) use ($products, $visibleColumn) {
-                    $product = $products[$line['product_id']];
+                $problems = collect($offer['products'])->pluck('product_id')->merge($offer['pool'])->map(function ($id) use ($products, $visibleColumn) {
+                    $product = $products[$id];
                     if (! $product->images_count) return "#{$product->id} no photo";
                     if (! $product->{$visibleColumn}) return "#{$product->id} hidden";
 
                     return null;
                 })->filter();
-                $live = $problems->isEmpty();
+                $live = $problems->isEmpty() && empty($offer['draft']);
                 $live ? $created++ : $drafts++;
-                $this->line(($live ? 'live  ' : 'draft ') . $offer['name'] . ($live ? '' : ' (' . $problems->implode(', ') . ')'));
+                $this->line(($live ? 'live  ' : 'draft ') . $offer['name'] . ($live ? '' : ' (' . ($problems->isEmpty() ? 'set as draft in the file' : $problems->implode(', ')) . ')'));
 
                 if ($this->option('dry-run')) continue;
 
@@ -72,18 +85,26 @@ class ImportBundleOffers extends Command
                     'promotion_type' => $type,
                     // "Pick any colours": the colour line and reward steps; products are the gift choices.
                     'product_family_id' => $type === Bundle::MIX_MATCH ? ($offer['product_family_id'] ?? null) : null,
+                    'product_family_ids' => $type === Bundle::MIX_MATCH ? ($offer['product_family_ids'] ?? null) : null,
+                    'bundle_price' => $type === 'fixed_price' ? $offer['bundle_price'] : null,
                     'tiers' => $type === Bundle::MIX_MATCH ? ($offer['tiers'] ?? null) : null,
                     'discount_percentage' => $offer['discount_percentage'] ?? $data['discount_percentage'] ?? null,
                     'is_active' => $live,
-                    'is_featured' => false,
+                    'is_featured' => (bool) ($offer['is_featured'] ?? false),
                     'starts_at' => now(),
                     'ends_at' => $data['ends_at'] ?? null,
                 ]);
                 $bundle->products()->sync(collect($offer['products'])->mapWithKeys(fn ($line) => [
                     $line['product_id'] => $type === Bundle::MIX_MATCH
                         ? ['quantity' => 1, 'is_bonus' => true, 'bonus_quantity' => 1]
-                        : ['quantity' => $line['quantity'], 'is_bonus' => false, 'bonus_quantity' => 0],
-                ])->all());
+                        : [
+                            'quantity' => $line['quantity'],
+                            'is_bonus' => ($line['bonus_quantity'] ?? 0) > 0,
+                            'bonus_quantity' => (int) ($line['bonus_quantity'] ?? 0),
+                        ],
+                ])->union(collect($offer['pool'])->mapWithKeys(fn ($id) => [
+                    $id => ['quantity' => 1, 'is_bonus' => false, 'bonus_quantity' => 0],
+                ]))->all());
             }
         });
 

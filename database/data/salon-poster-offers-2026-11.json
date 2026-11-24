@@ -1,0 +1,353 @@
+{
+ "audience": "stylist",
+ "ends_at": null,
+ "deactivate": [
+  "Fanola бои по избор",
+  "Oro Therapy бои по избор",
+  "RR Line бои по избор",
+  "No Yellow бои по избор"
+ ],
+ "offers": [
+  {
+   "name": "Real Color Trio (Goji)",
+   "description": "RR Line Real Color шампон 1000ml + маска 1000ml + серум 100ml за бојадисана и деколорирана коса. Акција 1.790 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1790,
+   "products": [
+    {
+     "product_id": 417,
+     "quantity": 1
+    },
+    {
+     "product_id": 420,
+     "quantity": 1
+    },
+    {
+     "product_id": 421,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Oro Therapy 24K Gold сет + Gold Mist гратис",
+   "description": "Fanola Oro Therapy Gold: шампон 1000ml, маска 1000ml, Bi-Phase 200ml и Gold Fluid. Gold Mist парфем за коса 100ml гратис.",
+   "promotion_type": "bonus_items",
+   "is_featured": true,
+   "products": [
+    {
+     "product_id": 397,
+     "quantity": 1
+    },
+    {
+     "product_id": 396,
+     "quantity": 1
+    },
+    {
+     "product_id": 273,
+     "quantity": 1
+    },
+    {
+     "product_id": 277,
+     "quantity": 1
+    },
+    {
+     "product_id": 1733,
+     "quantity": 1,
+     "bonus_quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "No Yellow / No Orange 3×1000ml + 3×100ml гратис",
+   "description": "Купи било кои 3 Fanola No Yellow или No Orange шампони 1000ml и добиј 3 No Yellow шампони 100ml гратис (6 = 6 гратис, 9 = 9 гратис).",
+   "promotion_type": "mix_match",
+   "is_featured": true,
+   "pool": [
+    422,
+    391
+   ],
+   "tiers": [
+    {
+     "min": 3,
+     "free": 0,
+     "gift": true,
+     "gift_qty": 3
+    },
+    {
+     "min": 6,
+     "free": 0,
+     "gift": true,
+     "gift_qty": 6
+    },
+    {
+     "min": 9,
+     "free": 0,
+     "gift": true,
+     "gift_qty": 9
+    }
+   ],
+   "products": [
+    {
+     "product_id": 571,
+     "quantity": 1
+    }
+   ]
+  },
+  {
+   "name": "Oro Therapy Magic четка 1 парче",
+   "description": "Oro Therapy Magic Brush: 1 парче 1.050 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1050,
+   "products": [
+    {
+     "product_id": 1584,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Oro Therapy Magic четка 3 парчиња",
+   "description": "Oro Therapy Magic Brush: 3 парчиња по 950 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 2850,
+   "products": [
+    {
+     "product_id": 1584,
+     "quantity": 3
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Oro Therapy Magic четка 6 парчиња",
+   "description": "Oro Therapy Magic Brush: 6 парчиња по 850 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 5100,
+   "products": [
+    {
+     "product_id": 1584,
+     "quantity": 6
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Oro Therapy Magic четка 12 парчиња",
+   "description": "Oro Therapy Magic Brush: 12 парчиња по 690 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 8280,
+   "products": [
+    {
+     "product_id": 1584,
+     "quantity": 12
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Fanola Volume дуо 350ml",
+   "description": "Fanola Volume шампон + регенератор 350ml. Акција 790 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 790,
+   "products": [
+    {
+     "product_id": 332,
+     "quantity": 1
+    },
+    {
+     "product_id": 333,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true,
+   "draft": true
+  },
+  {
+   "name": "Fanola Volume дуо 1L",
+   "description": "Fanola Volume шампон + регенератор 1000ml. Акција 1.090 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1090,
+   "products": [
+    {
+     "product_id": 578,
+     "quantity": 1
+    },
+    {
+     "product_id": 579,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true,
+   "draft": true
+  },
+  {
+   "name": "Fanola Color Mask 6+1 гратис",
+   "description": "Купи 6 Fanola Color Mask 200ml по избор, седмата е гратис (14 = 2 гратис, 21 = 3 гратис).",
+   "promotion_type": "mix_match",
+   "product_family_id": 5,
+   "is_featured": true,
+   "tiers": [
+    {
+     "min": 7,
+     "free": 1
+    },
+    {
+     "min": 14,
+     "free": 2
+    },
+    {
+     "min": 21,
+     "free": 3
+    }
+   ],
+   "products": []
+  },
+  {
+   "name": "RR Line Silver Star 6+1 гратис",
+   "description": "Real Silver шампон или маска, 350ml или 1L: купи 6, едно гратис (14 = 2, 21 = 3 гратис; гратис е најевтиното).",
+   "promotion_type": "mix_match",
+   "is_featured": true,
+   "pool": [
+    399,
+    400,
+    401,
+    402
+   ],
+   "tiers": [
+    {
+     "min": 7,
+     "free": 1
+    },
+    {
+     "min": 14,
+     "free": 2
+    },
+    {
+     "min": 21,
+     "free": 3
+    }
+   ],
+   "products": []
+  },
+  {
+   "name": "Fanola Wonder Curl шампон + маска 1L",
+   "description": "Fanola Wonder Curl шампон 1000ml + маска 1000ml. Акција 1.390 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1390,
+   "products": [
+    {
+     "product_id": 577,
+     "quantity": 1
+    },
+    {
+     "product_id": 576,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "RR Line Collagen & Macadamia сет",
+   "description": "Real Macadamia шампон 1000ml, спреј маска 200ml, флуид 100ml и маска 1000ml за сува, оштетена коса. Акција 2.900 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 2900,
+   "products": [
+    {
+     "product_id": 278,
+     "quantity": 1
+    },
+    {
+     "product_id": 285,
+     "quantity": 1
+    },
+    {
+     "product_id": 286,
+     "quantity": 1
+    },
+    {
+     "product_id": 282,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Fanola No Red шампон + маска 350ml",
+   "description": "Fanola No Red шампон + маска 350ml за кафеава коса. Акција 1.150 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1150,
+   "products": [
+    {
+     "product_id": 367,
+     "quantity": 1
+    },
+    {
+     "product_id": 366,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Fanola No Red шампон + маска 1L",
+   "description": "Fanola No Red шампон + маска 1000ml за кафеава коса. Акција 1.580 ден.",
+   "promotion_type": "fixed_price",
+   "bundle_price": 1580,
+   "products": [
+    {
+     "product_id": 393,
+     "quantity": 1
+    },
+    {
+     "product_id": 395,
+     "quantity": 1
+    }
+   ],
+   "is_featured": true
+  },
+  {
+   "name": "Салонска понуда: бои + подароци",
+   "description": "Купи бои (Fanola, Oro Therapy, RR Line, No Yellow, по избор): 30 туби = Oro Therapy Magic четка гратис, 50 туби = Fiber Fix кит гратис.",
+   "promotion_type": "mix_match",
+   "is_featured": true,
+   "product_family_id": 1,
+   "product_family_ids": [
+    2,
+    3,
+    4
+   ],
+   "tiers": [
+    {
+     "min": 30,
+     "free": 0,
+     "gift_ids": [
+      1584
+     ]
+    },
+    {
+     "min": 50,
+     "free": 0,
+     "gift_ids": [
+      358
+     ]
+    }
+   ],
+   "products": []
+  },
+  {
+   "name": "Fanola CS исправување 2+1 гратис",
+   "description": "Fanola CS Straightening Cream кит (100ml крем + 120ml неутрализатор): купи 2, третиот гратис.",
+   "promotion_type": "bonus_items",
+   "is_featured": true,
+   "products": [
+    {
+     "product_id": 1739,
+     "quantity": 3,
+     "bonus_quantity": 1
+    }
+   ]
+  }
+ ]
+}
