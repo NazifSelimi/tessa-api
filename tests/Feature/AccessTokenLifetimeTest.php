@@ -117,4 +117,40 @@ class AccessTokenLifetimeTest extends TestCase
         $this->withToken($plain)->getJson('/api/v1/admin/orders')->assertStatus(403);
         $this->withToken($plain)->getJson('/api/v1/auth/me')->assertStatus(403);
     }
+
+    /** #2 (owner rule Q10): a new password also signs out every AI assistant key. */
+    #[Test]
+    public function changing_the_password_also_signs_out_ai_assistant_keys()
+    {
+        $admin = $this->user(User::ROLE_ADMIN);
+        $laptop = $this->login($admin);
+        $ai = $admin->createToken(\App\Support\AccessTokens::AI_PREFIX . 'Claude', ['*'], now()->addYear())->plainTextToken;
+
+        $this->withToken($laptop)->putJson('/api/v1/auth/password', [
+            'current_password' => 'password123',
+            'password' => 'newpassword456',
+            'password_confirmation' => 'newpassword456',
+        ], ['Accept-Language' => 'mk'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Лозинката е ажурирана. Другите најави и клучевите за AI асистентот се одјавени.');
+
+        $this->assertNull(PersonalAccessToken::findToken($ai));
+        $this->assertNotNull(PersonalAccessToken::findToken($laptop));
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ai)->postJson('/api/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])->assertUnauthorized();
+    }
+
+    /** "Sign out other devices" still keeps AI assistant keys (only a new password removes them). */
+    #[Test]
+    public function sign_out_of_other_devices_keeps_ai_assistant_keys()
+    {
+        $admin = $this->user(User::ROLE_ADMIN);
+        $laptop = $this->login($admin);
+        $ai = $admin->createToken(\App\Support\AccessTokens::AI_PREFIX . 'Claude', ['*'], now()->addYear())->plainTextToken;
+
+        $this->withToken($laptop)->postJson('/api/v1/auth/logout-others')->assertOk();
+
+        $this->assertNotNull(PersonalAccessToken::findToken($ai));
+    }
+
 }

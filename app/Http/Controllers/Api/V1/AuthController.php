@@ -158,14 +158,17 @@ class AuthController extends Controller
         return ApiResponse::ok(['signed_out' => $this->revokeOtherTokens($request)]);
     }
 
-    /** Deletes the user's sign-in tokens except the current one (AI tokens are kept). */
-    private function revokeOtherTokens(Request $request): int
+    /**
+     * Deletes the user's sign-in tokens except the current one. AI assistant
+     * tokens are kept, unless $withAiTokens (a new password removes them too).
+     */
+    private function revokeOtherTokens(Request $request, bool $withAiTokens = false): int
     {
         $current = $request->user()->currentAccessToken();
 
         return $request->user()->tokens()
             ->when($current instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($current->getKey()))
-            ->where('name', 'not like', 'ai-assistant: %')
+            ->when(! $withAiTokens, fn ($q) => $q->where('name', 'not like', AccessTokens::AI_PREFIX . '%'))
             ->delete();
     }
 
@@ -225,10 +228,11 @@ class AuthController extends Controller
         $user->password = Hash::make($request->input('password'));
         $user->save();
 
-        // A new password signs out every other phone/browser; this one stays in.
-        $this->revokeOtherTokens($request);
+        // A new password signs out every other phone/browser and every AI assistant
+        // key (owner rule Q10); this one stays in.
+        $this->revokeOtherTokens($request, withAiTokens: true);
 
-        return ApiResponse::ok(null, 200, [], __('Password updated successfully.'));
+        return ApiResponse::ok(null, 200, [], __('Password updated. Other sign-ins and AI assistant keys were signed out.'));
     }
 
     public function forgotPassword(ForgotPasswordRequest $request)
