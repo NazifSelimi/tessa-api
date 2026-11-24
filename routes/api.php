@@ -129,6 +129,13 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             Route::post('/stylist-invitations/{id}/reissue', [StylistInvitationController::class, 'reissue'])->middleware('feature:stylist_invitations');
             Route::post('/stylist-invitations/{id}/revoke', [StylistInvitationController::class, 'revoke'])->middleware('feature:stylist_invitations');
             
+            // Query tool: filter products/orders/customers with conditions
+            Route::get('/query/schema', [\App\Http\Controllers\Api\V1\Admin\AdminQueryController::class, 'schema']);
+            Route::post('/query/run', [\App\Http\Controllers\Api\V1\Admin\AdminQueryController::class, 'run']);
+            Route::get('/query/saved', [\App\Http\Controllers\Api\V1\Admin\AdminQueryController::class, 'saved']);
+            Route::post('/query/saved', [\App\Http\Controllers\Api\V1\Admin\AdminQueryController::class, 'save']);
+            Route::delete('/query/saved/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminQueryController::class, 'destroy']);
+
             // Product Management
             Route::get('/products', [AdminProductController::class, 'index']);
             Route::get('/products/problems', [\App\Http\Controllers\Api\V1\Admin\ProductProblemController::class, 'index']);
