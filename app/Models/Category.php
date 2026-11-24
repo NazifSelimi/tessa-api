@@ -14,6 +14,7 @@ class Category extends Model
         'name',
         'sort_priority',
         'cost_percentage',
+        'is_hair_colour',
     ];
 
     protected $hidden = ['cost_percentage'];
@@ -21,6 +22,7 @@ class Category extends Model
     protected $casts = [
         'sort_priority' => 'integer',
         'cost_percentage' => 'decimal:2',
+        'is_hair_colour' => 'boolean',
     ];
 
     public function products(): HasMany

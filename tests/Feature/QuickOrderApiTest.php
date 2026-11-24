@@ -129,4 +129,39 @@ class QuickOrderApiTest extends TestCase
         $this->withToken($customer->createToken('t')->plainTextToken)
             ->getJson('/api/v1/products/quick-order')->assertStatus(403);
     }
+
+    /** #25 (owner rule Q11): categories ticked "Is hair colour" decide Restock colours. */
+    #[Test]
+    public function restock_colours_uses_the_ticked_categories()
+    {
+        $brand = Brand::factory()->create();
+        $tinte = Category::factory()->create(['name' => 'Tinte Q11 test']);
+        $named = Category::factory()->create(['name' => 'Hair Color Q11 test']);
+        Product::factory()->create(['name' => 'Ticked shade', 'brand_id' => $brand->id, 'category_id' => $tinte->id]);
+        Product::factory()->create(['name' => 'Named shade', 'brand_id' => $brand->id, 'category_id' => $named->id]);
+
+        // An admin ticks the category.
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->withToken($admin->createToken('t')->plainTextToken)
+            ->putJson("/api/v1/admin/categories/{$tinte->id}", ['name' => $tinte->name, 'is_hair_colour' => true])
+            ->assertOk()->assertJsonPath('data.isHairColour', true);
+
+        $this->app['auth']->forgetGuards();
+        $names = collect($this->asStylist()->getJson('/api/v1/products/quick-order?color_restock=1')->assertOk()->json('data'))->pluck('name');
+        $this->assertContains('Ticked shade', $names);
+        $this->assertNotContains('Named shade', $names);   // once something is ticked, names no longer count
+    }
+
+    /** NEW-5 (owner rule Q11): the name search finds colour in every shop language, but not care or protection. */
+    #[Test]
+    public function the_colour_name_search_skips_care_and_protection()
+    {
+        foreach (['Hair Color', 'Hair Colour', 'Боја за коса', 'Бои', 'Ngjyra flokësh', 'Ngjyrë'] as $name) {
+            $this->assertTrue(\App\Support\HairColourCategories::looksLikeColour($name), $name);
+        }
+        foreach (['Color Protection', 'Color Care', 'Color Mask', 'Bleach and De Color', 'Заштита на бојата', 'Mbrojtje ngjyre', 'Shampoo'] as $name) {
+            $this->assertFalse(\App\Support\HairColourCategories::looksLikeColour($name), $name);
+        }
+    }
+
 }

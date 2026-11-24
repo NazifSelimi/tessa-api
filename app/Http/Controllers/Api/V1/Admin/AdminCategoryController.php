@@ -40,6 +40,8 @@ class AdminCategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:categories,name,' . $id],
+            // "Is hair colour" tick (owner rule Q11).
+            'is_hair_colour' => ['sometimes', 'boolean'],
         ]);
 
         $category = $this->categoryService->update($id, $validated);

@@ -17,6 +17,8 @@ class CategoryResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
+            // Owner rule Q11: used by "Restock colours" in Quick order.
+            'isHairColour' => (bool) ($this->is_hair_colour ?? false),
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];
