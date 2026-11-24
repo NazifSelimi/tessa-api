@@ -56,6 +56,7 @@ class CartQuoteController extends Controller
             try {
                 $coupon = $this->orders->validCoupon($validated['coupon_code']);
                 $this->referrals->assertUsable($coupon, $user);
+                app(\App\Services\CouponUsage::class)->assertNotUsedBefore($coupon, $user, $user?->email, $user?->phone);
             } catch (ValidationException $e) {
                 $coupon = null;
                 $couponError = $e->errors()['coupon_code'][0] ?? 'Coupon is not valid.';

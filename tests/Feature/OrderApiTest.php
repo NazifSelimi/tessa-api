@@ -374,4 +374,62 @@ class OrderApiTest extends TestCase
         $this->assertDatabaseHas('order_infos', ['order_id' => $id, 'first_name' => 'Gift', 'city' => 'Tetovo']);
     }
 
+    /** #19 (owner rule Q7b): each customer can use a normal coupon once; guests are matched by email or phone. */
+    #[Test]
+    public function a_normal_coupon_works_once_per_customer()
+    {
+        $product = Product::factory()->create(['price' => 1000, 'quantity' => 50]);
+        \App\Models\Coupon::factory()->create(['code' => 'ONCE10', 'type' => 'percentage', 'value' => 10, 'quantity' => 10, 'expiration_date' => now()->addMonth()]);
+        $withCoupon = fn () => $this->orderFor($product, 1) + ['coupon_code' => 'ONCE10'];
+
+        // Signed in: second order with the same code is refused, in the shop language.
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+        $this->withToken($token)->postJson('/api/v1/orders', $withCoupon())->assertStatus(201);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->postJson('/api/v1/orders', $withCoupon(), ['Accept-Language' => 'mk'])
+            ->assertStatus(422)->assertJsonValidationErrors(['coupon_code' => 'Веќе го искористивте овој код.']);
+
+        // Guests: the same email (or phone) on an earlier order counts as used.
+        $this->app['auth']->forgetGuards();
+        $guest = fn (string $email, string $phone) => ['items' => [['product_id' => $product->id, 'qty' => 1]], 'coupon_code' => 'ONCE10',
+            'shipping_address' => ['firstName' => 'G', 'lastName' => 'Uest', 'email' => $email, 'phone' => $phone, 'address' => 'S 1', 'city' => 'Skopje', 'zip' => '1000']];
+        $this->postJson('/api/v1/checkout', $guest('guest@example.com', '071 222 333'))->assertStatus(201);
+        $this->postJson('/api/v1/checkout', $guest('GUEST@example.com', '071000000'))->assertStatus(422)->assertJsonValidationErrors('coupon_code');
+        $this->postJson('/api/v1/checkout', $guest('other@example.com', '071-222-333'))->assertStatus(422)->assertJsonValidationErrors('coupon_code');
+    }
+
+    /** #19 (owner rule Q7a): a cancelled or trashed order gives its coupon use back. */
+    #[Test]
+    public function a_cancelled_or_trashed_order_gives_its_coupon_back()
+    {
+        \App\Models\Setting::put('features', '{}');
+        $product = Product::factory()->create(['price' => 1000, 'quantity' => 50]);
+        $coupon = \App\Models\Coupon::factory()->create(['code' => 'BACK10', 'type' => 'percentage', 'value' => 10, 'quantity' => 5, 'expiration_date' => now()->addMonth()]);
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+
+        $id = $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 1) + ['coupon_code' => 'BACK10'])
+            ->assertStatus(201)->json('data.id');
+        $this->assertSame(4, $coupon->fresh()->quantity);
+
+        // The customer cancels: the use comes back, the order says so, and the code works again.
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->postJson("/api/v1/orders/{$id}/cancel")->assertOk()->assertJsonPath('data.couponCanBeUsedAgain', true);
+        $this->assertSame(5, $coupon->fresh()->quantity);
+        $this->app['auth']->forgetGuards();
+        $again = $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 1) + ['coupon_code' => 'BACK10'])
+            ->assertStatus(201)->json('data.id');
+        $this->assertSame(4, $coupon->fresh()->quantity);
+
+        // An admin trashes the new order: the use comes back again; restoring takes it again.
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin)->deleteJson("/api/v1/admin/orders/{$again}")->assertOk();
+        $this->assertSame(5, $coupon->fresh()->quantity);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin)->postJson("/api/v1/admin/orders/{$again}/restore")->assertOk();
+        $this->assertSame(4, $coupon->fresh()->quantity);
+    }
+
 }

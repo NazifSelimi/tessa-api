@@ -13,7 +13,8 @@ class AdminOrderService
 {
     public function __construct(
         private readonly ReferralService $referrals,
-        private readonly OrderService $orders
+        private readonly OrderService $orders,
+        private readonly CouponUsage $coupons,
     ) {}
 
     /**
@@ -113,6 +114,13 @@ class AdminOrderService
             }
 
             $order->update(['status' => $statusInt]);
+
+            // A cancelled order's coupon use comes back; undoing the cancel takes it again (Q7).
+            if ($isCancelled && ! $wasCancelled) {
+                $this->coupons->release($order);
+            } elseif ($wasCancelled && ! $isCancelled) {
+                $this->coupons->retake($order);
+            }
 
             $this->referrals->syncOrder($order);
 

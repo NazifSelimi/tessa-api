@@ -18,5 +18,6 @@
     "A percentage coupon can be at most 100%.": "Попустот во проценти може да биде најмногу 100%.",
     "The end date cannot be in the past.": "Датумот на истекување не може да биде во минатото.",
     "Password updated. Other sign-ins and AI assistant keys were signed out.": "Лозинката е ажурирана. Другите најави и клучевите за AI асистентот се одјавени.",
-    "Only :have left of :name, need :need.": "Останаа само :have од :name, потребни се :need."
+    "Only :have left of :name, need :need.": "Останаа само :have од :name, потребни се :need.",
+    "You have already used this coupon.": "Веќе го искористивте овој код."
 }

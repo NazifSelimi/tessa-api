@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\CouponUsage;
 use App\Services\OrderService;
 use App\Services\ReferralService;
 use App\Support\ApiResponse;
@@ -19,6 +20,7 @@ class AdminOrderTrashController extends Controller
     public function __construct(
         private readonly ReferralService $referrals,
         private readonly OrderService $orders,
+        private readonly CouponUsage $coupons,
     ) {}
 
     public function trash(int $id)
@@ -30,6 +32,10 @@ class AdminOrderTrashController extends Controller
             // and a shipped one has left the shop: returns are added by hand (owner rule Q3).
             if ($this->holdsStock($order)) {
                 $this->orders->moveStock($order, +1);
+            }
+            // Its coupon use comes back, unless a cancel already gave it back (Q7).
+            if ($order->status !== Order::STATUS_CANCELLED) {
+                $this->coupons->release($order);
             }
             $this->referrals->syncOrder($order);
 
@@ -49,6 +55,9 @@ class AdminOrderTrashController extends Controller
             // Takes its stock again; refuses when there is not enough, unless "Proceed anyway" (Q12).
             if ($this->holdsStock($order)) {
                 $this->orders->takeStock($order, $request->boolean('force'), $request->user());
+            }
+            if ($order->status !== Order::STATUS_CANCELLED) {
+                $this->coupons->retake($order);
             }
             $this->referrals->syncOrder($order);
 

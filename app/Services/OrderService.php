@@ -16,7 +16,8 @@ class OrderService
 {
     public function __construct(
         private readonly PricingService $pricing,
-        private readonly ReferralService $referrals
+        private readonly ReferralService $referrals,
+        private readonly CouponUsage $couponUsage,
     ) {}
 
     public function userOrders(User $user)
@@ -41,6 +42,8 @@ class OrderService
             $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
             if ($coupon) {
                 $this->referrals->assertUsable($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
+                // A normal coupon once per customer (owner rule Q7).
+                $this->couponUsage->assertNotUsedBefore($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
             }
 
             $order = Order::create([
@@ -210,6 +213,8 @@ class OrderService
             $this->referrals->syncOrder($order);
 
             $this->moveStock($order, +1);
+            // Its coupon use comes back (owner rule Q7).
+            $this->couponUsage->release($order);
 
             return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         });
