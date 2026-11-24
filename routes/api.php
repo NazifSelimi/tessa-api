@@ -107,7 +107,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);
-        Route::post('/orders', [OrderController::class, 'store']);
+        // One account may not place orders in a burst and hold all the stock (#26).
+        Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:10,1');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
 
         // Stylist Requests

@@ -336,4 +336,18 @@ class OrderApiTest extends TestCase
         }
         $this->assertSame(120, $product->fresh()->quantity);
     }
+
+    /** #26: one account can place at most 10 orders a minute. */
+    #[Test]
+    public function placing_orders_is_limited_to_10_a_minute()
+    {
+        $token = User::factory()->create()->createToken('t')->plainTextToken;
+
+        // Requests count even when they are refused, so empty ones are enough.
+        for ($i = 0; $i < 10; $i++) {
+            $this->withToken($token)->postJson('/api/v1/orders', [])->assertStatus(422);
+        }
+        $this->withToken($token)->postJson('/api/v1/orders', [])->assertStatus(429);
+    }
+
 }
