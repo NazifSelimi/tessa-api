@@ -75,7 +75,7 @@ class AdminProductController extends Controller
 
         // Auto-calculate stylist_price if not provided
         if (!isset($validated['stylist_price'])) {
-            $validated['stylist_price'] = $validated['price'] * 0.9;
+            $validated['stylist_price'] = round($validated['price'] * 0.9); // whole denars
         }
 
         // Preserve the source and create non-destructive catalogue variants.
@@ -148,7 +148,7 @@ class AdminProductController extends Controller
         // Fill a missing salon price from the new retail price, but never overwrite
         // a salon price that is already set.
         if (isset($validated['price']) && !isset($validated['stylist_price']) && (float) $product->stylist_price <= 0) {
-            $validated['stylist_price'] = $validated['price'] * 0.9;
+            $validated['stylist_price'] = round($validated['price'] * 0.9); // whole denars
         }
 
         $validated = $this->audienceColumns($validated);

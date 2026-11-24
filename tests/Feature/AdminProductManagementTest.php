@@ -104,4 +104,22 @@ class AdminProductManagementTest extends TestCase
             ->assertJsonPath('data.0.stylistOnly', true)
             ->assertJsonPath('data.0.inStock', true);
     }
+
+    /** #16: an automatic salon price is whole denars (1095 × 0.9 = 985.50 → 986). */
+    #[Test]
+    public function an_automatic_salon_price_is_rounded_to_whole_denars(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]));
+
+        $this->postJson('/api/v1/admin/products', [
+            'name' => 'Rounding test shampoo',
+            'price' => 1095,
+            'quantity' => 5,
+            'category_id' => Category::factory()->create()->id,
+            'brand_id' => Brand::factory()->create()->id,
+        ])->assertCreated();
+
+        $this->assertEquals(986, (float) Product::where('name', 'Rounding test shampoo')->value('stylist_price'));
+    }
+
 }
