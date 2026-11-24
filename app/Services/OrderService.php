@@ -218,7 +218,60 @@ class OrderService
     }
 
     /**
-     * Put an order's items back on the shelf (+1, order cancelled) or take them again (-1, cancel undone).
+     * Take an order's items from the shelf again (a cancel undone, or an order
+     * restored from the Trash). Call inside a transaction.
+     *
+     * Refuses with 422 (errors.stock) when there is not enough, unless $force:
+     * then stock may go below 0, and who did it and when is written to the log
+     * (owner rule Q12).
+     */
+    public function takeStock(Order $order, bool $force = false, ?User $by = null): void
+    {
+        $order->load('items');
+        $needed = [];
+        foreach ($order->items as $item) {
+            if ($item->product_id) {
+                $needed[$item->product_id] = ($needed[$item->product_id] ?? 0) + (int) $item->quantity;
+            }
+        }
+        if (! $needed) {
+            return;
+        }
+
+        // Lock the rows (in id order, so two requests never wait on each other) before checking.
+        $products = Product::query()->whereKey(array_keys($needed))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+
+        $short = [];
+        foreach ($needed as $id => $qty) {
+            $product = $products->get($id);
+            if ($product && (int) $product->quantity < $qty) {
+                $short[] = __('Only :have left of :name, need :need.', [
+                    'have' => max(0, (int) $product->quantity), 'name' => $product->name, 'need' => $qty,
+                ]);
+            }
+        }
+
+        if ($short && ! $force) {
+            throw ValidationException::withMessages(['stock' => $short]);
+        }
+        if ($short) {
+            Log::warning('Stock taken below zero by an admin (Proceed anyway)', [
+                'order_id' => $order->id,
+                'admin_id' => $by?->id,
+                'admin_email' => $by?->email,
+                'at' => now()->toIso8601String(),
+                'short' => $short,
+            ]);
+        }
+
+        foreach ($needed as $id => $qty) {
+            $products->get($id)?->decrement('quantity', $qty);
+        }
+    }
+
+    /**
+     * Put an order's items back on the shelf (+1, order cancelled) or take them again (-1).
+     * Taking them again should go through takeStock(), which checks there is enough.
      * Call inside a transaction.
      */
     public function moveStock(Order $order, int $direction): void

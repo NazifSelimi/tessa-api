@@ -37,9 +37,11 @@ class AdminOrderController extends Controller
     {
         $request->validate([
             'status' => ['required', 'in:pending,confirmed,shipped,cancelled'],
+            // "Proceed anyway" after a not-enough-stock refusal (422 errors.stock).
+            'force' => ['sometimes', 'boolean'],
         ]);
 
-        $order = $this->adminOrderService->updateStatus($id, $request->status);
+        $order = $this->adminOrderService->updateStatus($id, $request->status, $request->boolean('force'), $request->user());
 
         return ApiResponse::ok(
             new OrderResource($order),

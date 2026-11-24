@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Events\OrderStatusUpdated;
 use App\Models\Order;
+use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -74,25 +76,43 @@ class AdminOrderService
     /**
      * Update the status of an order.
      */
-    public function updateStatus($id, string $status): Order
+    /** Orders that were shipped when cancelled: their stock was not put back (owner rule Q3). */
+    private const STOCK_KEPT_KEY = 'orders.stock_kept_on_cancel';
+
+    /**
+     * @param bool $force "Proceed anyway": take the stock even if it goes below 0 (owner rule Q12).
+     */
+    public function updateStatus($id, string $status, bool $force = false, ?User $by = null): Order
     {
         $statusInt = self::STATUS_MAP[$status] ?? null;
         if ($statusInt === null) {
             throw new \InvalidArgumentException("Invalid status: {$status}");
         }
 
-        [$order, $previousStatus] = DB::transaction(function () use ($id, $statusInt) {
+        [$order, $previousStatus] = DB::transaction(function () use ($id, $statusInt, $force, $by) {
             $order = Order::query()->lockForUpdate()->findOrFail($id);
             $previousStatus = $order->status;
-            $order->update(['status' => $statusInt]);
 
             // Stock follows the order: cancelling puts items back, undoing a cancel takes them again
-            // (the same as a customer cancelling their own order).
+            // (the same as a customer cancelling their own order). A shipped order has left the
+            // shop, so cancelling it never puts stock back; returns are added by hand (Q3).
             $wasCancelled = $previousStatus === Order::STATUS_CANCELLED;
             $isCancelled = $statusInt === Order::STATUS_CANCELLED;
-            if ($wasCancelled !== $isCancelled) {
-                $this->orders->moveStock($order, $isCancelled ? +1 : -1);
+            if ($isCancelled && ! $wasCancelled) {
+                if ($previousStatus === Order::STATUS_SHIPPED) {
+                    $this->rememberStockKept($order->id);
+                } else {
+                    $this->orders->moveStock($order, +1);
+                }
+            } elseif ($wasCancelled && ! $isCancelled) {
+                if ($this->forgetStockKept($order->id)) {
+                    // Its stock was never put back, so there is nothing to take again.
+                } else {
+                    $this->orders->takeStock($order, $force, $by);
+                }
             }
+
+            $order->update(['status' => $statusInt]);
 
             $this->referrals->syncOrder($order);
 
@@ -109,5 +129,27 @@ class AdminOrderService
         }
 
         return $order->load(['user', 'info', 'items.product.images', 'items.product.brand', 'items.product.category', 'coupon', 'referralStylist']);
+    }
+
+    private function stockKept(): array
+    {
+        return array_map('intval', json_decode((string) Setting::get(self::STOCK_KEPT_KEY, '[]'), true) ?: []);
+    }
+
+    private function rememberStockKept(int $orderId): void
+    {
+        Setting::put(self::STOCK_KEPT_KEY, json_encode(array_values(array_unique([...$this->stockKept(), $orderId]))));
+    }
+
+    /** True when the order was on the list (and takes it off). */
+    private function forgetStockKept(int $orderId): bool
+    {
+        $ids = $this->stockKept();
+        if (! in_array($orderId, $ids, true)) {
+            return false;
+        }
+        Setting::put(self::STOCK_KEPT_KEY, json_encode(array_values(array_diff($ids, [$orderId]))));
+
+        return true;
     }
 }

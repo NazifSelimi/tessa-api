@@ -17,5 +17,6 @@
     "This phone number is already linked to an account.": "Ky numër telefoni është i lidhur tashmë me një llogari.",
     "A percentage coupon can be at most 100%.": "Kuponi me përqindje mund të jetë deri në 100%.",
     "The end date cannot be in the past.": "Data e skadimit nuk mund të jetë në të kaluarën.",
-    "Password updated. Other sign-ins and AI assistant keys were signed out.": "Fjalëkalimi u përditësua. Hyrjet e tjera dhe çelësat e asistentit AI u çkyçën."
+    "Password updated. Other sign-ins and AI assistant keys were signed out.": "Fjalëkalimi u përditësua. Hyrjet e tjera dhe çelësat e asistentit AI u çkyçën.",
+    "Only :have left of :name, need :need.": "Kanë mbetur vetëm :have nga :name, duhen :need."
 }
