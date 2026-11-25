@@ -158,6 +158,7 @@ final class SalesReportCalculator
                 'name' => $line['name'],
                 'brand' => $line['brand'],
                 'category' => $line['category'],
+                'visibleTo' => $line['visibleTo'] ?? [],
                 'qty' => (int) $line['qty'],
                 'revenue' => self::money($line['revenue']),
                 'cost' => self::money($line['cost']),
