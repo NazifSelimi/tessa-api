@@ -98,10 +98,35 @@ class Product extends Model
     /** @return list<string> the audiences ticked for this product; empty = hidden. */
     public function visibleTo(): array
     {
+        return self::audiencesOfRow($this);
+    }
+
+    /**
+     * Audiences ticked on any row that carries the visible_to_* columns
+     * (a model or a plain query row, e.g. in reports). A missing column counts as open.
+     *
+     * @return list<string>
+     */
+    public static function audiencesOfRow(object $row): array
+    {
         return array_values(array_filter(
             self::AUDIENCES,
-            fn (string $audience) => (bool) ($this->{'visible_to_' . $audience} ?? true)
+            fn (string $audience) => (bool) ($row->{'visible_to_' . $audience} ?? true)
         ));
+    }
+
+    /** Admin wording for who can see a product: "Everyone", "Stylists only", "Hidden". */
+    public static function audienceLabel(array $audiences): string
+    {
+        if ($audiences === []) {
+            return 'Hidden';
+        }
+        if (count($audiences) === count(self::AUDIENCES)) {
+            return 'Everyone';
+        }
+        $names = ['guests' => 'Guests', 'customers' => 'Customers', 'stylists' => 'Stylists'];
+
+        return implode(' + ', array_map(fn ($a) => $names[$a], array_values(array_intersect(self::AUDIENCES, $audiences)))) . ' only';
     }
 
     /** @param list<string> $audiences */

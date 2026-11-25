@@ -227,6 +227,7 @@ class ProductProblemController extends Controller
             'visible_to_guests' => (bool) $product->visible_to_guests,
             'visible_to_customers' => (bool) $product->visible_to_customers,
             'visible_to_stylists' => (bool) $product->visible_to_stylists,
+            'visibleTo' => $product->visibleTo(),
             'descriptions' => collect(['en', 'mk', 'shq'])->mapWithKeys(fn ($l) => [$l => (string) $product->translations->firstWhere('locale', $l)?->description])->all(),
             'price' => $product->price,
             'stylist_price' => $product->stylist_price,

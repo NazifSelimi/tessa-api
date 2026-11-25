@@ -15,7 +15,7 @@ class ProductImageController extends Controller
         $product->load(['images', 'brand']);
         $primary = $product->primaryImage();
         return response()->json([
-            'product' => ['id' => $product->id, 'name' => $product->name, 'brand' => $product->brand?->name],
+            'product' => ['id' => $product->id, 'name' => $product->name, 'brand' => $product->brand?->name, 'visibleTo' => $product->visibleTo()],
             'images' => $product->images->map(fn ($image) => [
                 'id' => $image->id, 'url' => $image->url ?: $image->publicUrl(),
                 'alt' => $image->alt, 'sort_order' => $image->sort_order,

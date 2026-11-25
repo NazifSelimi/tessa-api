@@ -450,6 +450,7 @@ class AdminQueryService
                     ['key' => 'quantity', 'label' => 'Stock', 'type' => 'number', 'sort' => 'quantity'],
                     ['key' => 'images_count', 'label' => 'Photos', 'type' => 'number'],
                     ['key' => 'is_active', 'label' => 'Active', 'type' => 'bool'],
+                    ['key' => 'visible_to', 'label' => 'Who can see it', 'type' => 'text'],
                 ],
                 'row' => fn (Product $p) => [
                     'id' => $p->id,
@@ -462,6 +463,7 @@ class AdminQueryService
                     'quantity' => $p->quantity,
                     'images_count' => (int) $p->images_count,
                     'is_active' => (bool) $p->is_active,
+                    'visible_to' => Product::audienceLabel($p->visibleTo()),
                 ],
                 'presets' => [
                     ['key' => 'price_below_stylist', 'label' => 'Price below stylist price', 'filter' => $cmp('price', 'stylist_price')],

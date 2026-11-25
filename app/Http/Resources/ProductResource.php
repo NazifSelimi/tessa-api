@@ -22,7 +22,9 @@ class ProductResource extends JsonResource
             $images = $isAdmin ? $this->images : $this->storefrontImages();
             if ($images->isNotEmpty() || $this->images->isNotEmpty()) {
                 $primaryImage = $this->imageUrl($this->primaryImage());
-                $media = $images->map(fn ($image) => [
+                $media = $images->map(fn ($image) => array_filter([
+                    // Admins can delete a photo straight from the shop pages.
+                    'id' => $isAdmin ? $image->id : null,
                     'url' => $this->imageUrl($image),
                     'alt' => $image->alt,
                     'variant' => $image->variant ?? 'legacy',
@@ -30,7 +32,7 @@ class ProductResource extends JsonResource
                     'reviewStatus' => $image->review_status ?? 'legacy',
                     'sortOrder' => (int) ($image->sort_order ?? 0),
                     'metadata' => $image->metadata,
-                ])->values();
+                ], fn ($value, $key) => $key !== 'id' || $value !== null, ARRAY_FILTER_USE_BOTH))->values();
             }
         }
 
