@@ -40,6 +40,7 @@ class CatalogImageCandidateController extends Controller
                 'id' => (string) $product->id,
                 'name' => $product->name,
                 'brand' => $product->brand?->name,
+                'visibleTo' => $product->visibleTo(),
                 'status' => $status,
                 'imageUrl' => $primary?->url ?: $primary?->publicUrl(),
                 'imageCount' => $images->count(),

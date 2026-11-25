@@ -116,7 +116,7 @@ class SalesReportService
             ->where(fn ($query) => $query->whereNull('sold.last_sold_at')->orWhere('sold.last_sold_at', '<', $cutoff))
             ->select([
                 'products.id', 'products.name', 'products.quantity', 'products.price', 'products.cost_price',
-                'products.created_at',
+                'products.created_at', 'products.visible_to_guests', 'products.visible_to_customers', 'products.visible_to_stylists',
                 'brands.name as brand_name', 'categories.name as category_name', 'categories.cost_percentage',
                 'sold.last_sold_at', 'sold.sold_ever',
             ])
@@ -132,6 +132,7 @@ class SalesReportService
                 'name' => $row->name,
                 'brand' => $row->brand_name,
                 'category' => $row->category_name,
+                'visibleTo' => \App\Models\Product::audiencesOfRow($row),
                 'stock' => (int) $row->quantity,
                 'price' => (float) $row->price,
                 'lastSoldAt' => $lastSold?->toDateString(),
@@ -202,11 +203,11 @@ class SalesReportService
             ->whereBetween('orders.created_at', [$start, $end])
             ->groupBy(
                 'items.product_id', 'products.id', 'products.name', 'products.price', 'products.cost_price',
-                'products.quantity', 'brands.name', 'categories.name', 'categories.cost_percentage'
+                'products.quantity', 'products.visible_to_guests', 'products.visible_to_customers', 'products.visible_to_stylists', 'brands.name', 'categories.name', 'categories.cost_percentage'
             )
             ->select([
                 'items.product_id', 'products.id', 'products.name', 'products.price', 'products.cost_price',
-                'products.quantity', 'brands.name as brand_name', 'categories.name as category_name',
+                'products.quantity', 'products.visible_to_guests', 'products.visible_to_customers', 'products.visible_to_stylists', 'brands.name as brand_name', 'categories.name as category_name',
                 'categories.cost_percentage',
             ])
             ->selectRaw('SUM(items.quantity) as qty, SUM(items.price * items.quantity) as revenue')
@@ -220,6 +221,8 @@ class SalesReportService
                     'name' => $row->name ?? "Deleted product #{$row->product_id}",
                     'brand' => $row->brand_name,
                     'category' => $row->category_name,
+                    // Deleted products have no row left, so nobody can see them.
+                    'visibleTo' => $row->id === null ? [] : \App\Models\Product::audiencesOfRow($row),
                     'qty' => (int) $row->qty,
                     'revenue' => (float) $row->revenue,
                     'unitCost' => $unitCost,

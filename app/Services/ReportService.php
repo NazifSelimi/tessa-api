@@ -71,9 +71,9 @@ class ReportService
     {
         return Item::query()
             ->join('products', 'items.product_id', '=', 'products.id')
-            ->select('products.id', 'products.name', 'products.price', 'products.image')
+            ->select('products.id', 'products.name', 'products.price', 'products.image', 'products.visible_to_guests', 'products.visible_to_customers', 'products.visible_to_stylists')
             ->selectRaw('SUM(items.quantity) as total_sold, SUM(items.price * items.quantity) as revenue')
-            ->groupBy('products.id', 'products.name', 'products.price', 'products.image')
+            ->groupBy('products.id', 'products.name', 'products.price', 'products.image', 'products.visible_to_guests', 'products.visible_to_customers', 'products.visible_to_stylists')
             ->orderByDesc('total_sold')
             ->limit(10)
             ->get()
@@ -81,6 +81,7 @@ class ReportService
                 return [
                     'id' => (string) $product->id,
                     'name' => $product->name,
+                    'visibleTo' => Product::audiencesOfRow($product),
                     'price' => (float) $product->price,
                     'image' => $product->image,
                     'totalSold' => $product->total_sold,
@@ -93,7 +94,7 @@ class ReportService
     {
         return Product::where('quantity', '>', 0)
             ->where('quantity', '<', 10)
-            ->select('id', 'name', 'quantity', 'price', 'image')
+            ->select('id', 'name', 'quantity', 'price', 'image', 'visible_to_guests', 'visible_to_customers', 'visible_to_stylists')
             ->orderBy('quantity')
             ->limit(10)
             ->get()
@@ -101,6 +102,7 @@ class ReportService
                 return [
                     'id' => (string) $product->id,
                     'name' => $product->name,
+                    'visibleTo' => Product::audiencesOfRow($product),
                     'quantity' => $product->quantity,
                     'price' => (float) $product->price,
                     'image' => $product->image,
@@ -111,13 +113,14 @@ class ReportService
     protected function getOutOfStockProducts()
     {
         return Product::where('quantity', 0)
-            ->select('id', 'name', 'price', 'image')
+            ->select('id', 'name', 'price', 'image', 'visible_to_guests', 'visible_to_customers', 'visible_to_stylists')
             ->limit(10)
             ->get()
             ->map(function ($product) {
                 return [
                     'id' => (string) $product->id,
                     'name' => $product->name,
+                    'visibleTo' => Product::audiencesOfRow($product),
                     'price' => (float) $product->price,
                     'image' => $product->image,
                 ];
