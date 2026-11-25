@@ -37,7 +37,7 @@ class AdminProductAudienceAndPhotoDeleteTest extends TestCase
         $this->assertIsInt($media[0]['id']);
 
         $this->app['auth']->forgetGuards();
-        $media = $this->withToken($this->token(User::ROLE_CUSTOMER))->getJson("/api/v1/products/{$product->id}")->assertOk()->json('data.media');
+        $media = $this->withToken($this->token(User::ROLE_USER))->getJson("/api/v1/products/{$product->id}")->assertOk()->json('data.media');
         $this->assertArrayNotHasKey('id', $media[0]);
     }
 
@@ -62,7 +62,7 @@ class AdminProductAudienceAndPhotoDeleteTest extends TestCase
         $product = $this->product();
         $id = $product->images()->value('id');
 
-        $this->withToken($this->token(User::ROLE_CUSTOMER))->deleteJson("/api/v1/admin/products/{$product->id}/images/{$id}")->assertForbidden();
+        $this->withToken($this->token(User::ROLE_USER))->deleteJson("/api/v1/admin/products/{$product->id}/images/{$id}")->assertForbidden();
         $this->assertSame(2, $product->images()->count());
     }
 
