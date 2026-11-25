@@ -391,7 +391,9 @@ class OrderApiTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors(['coupon_code' => 'Веќе го искористивте овој код.']);
 
         // Guests: the same email (or phone) on an earlier order counts as used.
+        // withToken() stays on for later requests, so drop it to really be a guest.
         $this->app['auth']->forgetGuards();
+        $this->withoutToken();
         $guest = fn (string $email, string $phone) => ['items' => [['product_id' => $product->id, 'qty' => 1]], 'coupon_code' => 'ONCE10',
             'shipping_address' => ['firstName' => 'G', 'lastName' => 'Uest', 'email' => $email, 'phone' => $phone, 'address' => 'S 1', 'city' => 'Skopje', 'zip' => '1000']];
         $this->postJson('/api/v1/checkout', $guest('guest@example.com', '071 222 333'))->assertStatus(201);

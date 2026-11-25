@@ -206,7 +206,7 @@ class PricingApiTest extends TestCase
         $this->assertEquals(800, $quote['discount']);
         $this->assertTrue($quote['discountCapped']);
         $this->assertFalse($quote['discountLimited']);
-        $this->assertEquals(1200, $quote['total']);   // 2000 of goods: free shipping (counted before discounts)
+        $this->assertEquals(1350, $quote['total']);   // 2000 - 800 = 1200, plus 150 shipping (2000 is under the 3000 free-shipping limit)
 
         // Checkout charges the same.
         $response = $this->checkout(['items' => [['product_id' => $product->id, 'qty' => 2]], 'coupon_code' => 'HALFOFF']);
@@ -255,7 +255,7 @@ class PricingApiTest extends TestCase
 
         // The shop reads the same numbers before a cart is priced.
         $this->getJson('/api/v1/shop-settings')->assertOk()
-            ->assertJsonPath('data.freeShippingFrom', 4000.0)->assertJsonPath('data.shippingCost', 150.0);
+            ->assertJsonPath('data.freeShippingFrom', 4000)->assertJsonPath('data.shippingCost', 150);
     }
 
     /** Q1 + Q6: admins change the three settings; customers cannot. */
@@ -266,9 +266,9 @@ class PricingApiTest extends TestCase
         $this->withToken($admin->createToken('t')->plainTextToken)->putJson('/api/v1/admin/pricing-settings', [
             'freeShippingFrom' => 2500, 'freeShippingAfterDiscounts' => true, 'maxDiscountPercentage' => 35,
         ])->assertOk()
-            ->assertJsonPath('data.freeShippingFrom', 2500.0)
+            ->assertJsonPath('data.freeShippingFrom', 2500)
             ->assertJsonPath('data.freeShippingAfterDiscounts', true)
-            ->assertJsonPath('data.maxDiscountPercentage', 35.0);
+            ->assertJsonPath('data.maxDiscountPercentage', 35);
 
         $this->withToken($admin->createToken('t')->plainTextToken)
             ->putJson('/api/v1/admin/pricing-settings', ['maxDiscountPercentage' => 150])->assertStatus(422);
