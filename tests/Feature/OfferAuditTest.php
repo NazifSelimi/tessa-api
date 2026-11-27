@@ -48,7 +48,7 @@ class OfferAuditTest extends TestCase
 
     private function rows(Bundle ...$bundles): array
     {
-        return app(OfferAuditor::class)->audit(collect($bundles));
+        return app(OfferAuditor::class)->audit(new \Illuminate\Database\Eloquent\Collection($bundles));
     }
 
     private function row(array $report, Bundle $bundle, string $audience): array
