@@ -133,13 +133,13 @@ class AdminBundleController extends Controller
             return;
         }
         $lines = array_map(
-            fn ($clash) => sprintf('%s is already in the offer "%s" (#%d).', implode(', ', $clash['products']), $clash['name'], $clash['id']),
+            fn ($clash) => sprintf('%s is already in the offer "%s" (#%d)', implode(', ', $clash['products']), $clash['name'], $clash['id']),
             $clashes,
         );
 
         throw ValidationException::withMessages([
             'products' => array_merge(
-                ["A product can be in only one offer at a time. Take it out of one offer, change the dates or the audience, or switch one offer off."],
+                ["A product can be in only one offer at a time. Take it out of one offer, change the dates or the audience, or switch one offer off"],
                 $lines,
             ),
         ]);
