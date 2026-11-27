@@ -174,8 +174,8 @@ class PickedOffersOnlyTest extends TestCase
         $this->assertEquals($cart['discount'], (float) $order->discount);
         $this->assertEquals($cart['shipping'], (float) $order->shipping);
         $this->app['auth']->forgetGuards();
-        $this->withToken($buyer->createToken('t2')->plainTextToken)->getJson("/api/v1/orders/{$id}")
-            ->assertOk()->assertJsonPath('data.total', (float) $cart['total']);
+        $saved = $this->withToken($buyer->createToken('t2')->plainTextToken)->getJson("/api/v1/orders/{$id}")->assertOk();
+        $this->assertEquals($cart['total'], $saved->json('data.total'));
     }
 
     #[Test]
