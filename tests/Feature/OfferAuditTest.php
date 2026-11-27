@@ -30,7 +30,7 @@ class OfferAuditTest extends TestCase
         Setting::put('pricing.cost_percentage', 65);
         Setting::put('pricing.min_margin_percentage', 15);
         Setting::put('pricing.max_discount_percentage', 40);
-        Setting::put('features', json_encode(['bundles' => true, 'colour_deals' => true]));
+        Setting::put('features', json_encode(['bundles' => true, 'colour_deals' => true, 'profit_protection' => false]));
         // Only the offers made here.
         Bundle::query()->update(['is_active' => false]);
 
@@ -132,6 +132,25 @@ class OfferAuditTest extends TestCase
         $sale = $this->row($report, $onSale, 'customer');
         $this->assertSame(OfferAuditor::WRONG, $sale['verdict']);
         $this->assertStringContainsString('on sale', implode(' ', $sale['why']));
+    }
+
+    #[Test]
+    public function under_an_estimated_cost_is_check_and_under_a_real_cost_is_wrong()
+    {
+        // No real cost: estimated at 65% of 1000 = 650, above the salon price 600.
+        $guess = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'cost_price' => null, 'quantity' => 10]);
+        $estimated = $this->offer(['name' => 'Guess', 'promotion_type' => 'percentage', 'discount_percentage' => 10],
+            [$guess->id => ['quantity' => 1]]);
+        // Real cost 580: 10% off 600 = 540 is under it.
+        $tight = Product::factory()->create(['price' => 1000, 'stylist_price' => 600, 'cost_price' => 580, 'quantity' => 10]);
+        $real = $this->offer(['name' => 'Tight', 'promotion_type' => 'percentage', 'discount_percentage' => 10],
+            [$tight->id => ['quantity' => 1]]);
+
+        $report = $this->rows($estimated, $real);
+
+        $this->assertSame(OfferAuditor::CHECK, $this->row($report, $estimated, 'stylist')['verdict']);
+        $this->assertSame(OfferAuditor::WRONG, $this->row($report, $real, 'stylist')['verdict']);
+        $this->assertStringContainsString('below cost', implode(' ', $this->row($report, $real, 'stylist')['why']));
     }
 
     #[Test]

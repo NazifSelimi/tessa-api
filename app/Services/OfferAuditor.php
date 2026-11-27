@@ -25,6 +25,8 @@ class OfferAuditor
     public const WRONG = 'WRONG';
     public const SKIP = 'SKIP';
     public const NA = 'N/A';
+    /** Needs a person: e.g. under an estimated cost, when the product has no real cost. */
+    public const CHECK = 'CHECK';
 
     /** Differences under one denar are rounding (the cart rounds discounts down to whole denars). */
     private const TOLERANCE = 1.0;
@@ -157,7 +159,7 @@ class OfferAuditor
             $row['notes'][] = 'also applied: ' . $this->names($others);
         }
 
-        $this->limits($row, $quote, $settings);
+        $this->limits($row, $quote, $settings, $lines);
 
         // 2. Same products, no offer chosen: only a pick-any deal may discount them by itself.
         $plain = $this->quote($row, $user, $lines, [], false);
@@ -292,7 +294,7 @@ class OfferAuditor
             if ($others = array_diff($quote['appliedBundleIds'], [(string) $deal->id])) {
                 $row['notes'][] = 'also applied: ' . $this->names($others);
             }
-            $this->limits($row, $quote, $settings);
+            $this->limits($row, $quote, $settings, $lines);
 
             // One unit short of the step: the step's reward must not be given yet.
             if ($tier['min'] > 1) {
@@ -332,11 +334,23 @@ class OfferAuditor
     }
 
     /** 3. Never under cost, never more than the discount cap. */
-    private function limits(array &$row, array $quote, array $settings): void
+    private function limits(array &$row, array $quote, array $settings, array $lines): void
     {
         $goods = $quote['subtotal'] - $quote['discount'];
         if ($goods + 0.004 < $quote['cost']) {
-            $this->wrong($row, "below cost: pays {$this->mkd($goods)}, cost {$this->mkd($quote['cost'])}");
+            $estimated = collect($lines)->contains(fn ($line) => (float) $line['product']->cost_price <= 0);
+            $text = "below cost: pays {$this->mkd($goods)}, cost {$this->mkd($quote['cost'])}";
+            if (! $estimated) {
+                $this->wrong($row, $text);
+            } else {
+                // No real cost: the cost is a guess (a % of the shop price), so this needs a person to look.
+                $plainUnder = $quote['subtotal'] + 0.004 < $quote['cost'];
+                $row['why'][] = $text . ' (estimated: ' . $this->pct($settings['costPercentage']) . ' of the shop price, no real cost'
+                    . ($plainUnder ? '; the price without any offer is already under it)' : ')');
+                if ($row['verdict'] === self::OK) {
+                    $row['verdict'] = self::CHECK;
+                }
+            }
         }
         $off = $quote['subtotal'] > 0 ? $quote['discount'] / $quote['subtotal'] * 100 : 0;
         if ($off > 40 + 0.01) {
@@ -485,13 +499,13 @@ class OfferAuditor
         $out .= 'Settings: discount cap ' . $report['settings']['maxDiscountPercentage'] . '%, profit floor cost + '
             . $report['settings']['minMarginPercentage'] . '%, estimated cost ' . $report['settings']['costPercentage']
             . "% of the shop price when a product has no cost.\n\n";
-        $out .= "**{$count(self::WRONG)} WRONG**, {$count(self::OK)} OK, {$count(self::SKIP)} not running, {$count(self::NA)} not for that audience.\n\n";
+        $out .= "**{$count(self::WRONG)} WRONG**, {$count(self::CHECK)} CHECK (under the estimated cost), {$count(self::OK)} OK, {$count(self::SKIP)} not running, {$count(self::NA)} not for that audience.\n\n";
         $out .= "Totals are the goods only (no shipping), in MKD. Expected = the offer card's price worked out by hand; "
             . "real = PricingService::quote. \"No offer\" = same products without choosing the offer "
             . "(for pick-any deals: one shade short of the step).\n\n";
 
         $out .= "## Price check\n\n| # | Offer | Type | Step | Who | Expected | Real | Diff | No offer | Result | Why / notes |\n|---|---|---|---|---|---:|---:|---:|---:|---|---|\n";
-        $order = [self::WRONG => 0, self::OK => 1, self::NA => 2, self::SKIP => 3];
+        $order = [self::WRONG => 0, self::CHECK => 1, self::OK => 2, self::NA => 3, self::SKIP => 4];
         foreach ($rows->sortBy(fn ($r) => [$order[$r['verdict']], (int) $r['bundleId']])->values() as $r) {
             $why = implode('; ', $r['why']);
             $notes = implode('; ', $r['notes']);
