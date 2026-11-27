@@ -2,7 +2,7 @@
 
 // Proof tests from fix-plan-2026-11-24.md: each one failed on staging d9e6547.
 // Batch 1: #3, #4 (owner rule Q2: one tube counts for only one deal), #14.
-// The #7 and #8 tests are added with Batch 3.
+// Batch 3: #7 (owner rule Q12), #8 (Q3), NEW-2, NEW-3, #9.
 
 namespace Tests\Feature;
 
@@ -128,6 +128,116 @@ class MoneyStockProofTest extends TestCase
         $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 20]], [$offer->id]);
         $this->assertEquals(900, $quote['bundleDiscount']);
         $this->assertSame(10, $quote['colourDeals'][0]['count']);
+    }
+
+    private function order(User $buyer, Product $product, int $qty): string
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->withToken($buyer->createToken('t')->plainTextToken)->postJson('/api/v1/orders', [
+            'items' => [['product_id' => $product->id, 'qty' => $qty]],
+            'shipping_address' => [
+                'firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.com', 'phone' => '070111222',
+                'address' => '1 Street', 'city' => 'Skopje', 'state' => 'MK', 'zip' => '1000',
+            ],
+            'payment_method' => 'cod',
+        ])->assertStatus(201)->json('data.id');
+    }
+
+    private function admin()
+    {
+        $this->app['auth']->forgetGuards();
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        return $this->withToken($admin->createToken('t')->plainTextToken);
+    }
+
+    /** Bug #7: undoing a cancel takes stock again without checking there is enough. */
+    #[Test]
+    public function undoing_a_cancel_refuses_when_stock_is_short_unless_forced()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 3]);
+        $first = $this->order(User::factory()->create(), $product, 3);         // stock 3 → 0
+        $this->admin()->putJson("/api/v1/admin/orders/{$first}/status", ['status' => 'cancelled'])->assertOk(); // → 3
+        $this->order(User::factory()->create(), $product, 3);                  // someone else buys them → 0
+
+        // Before the fix: 200 OK and stock becomes −3 (or a 500 if the column is unsigned).
+        // Owner rule Q12: refuse first, with a clear message.
+        $this->admin()->putJson("/api/v1/admin/orders/{$first}/status", ['status' => 'confirmed'], ['Accept-Language' => 'en'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['stock' => "Only 0 left of {$product->name}, need 3."]);
+        $this->assertSame(0, $product->fresh()->quantity);
+
+        // "Proceed anyway" (force=true): done, stock may go below 0, and the admin is logged.
+        \Illuminate\Support\Facades\Log::spy();
+        $this->admin()->putJson("/api/v1/admin/orders/{$first}/status", ['status' => 'confirmed', 'force' => true])->assertOk();
+        $this->assertSame(-3, $product->fresh()->quantity);
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->withArgs(fn ($message) => str_contains($message, 'below zero'))->once();
+    }
+
+    /** Bug #8: trashing a shipped order puts its goods back on the shelf. */
+    #[Test]
+    public function trashing_a_shipped_order_does_not_add_stock()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $id = $this->order(User::factory()->create(), $product, 4);            // 10 → 6
+        $this->admin()->putJson("/api/v1/admin/orders/{$id}/status", ['status' => 'shipped'])->assertOk();
+        $this->admin()->deleteJson("/api/v1/admin/orders/{$id}")->assertOk();
+
+        // Today: 10 (the 4 shipped pieces "come back").
+        $this->assertSame(6, $product->fresh()->quantity);
+    }
+
+    /** NEW-2 (owner rule Q3): cancelling a shipped order never puts stock back, and undoing it takes nothing. */
+    #[Test]
+    public function cancelling_a_shipped_order_does_not_add_stock()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $id = $this->order(User::factory()->create(), $product, 4);            // 10 → 6
+        $this->admin()->putJson("/api/v1/admin/orders/{$id}/status", ['status' => 'shipped'])->assertOk();
+
+        $this->admin()->putJson("/api/v1/admin/orders/{$id}/status", ['status' => 'cancelled'])->assertOk();
+        $this->assertSame(6, $product->fresh()->quantity);
+
+        // Its stock was never put back, so undoing the cancel takes nothing again.
+        $this->admin()->putJson("/api/v1/admin/orders/{$id}/status", ['status' => 'shipped'])->assertOk();
+        $this->assertSame(6, $product->fresh()->quantity);
+    }
+
+    /** NEW-3 (owner rule Q12): restoring from the Trash refuses when there is not enough stock, unless forced. */
+    #[Test]
+    public function restoring_from_the_trash_checks_the_stock()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 3]);
+        $id = $this->order(User::factory()->create(), $product, 3);            // 3 → 0
+        $this->admin()->deleteJson("/api/v1/admin/orders/{$id}")->assertOk(); // → 3
+        $this->order(User::factory()->create(), $product, 2);                  // → 1
+
+        $this->admin()->postJson("/api/v1/admin/orders/{$id}/restore")->assertStatus(422)->assertJsonValidationErrors('stock');
+        $this->assertSame(1, $product->fresh()->quantity);
+        $this->assertSoftDeleted('orders', ['id' => $id]);
+
+        $this->admin()->postJson("/api/v1/admin/orders/{$id}/restore", ['force' => true])->assertOk();
+        $this->assertSame(-2, $product->fresh()->quantity);
+    }
+
+    /** #9: a cancel that arrives after the order was shipped is refused, and stock stays. */
+    #[Test]
+    public function a_late_cancel_does_not_put_back_stock_of_a_shipped_order()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $id = $this->order(User::factory()->create(), $product, 4);            // 10 → 6
+        $stale = \App\Models\Order::findOrFail($id);                          // the customer's copy: still pending
+        \App\Models\Order::whereKey($id)->update(['status' => \App\Models\Order::STATUS_SHIPPED]); // the admin ships it
+
+        try {
+            app(\App\Services\OrderService::class)->cancelOrder($stale);
+            $this->fail('A shipped order must not be cancelled.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('order', $e->errors());
+        }
+        $this->assertSame(6, $product->fresh()->quantity);
+        $this->assertSame(\App\Models\Order::STATUS_SHIPPED, \App\Models\Order::findOrFail($id)->status);
     }
 
     /** Bug #14: a coupon "valid until today" must still work today. */

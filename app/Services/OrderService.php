@@ -7,6 +7,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\PublicStock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +16,8 @@ class OrderService
 {
     public function __construct(
         private readonly PricingService $pricing,
-        private readonly ReferralService $referrals
+        private readonly ReferralService $referrals,
+        private readonly CouponUsage $couponUsage,
     ) {}
 
     public function userOrders(User $user)
@@ -31,23 +33,17 @@ class OrderService
         $order = DB::transaction(function () use ($user, $payload) {
             $shipping = $payload['shipping_address'] ?? [];
 
-            if ($user) {
-                // Keep the saved profile in sync for authenticated customers.
-                $user->update([
-                    'first_name' => $shipping['firstName'] ?? $user->first_name,
-                    'last_name' => $shipping['lastName'] ?? $user->last_name,
-                    'phone' => $shipping['phone'] ?? $user->phone,
-                    'address' => $shipping['address'] ?? $user->address,
-                    'city' => $shipping['city'] ?? $user->city,
-                    'postcode' => $shipping['zipCode'] ?? $shipping['zip'] ?? $user->postcode,
-                ]);
-            }
+            // Checkout never changes the customer's profile: the delivery details
+            // are saved on the order only (owner rule Q5, #13). Ordering for someone
+            // else must not change your own name, phone or address.
 
             // Check the code before this order exists, or a signed-in client's
             // new order would count as "ordered before" for first-order codes.
             $coupon = empty($payload['coupon_code']) ? null : $this->validCoupon($payload['coupon_code'], true);
             if ($coupon) {
                 $this->referrals->assertUsable($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
+                // A normal coupon once per customer (owner rule Q7).
+                $this->couponUsage->assertNotUsedBefore($coupon, $user, $shipping['email'] ?? $user?->email, $shipping['phone'] ?? $user?->phone);
             }
 
             $order = Order::create([
@@ -77,8 +73,13 @@ class OrderService
                 $requested[$product->id] = ($requested[$product->id] ?? 0) + $qty;
 
                 if (!$product->inStock($requested[$product->id])) {
+                    // Exact stock is for admins; everyone else sees at most PublicStock::CAP (#20).
+                    $left = max(0, (int) $product->quantity);
+                    if (! $user?->isAdmin()) {
+                        $left = min($left, PublicStock::CAP);
+                    }
                     throw ValidationException::withMessages([
-                        'items' => [__('Only :count left of :name.', ['count' => max(0, (int) $product->quantity), 'name' => $product->name])]
+                        'items' => [__('Only :count left of :name.', ['count' => $left, 'name' => $product->name])]
                     ]);
                 }
 
@@ -130,7 +131,8 @@ class OrderService
 
             // Store credit pays part of the order; the user row lock keeps two
             // checkouts from spending the same balance.
-            if ($user && !empty($payload['use_store_credit'])) {
+            // Only while the referral feature is on (#22): with it off, credit is never spent.
+            if ($user && !empty($payload['use_store_credit']) && app(FeatureService::class)->enabled('referrals')) {
                 User::query()->whereKey($user->id)->lockForUpdate()->first();
                 // A negative balance (credit spent, then the client order was cancelled) is a
                 // debt future commission pays off; it never adds to what the stylist pays.
@@ -200,19 +202,80 @@ class OrderService
             if ($order->status === Order::STATUS_CANCELLED) {
                 return $order->load(['items.product.images', 'coupon', 'user', 'info']);
             }
+            // The admin may have shipped it between the first check and the lock (#9).
+            if ($order->status !== Order::STATUS_PENDING) {
+                throw ValidationException::withMessages([
+                    'order' => [__('Only pending orders can be cancelled.')]
+                ]);
+            }
 
             $order->status = Order::STATUS_CANCELLED;
             $order->save();
             $this->referrals->syncOrder($order);
 
             $this->moveStock($order, +1);
+            // Its coupon use comes back (owner rule Q7).
+            $this->couponUsage->release($order);
 
             return $order->load(['items.product.images', 'coupon', 'user', 'info']);
         });
     }
 
     /**
-     * Put an order's items back on the shelf (+1, order cancelled) or take them again (-1, cancel undone).
+     * Take an order's items from the shelf again (a cancel undone, or an order
+     * restored from the Trash). Call inside a transaction.
+     *
+     * Refuses with 422 (errors.stock) when there is not enough, unless $force:
+     * then stock may go below 0, and who did it and when is written to the log
+     * (owner rule Q12).
+     */
+    public function takeStock(Order $order, bool $force = false, ?User $by = null): void
+    {
+        $order->load('items');
+        $needed = [];
+        foreach ($order->items as $item) {
+            if ($item->product_id) {
+                $needed[$item->product_id] = ($needed[$item->product_id] ?? 0) + (int) $item->quantity;
+            }
+        }
+        if (! $needed) {
+            return;
+        }
+
+        // Lock the rows (in id order, so two requests never wait on each other) before checking.
+        $products = Product::query()->whereKey(array_keys($needed))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+
+        $short = [];
+        foreach ($needed as $id => $qty) {
+            $product = $products->get($id);
+            if ($product && (int) $product->quantity < $qty) {
+                $short[] = __('Only :have left of :name, need :need.', [
+                    'have' => max(0, (int) $product->quantity), 'name' => $product->name, 'need' => $qty,
+                ]);
+            }
+        }
+
+        if ($short && ! $force) {
+            throw ValidationException::withMessages(['stock' => $short]);
+        }
+        if ($short) {
+            Log::warning('Stock taken below zero by an admin (Proceed anyway)', [
+                'order_id' => $order->id,
+                'admin_id' => $by?->id,
+                'admin_email' => $by?->email,
+                'at' => now()->toIso8601String(),
+                'short' => $short,
+            ]);
+        }
+
+        foreach ($needed as $id => $qty) {
+            $products->get($id)?->decrement('quantity', $qty);
+        }
+    }
+
+    /**
+     * Put an order's items back on the shelf (+1, order cancelled) or take them again (-1).
+     * Taking them again should go through takeStock(), which checks there is enough.
      * Call inside a transaction.
      */
     public function moveStock(Order $order, int $direction): void

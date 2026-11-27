@@ -96,6 +96,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         ->name('admin.catalog-image-candidates.preview');
     Route::post('/checkout', [CheckoutController::class, 'checkout'])->middleware('throttle:10,1'); // order spam guard
     Route::post('/cart/quote', CartQuoteController::class);
+    // Delivery cost and free-shipping amount, set in Admin (owner rule Q6).
+    Route::get('/shop-settings', \App\Http\Controllers\Api\V1\ShopSettingsController::class);
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -107,7 +109,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);
-        Route::post('/orders', [OrderController::class, 'store']);
+        // One account may not place orders in a burst and hold all the stock (#26).
+        Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:10,1');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
 
         // Stylist Requests
@@ -293,11 +296,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
             // Dashboard
             Route::get('/dashboard', [StylistDashboardController::class, 'index']);
             
-            // Distributor Codes
-            Route::get('/codes', [StylistCodeController::class, 'index']);
-            Route::post('/codes/generate', [StylistCodeController::class, 'generate']);
-            Route::get('/codes/{code}/stats', [StylistCodeController::class, 'stats']);
-            Route::put('/codes/{code}', [StylistCodeController::class, 'update']);
+            // Distributor Codes (switched off with the "distributors" feature, like the admin pages: #22)
+            Route::get('/codes', [StylistCodeController::class, 'index'])->middleware('feature:distributors');
+            Route::post('/codes/generate', [StylistCodeController::class, 'generate'])->middleware('feature:distributors');
+            Route::get('/codes/{code}/stats', [StylistCodeController::class, 'stats'])->middleware('feature:distributors');
+            Route::put('/codes/{code}', [StylistCodeController::class, 'update'])->middleware('feature:distributors');
             
             // Orders
             Route::get('/orders', [StylistOrderController::class, 'index']);

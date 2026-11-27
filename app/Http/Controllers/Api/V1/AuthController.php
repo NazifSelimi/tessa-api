@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Support\AccessTokens;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Support\ApiResponse;
+use App\Support\PhoneLogin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -23,7 +24,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -158,14 +158,17 @@ class AuthController extends Controller
         return ApiResponse::ok(['signed_out' => $this->revokeOtherTokens($request)]);
     }
 
-    /** Deletes the user's sign-in tokens except the current one (AI tokens are kept). */
-    private function revokeOtherTokens(Request $request): int
+    /**
+     * Deletes the user's sign-in tokens except the current one. AI assistant
+     * tokens are kept, unless $withAiTokens (a new password removes them too).
+     */
+    private function revokeOtherTokens(Request $request, bool $withAiTokens = false): int
     {
         $current = $request->user()->currentAccessToken();
 
         return $request->user()->tokens()
             ->when($current instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($current->getKey()))
-            ->where('name', 'not like', 'ai-assistant: %')
+            ->when(! $withAiTokens, fn ($q) => $q->where('name', 'not like', AccessTokens::AI_PREFIX . '%'))
             ->delete();
     }
 
@@ -225,10 +228,11 @@ class AuthController extends Controller
         $user->password = Hash::make($request->input('password'));
         $user->save();
 
-        // A new password signs out every other phone/browser; this one stays in.
-        $this->revokeOtherTokens($request);
+        // A new password signs out every other phone/browser and every AI assistant
+        // key (owner rule Q10); this one stays in.
+        $this->revokeOtherTokens($request, withAiTokens: true);
 
-        return ApiResponse::ok(null, 200, [], __('Password updated successfully.'));
+        return ApiResponse::ok(null, 200, [], __('Password updated. Other sign-ins and AI assistant keys were signed out.'));
     }
 
     public function forgotPassword(ForgotPasswordRequest $request)
@@ -552,31 +556,7 @@ class AuthController extends Controller
 
     private function synchronizePhoneLogin(User $user, string $phone): void
     {
-        // Production may still be on the pre-phone-first schema. Keeping this
-        // guard makes the API backwards-compatible while staging uses the
-        // normalized unique value required for phone-first stylist sign-in.
-        if (! Schema::hasColumn('users', 'phone_login')) {
-            return;
-        }
-
-        $normalized = preg_replace('/\D+/', '', $phone) ?: '';
-
-        if ($normalized === '') {
-            return;
-        }
-
-        $exists = User::query()
-            ->where('phone_login', $normalized)
-            ->when($user->exists, fn ($query) => $query->whereKeyNot($user->getKey()))
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'phone' => [__('This phone number is already linked to an account.')],
-            ]);
-        }
-
-        $user->phone_login = $normalized;
+        PhoneLogin::sync($user, $phone);
     }
 
     private function redirectSocialSuccess(string $provider, string $token, User $user, array $meta): RedirectResponse

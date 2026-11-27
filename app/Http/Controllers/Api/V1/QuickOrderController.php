@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use App\Models\Product;
 use App\Support\ApiUserResolver;
+use App\Support\HairColourCategories;
 use Illuminate\Http\Request;
 
 class QuickOrderController extends Controller
@@ -35,8 +36,9 @@ class QuickOrderController extends Controller
             $query->where('category_id', $categoryId);
         }
 
+        // Ticked "Is hair colour" categories, or a careful name search while none is ticked (#25, Q11).
         if ($request->boolean('color_restock')) {
-            $query->whereHas('category', fn ($category) => $category->whereRaw('LOWER(name) like ?', ['%color%']));
+            $query->whereIn('category_id', HairColourCategories::ids());
         }
 
         $products = $query->paginate(20);

@@ -83,6 +83,8 @@ class OrderResource extends JsonResource
             ],
             'customMessage' => $this->message,
             'couponCode' => $this->coupon?->code ?? $this->coupon_code,
+            // "Your coupon can be used again." (cancelled or trashed order, owner rule Q7)
+            'couponCanBeUsedAgain' => \App\Services\CouponUsage::released($this->resource),
             // Only the admin order queries load the stylist, so customers never see this.
             'referral' => $this->referral_stylist_id && $this->relationLoaded('referralStylist') ? [
                 'stylistId' => (string) $this->referral_stylist_id,

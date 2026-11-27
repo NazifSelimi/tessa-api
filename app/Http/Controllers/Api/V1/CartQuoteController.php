@@ -56,6 +56,7 @@ class CartQuoteController extends Controller
             try {
                 $coupon = $this->orders->validCoupon($validated['coupon_code']);
                 $this->referrals->assertUsable($coupon, $user);
+                app(\App\Services\CouponUsage::class)->assertNotUsedBefore($coupon, $user, $user?->email, $user?->phone);
             } catch (ValidationException $e) {
                 $coupon = null;
                 $couponError = $e->errors()['coupon_code'][0] ?? 'Coupon is not valid.';
@@ -68,7 +69,9 @@ class CartQuoteController extends Controller
         $quote['couponRequiresLogin'] = $couponError === __(ReferralService::GUEST_ERROR);
 
         // Store credit is a way to pay, not a discount: it does not touch the profit floor.
-        $quote['storeCreditAvailable'] = $user ? $this->referrals->balance($user) : 0.0;
+        // Same as checkout: no store credit while the referral feature is off (#22).
+        $quote['storeCreditAvailable'] = $user && app(\App\Services\FeatureService::class)->enabled('referrals')
+            ? $this->referrals->balance($user) : 0.0;
         $quote['storeCreditUsed'] = !empty($validated['use_store_credit'])
             ? round(max(0, min($quote['storeCreditAvailable'], $quote['total'])), 2)
             : 0.0;

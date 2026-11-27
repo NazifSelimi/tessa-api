@@ -8,6 +8,7 @@ use App\Services\AdminUserService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AdminUserController extends Controller
 {
@@ -76,7 +77,12 @@ class AdminUserController extends Controller
             'password' => ['sometimes', 'string', 'min:8'],
         ])->validate();
 
-        $user = $this->adminUserService->updateUser($id, $validated);
+        // Admins changing their own password stay signed in on this device.
+        $current = $request->user()->currentAccessToken();
+        $keepTokenId = (string) $request->user()->getKey() === (string) $id && $current instanceof PersonalAccessToken
+            ? (int) $current->getKey()
+            : null;
+        $user = $this->adminUserService->updateUser($id, $validated, $keepTokenId);
 
         return ApiResponse::ok(
             new UserResource($user),

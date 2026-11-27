@@ -5,6 +5,15 @@ return [
     'site_url' => env('SITE_URL', env('FRONTEND_URL', 'https://tessa.mk')),
 
     /*
+    | Discount cap default (owner rule Q1): all discounts together never go
+    | above this % of the goods, until an admin sets another value in Admin.
+    | The test run sets 100 (phpunit.xml) so tests written before the cap are
+    | not affected; the cap tests set 40 themselves.
+    */
+
+    'max_discount_percentage' => (float) env('TESSA_MAX_DISCOUNT_PERCENTAGE', 40),
+
+    /*
     |--------------------------------------------------------------------------
     | Admin Notification Email
     |--------------------------------------------------------------------------

@@ -308,4 +308,130 @@ class OrderApiTest extends TestCase
         $this->withToken($adminToken)->putJson("/api/v1/admin/orders/{$orderId}/status", ['status' => 'confirmed'])->assertOk();
         $this->assertSame(47, $product->fresh()->quantity);
     }
+
+    private function orderFor(Product $product, int $qty): array
+    {
+        return [
+            'items' => [['product_id' => $product->id, 'qty' => $qty]],
+            'shipping_address' => [
+                'firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.com', 'phone' => '070111222',
+                'address' => '1 Street', 'city' => 'Skopje', 'state' => 'MK', 'zip' => '1000',
+            ],
+            'payment_method' => 'cod',
+        ];
+    }
+
+    /** #20: "Only X left" never shows more than 50 to customers or salons; admins see the real number. */
+    #[Test]
+    public function the_stock_message_shows_at_most_50_to_non_admins()
+    {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 120, 'name' => 'Cap test mask']);
+
+        foreach ([User::ROLE_USER => 50, User::ROLE_STYLIST => 50, User::ROLE_ADMIN => 120] as $role => $shown) {
+            $this->app['auth']->forgetGuards();
+            $token = User::factory()->create(['role' => $role])->createToken('t')->plainTextToken;
+            $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 200))
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['items' => "Only {$shown} left of Cap test mask."]);
+        }
+        $this->assertSame(120, $product->fresh()->quantity);
+    }
+
+    /** #26: one account can place at most 10 orders a minute. */
+    #[Test]
+    public function placing_orders_is_limited_to_10_a_minute()
+    {
+        $token = User::factory()->create()->createToken('t')->plainTextToken;
+
+        // Requests count even when they are refused, so empty ones are enough.
+        for ($i = 0; $i < 10; $i++) {
+            $this->withToken($token)->postJson('/api/v1/orders', [])->assertStatus(422);
+        }
+        $this->withToken($token)->postJson('/api/v1/orders', [])->assertStatus(429);
+    }
+
+    /** #13 (owner rule Q5): an order to another name and address leaves the profile as it was. */
+    #[Test]
+    public function an_order_never_changes_the_customer_profile()
+    {
+        $user = User::factory()->create([
+            'first_name' => 'Ana', 'last_name' => 'Own', 'phone' => '070000001', 'address' => 'Home 1', 'city' => 'Skopje', 'postcode' => '1000',
+        ]);
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $order = $this->orderFor($product, 1);
+        $order['shipping_address'] = [
+            'firstName' => 'Gift', 'lastName' => 'Friend', 'email' => 'friend@example.com', 'phone' => '070999999',
+            'address' => 'Friend street 9', 'city' => 'Tetovo', 'state' => 'MK', 'zip' => '1200',
+        ];
+
+        $id = $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/orders', $order)
+            ->assertStatus(201)->json('data.id');
+
+        $fresh = $user->fresh();
+        $this->assertSame(['Ana', 'Own', '070000001', 'Home 1', 'Skopje', '1000'],
+            [$fresh->first_name, $fresh->last_name, $fresh->phone, $fresh->address, $fresh->city, (string) $fresh->postcode]);
+        // The delivery details are on the order.
+        $this->assertDatabaseHas('order_infos', ['order_id' => $id, 'first_name' => 'Gift', 'city' => 'Tetovo']);
+    }
+
+    /** #19 (owner rule Q7b): each customer can use a normal coupon once; guests are matched by email or phone. */
+    #[Test]
+    public function a_normal_coupon_works_once_per_customer()
+    {
+        $product = Product::factory()->create(['price' => 1000, 'quantity' => 50]);
+        \App\Models\Coupon::factory()->create(['code' => 'ONCE10', 'type' => 'percentage', 'value' => 10, 'quantity' => 10, 'expiration_date' => now()->addMonth()]);
+        $withCoupon = fn () => $this->orderFor($product, 1) + ['coupon_code' => 'ONCE10'];
+
+        // Signed in: second order with the same code is refused, in the shop language.
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+        $this->withToken($token)->postJson('/api/v1/orders', $withCoupon())->assertStatus(201);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->postJson('/api/v1/orders', $withCoupon(), ['Accept-Language' => 'mk'])
+            ->assertStatus(422)->assertJsonValidationErrors(['coupon_code' => 'Веќе го искористивте овој код.']);
+
+        // Guests: the same email (or phone) on an earlier order counts as used.
+        // withToken() stays on for later requests, so drop it to really be a guest.
+        $this->app['auth']->forgetGuards();
+        $this->withoutToken();
+        $guest = fn (string $email, string $phone) => ['items' => [['product_id' => $product->id, 'qty' => 1]], 'coupon_code' => 'ONCE10',
+            'shipping_address' => ['firstName' => 'G', 'lastName' => 'Uest', 'email' => $email, 'phone' => $phone, 'address' => 'S 1', 'city' => 'Skopje', 'zip' => '1000']];
+        $this->postJson('/api/v1/checkout', $guest('guest@example.com', '071 222 333'))->assertStatus(201);
+        $this->postJson('/api/v1/checkout', $guest('GUEST@example.com', '071000000'))->assertStatus(422)->assertJsonValidationErrors('coupon_code');
+        $this->postJson('/api/v1/checkout', $guest('other@example.com', '071-222-333'))->assertStatus(422)->assertJsonValidationErrors('coupon_code');
+    }
+
+    /** #19 (owner rule Q7a): a cancelled or trashed order gives its coupon use back. */
+    #[Test]
+    public function a_cancelled_or_trashed_order_gives_its_coupon_back()
+    {
+        \App\Models\Setting::put('features', '{}');
+        $product = Product::factory()->create(['price' => 1000, 'quantity' => 50]);
+        $coupon = \App\Models\Coupon::factory()->create(['code' => 'BACK10', 'type' => 'percentage', 'value' => 10, 'quantity' => 5, 'expiration_date' => now()->addMonth()]);
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+
+        $id = $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 1) + ['coupon_code' => 'BACK10'])
+            ->assertStatus(201)->json('data.id');
+        $this->assertSame(4, $coupon->fresh()->quantity);
+
+        // The customer cancels: the use comes back, the order says so, and the code works again.
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->postJson("/api/v1/orders/{$id}/cancel")->assertOk()->assertJsonPath('data.couponCanBeUsedAgain', true);
+        $this->assertSame(5, $coupon->fresh()->quantity);
+        $this->app['auth']->forgetGuards();
+        $again = $this->withToken($token)->postJson('/api/v1/orders', $this->orderFor($product, 1) + ['coupon_code' => 'BACK10'])
+            ->assertStatus(201)->json('data.id');
+        $this->assertSame(4, $coupon->fresh()->quantity);
+
+        // An admin trashes the new order: the use comes back again; restoring takes it again.
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin)->deleteJson("/api/v1/admin/orders/{$again}")->assertOk();
+        $this->assertSame(5, $coupon->fresh()->quantity);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin)->postJson("/api/v1/admin/orders/{$again}/restore")->assertOk();
+        $this->assertSame(4, $coupon->fresh()->quantity);
+    }
+
 }

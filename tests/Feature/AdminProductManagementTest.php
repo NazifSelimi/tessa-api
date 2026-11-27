@@ -122,4 +122,22 @@ class AdminProductManagementTest extends TestCase
         $this->assertEquals(986, (float) Product::where('name', 'Rounding test shampoo')->value('stylist_price'));
     }
 
+    /** #10: stock add / subtract / set work from the current number (row locked while changing). */
+    #[Test]
+    public function admin_stock_changes_add_subtract_and_set(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]));
+        $product = Product::factory()->create(['quantity' => 10]);
+
+        $this->putJson("/api/v1/admin/products/{$product->id}/stock", ['quantity' => 5, 'operation' => 'add'])
+            ->assertOk()->assertJsonPath('data.quantity', 15);
+        // Someone buys 3 in the meantime: the next change starts from 12, not from a stale 15.
+        $product->decrement('quantity', 3);
+        $this->putJson("/api/v1/admin/products/{$product->id}/stock", ['quantity' => 20, 'operation' => 'subtract'])
+            ->assertOk()->assertJsonPath('data.quantity', 0);
+        $this->putJson("/api/v1/admin/products/{$product->id}/stock", ['quantity' => 7, 'operation' => 'set'])
+            ->assertOk()->assertJsonPath('data.quantity', 7);
+        $this->assertSame(7, $product->fresh()->quantity);
+    }
+
 }

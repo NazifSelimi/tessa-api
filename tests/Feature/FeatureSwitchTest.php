@@ -83,4 +83,43 @@ class FeatureSwitchTest extends TestCase
             ->assertJsonPath('data.brand_color', '#123456');
         $this->asAdmin()->putJson('/api/v1/admin/business', ['brand_color' => 'red'])->assertStatus(422);
     }
+
+    /** #22: with "Distributor codes" off, the stylist code pages stop too (like the admin ones). */
+    #[Test]
+    public function distributor_codes_off_closes_the_stylist_code_pages()
+    {
+        Setting::put('features', json_encode(['distributors' => false]));
+        $this->app->forgetInstance(\App\Services\FeatureService::class);
+        \Illuminate\Support\Facades\Cache::flush();
+        $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($stylist->createToken('t')->plainTextToken)->getJson('/api/v1/stylist/codes')->assertNotFound()->assertJsonPath('errors.code', 'feature_off');
+        $this->withToken($stylist->createToken('t')->plainTextToken)->postJson('/api/v1/stylist/codes/generate')->assertNotFound();
+    }
+
+    /** #22: with "Referral codes & store credit" off, checkout never spends store credit. */
+    #[Test]
+    public function referrals_off_means_no_store_credit_is_spent()
+    {
+        $stylist = User::factory()->create(['role' => User::ROLE_STYLIST]);
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        app(\App\Services\ReferralService::class)->adjust($stylist, 500, 'Test credit', $admin);
+        Setting::put('features', json_encode(['referrals' => false]));
+        $this->app->forgetInstance(\App\Services\FeatureService::class);
+        \Illuminate\Support\Facades\Cache::flush();
+        $product = \App\Models\Product::factory()->create(['price' => 1000, 'stylist_price' => 800, 'quantity' => 10]);
+        $this->app['auth']->forgetGuards();
+
+        $response = $this->withToken($stylist->createToken('t')->plainTextToken)->postJson('/api/v1/checkout', [
+            'items' => [['product_id' => $product->id, 'qty' => 1]],
+            'use_store_credit' => true,
+            'shipping_address' => ['firstName' => 'S', 'lastName' => 'Alon', 'email' => 's@example.com', 'phone' => '070555666',
+                'address' => 'S 1', 'city' => 'Skopje', 'zip' => '1000'],
+        ])->assertStatus(201);
+
+        $this->assertEquals(0, (float) $response->json('data.storeCreditUsed'));
+        $this->assertEqualsWithDelta(500, app(\App\Services\ReferralService::class)->balance($stylist), 0.01);
+    }
+
 }

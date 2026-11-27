@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\PhoneLogin;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserService
@@ -54,7 +55,10 @@ class AdminUserService
     /**
      * Normalize camelCase fields and update a user.
      */
-    public function updateUser($id, array $data): User
+    /**
+     * @param int|null $keepTokenId When admins change their own password, the token they use stays.
+     */
+    public function updateUser($id, array $data, ?int $keepTokenId = null): User
     {
         $user = User::findOrFail($id);
 
@@ -66,8 +70,14 @@ class AdminUserService
             $data['last_name'] = $data['lastName'];
         }
 
-        if (isset($data['password'])) {
+        $newPassword = isset($data['password']);
+        if ($newPassword) {
             $data['password'] = Hash::make($data['password']);
+        }
+
+        // The sign-in phone follows the account phone, as on the customer's own profile.
+        if (! empty($data['phone'])) {
+            PhoneLogin::sync($user, $data['phone']);
         }
 
         // Extract role and handle via explicit assignment (role is not mass-assignable)
@@ -83,6 +93,12 @@ class AdminUserService
 
         $user->fill($data);
         $user->save();
+
+        // An admin usually sets a password because an account was taken over:
+        // sign out every device and AI assistant key of that account.
+        if ($newPassword) {
+            $user->tokens()->when($keepTokenId, fn ($q) => $q->whereKeyNot($keepTokenId))->delete();
+        }
 
         return $user->fresh();
     }
