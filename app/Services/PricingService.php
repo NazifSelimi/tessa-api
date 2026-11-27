@@ -192,6 +192,7 @@ class PricingService
         $left = $bundleDiscount;
         foreach ($offersUsed as &$used) {
             $used['saving'] = min($this->wholeDenars($used['saving']), $left);
+            $used['price'] = round($used['regular'] - $used['saving'], 2);
             $left -= $used['saving'];
         }
         unset($used);
@@ -519,6 +520,7 @@ class PricingService
         };
 
         $applied = [];
+        $regular = [];
         foreach (array_reverse($ids) as $id) {
             $bundle = $bundles[$id] ?? null;
             $on = $bundle && $features->enabled($bundle->isMixMatch() ? 'colour_deals' : 'bundles');
@@ -536,6 +538,8 @@ class PricingService
                 if ($deal && $deal['saving'] > 0) {
                     $take($id, $deal['taken']);
                     $applied[$id] = $deal['saving'];
+                    // The units the deal uses at their normal price, for "Offer: … 1.390 (1.580)".
+                    $regular[$id] = collect($deal['taken'])->sum(fn ($qty, $productId) => (float) ($prices[$productId] ?? 0) * $qty);
                     $result['progress'][$id] = $deal['progress'];
                     continue;
                 }
@@ -575,7 +579,7 @@ class PricingService
             }
 
             $take($id, $need->all());
-            $applied[$id] = $this->offerSaving($bundle, $priceOf)['saving'];
+            ['regular' => $regular[$id], 'saving' => $applied[$id]] = $this->offerSaving($bundle, $priceOf);
         }
 
         // Back to pick order.
@@ -583,7 +587,7 @@ class PricingService
             if (isset($applied[$id])) {
                 $result['discount'] += $applied[$id];
                 $result['applied'][] = $id;
-                $result['used'][] = ['bundleId' => $id, 'name' => $bundles[$id]->name, 'saving' => $applied[$id]];
+                $result['used'][] = ['bundleId' => $id, 'name' => $bundles[$id]->name, 'saving' => $applied[$id], 'regular' => round($regular[$id], 2)];
             }
         }
         $result['progress'] = array_values(array_filter(array_map(fn ($id) => $result['progress'][$id] ?? null, $ids)));

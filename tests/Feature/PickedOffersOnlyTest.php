@@ -106,7 +106,8 @@ class PickedOffersOnlyTest extends TestCase
         $quote = $this->quote($this->items(1, 1), [$this->duo->id]);
 
         $this->assertEquals(300, $quote['bundleDiscount']);
-        $this->assertSame([['bundleId' => (string) $this->duo->id, 'name' => 'Duo', 'saving' => 300]], $quote['offersUsed']);
+        // "Offer: Duo — 1.200" with the normal 1.500 crossed out.
+        $this->assertEquals([['bundleId' => (string) $this->duo->id, 'name' => 'Duo', 'saving' => 300, 'regular' => 1500, 'price' => 1200]], $quote['offersUsed']);
         $this->assertEquals(1200, $quote['total'] - $quote['shipping']);
     }
 
