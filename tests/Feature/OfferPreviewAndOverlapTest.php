@@ -57,7 +57,7 @@ class OfferPreviewAndOverlapTest extends TestCase
     }
 
     #[Test]
-    public function a_product_can_be_in_only_one_running_offer()
+    public function offers_may_share_products_and_admin_gets_a_warning()
     {
         [$bundle, $products] = $this->salonSet();
         $token = $this->adminToken();
@@ -66,21 +66,19 @@ class OfferPreviewAndOverlapTest extends TestCase
         ]);
 
         $post(['name' => 'Clash', 'audience' => 'all', 'products' => [['product_id' => $products[2]->id, 'quantity' => 1]]])
-            ->assertStatus(422)->assertJsonValidationErrors('products');
-        $this->assertFalse(Bundle::where('name', 'Clash')->exists());
+            ->assertCreated()
+            ->assertJsonPath('meta.warnings.0', fn ($w) => str_contains($w, 'Salon set'));
+        $this->assertTrue(Bundle::where('name', 'Clash')->exists());
 
-        // Shoppers only never meets a salons-only offer.
-        $post(['name' => 'Shoppers', 'audience' => 'customer', 'products' => [['product_id' => $products[2]->id, 'quantity' => 1]]])
-            ->assertCreated();
+        // Shoppers only never meets a salons-only offer: no warning.
+        $post(['name' => 'Shoppers', 'audience' => 'customer', 'products' => [['product_id' => $products[3]->id, 'quantity' => 1]]])
+            ->assertCreated()->assertJsonMissingPath('meta');
 
-        // Switched off, then switching it on clashes.
+        // Switching on an offer that shares a product works, with a warning.
         $off = Bundle::create(['name' => 'Later', 'audience' => 'stylist', 'promotion_type' => 'percentage', 'discount_percentage' => 5, 'is_active' => false]);
         $off->products()->attach([$products[0]->id => ['quantity' => 1]]);
-        $this->withToken($token)->postJson('/api/v1/admin/bundles/bulk', ['ids' => [$off->id], 'action' => 'activate'])->assertStatus(422);
-        $this->assertFalse($off->fresh()->is_active);
-
-        // Dates that do not meet are fine.
-        $bundle->update(['ends_at' => now()->addDays(3)]);
-        $this->withToken($token)->putJson("/api/v1/admin/bundles/{$off->id}", ['is_active' => true, 'starts_at' => now()->addDays(4)->toDateTimeString()])->assertOk();
+        $this->withToken($token)->postJson('/api/v1/admin/bundles/bulk', ['ids' => [$off->id], 'action' => 'activate'])
+            ->assertOk()->assertJsonPath('meta.warnings.0', fn ($w) => str_contains($w, 'Salon set'));
+        $this->assertTrue($off->fresh()->is_active);
     }
 }

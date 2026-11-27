@@ -60,7 +60,8 @@ class ColourDealPricingTest extends TestCase
         }
         $request = $user ? $this->withToken($user->createToken('t')->plainTextToken) : $this;
 
-        return $request->postJson('/api/v1/cart/quote', ['items' => $items])->assertOk()->json('data');
+        // Only picked deals count: the shop picks the deal when its picker adds the shades.
+        return $request->postJson('/api/v1/cart/quote', ['items' => $items, 'bundle_ids' => [$this->deal->id]])->assertOk()->json('data');
     }
 
     #[Test]
@@ -132,14 +133,15 @@ class ColourDealPricingTest extends TestCase
     public function admins_save_a_pick_any_colours_offer_with_steps()
     {
         $token = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
-        // Same colour line and gift as the running deal: refused while that one is on.
+        // Same colour line and gift as the running deal: saved, with a warning for Admin.
         $body = [
             'name' => 'Admin colour deal', 'audience' => 'stylist', 'promotion_type' => 'mix_match', 'is_active' => true,
             'product_family_id' => $this->family->id,
             'tiers' => [['min' => 10, 'free' => 0, 'gift' => true]],
             'products' => [['product_id' => $this->oxidant->id, 'quantity' => 1]],
         ];
-        $this->withToken($token)->postJson('/api/v1/admin/bundles', $body)->assertStatus(422);
+        $this->withToken($token)->postJson('/api/v1/admin/bundles', $body)->assertCreated()
+            ->assertJsonPath('meta.warnings.0', fn ($warning) => str_contains($warning, 'Pick colours'));
         $this->deal->update(['is_active' => false]);
 
         $response = $this->withToken($token)->postJson('/api/v1/admin/bundles', [

@@ -161,20 +161,14 @@ class OfferAuditor
 
         $this->limits($row, $quote, $settings, $lines);
 
-        // 2. Same products, no offer chosen: only a pick-any deal may discount them by itself.
+        // 2. Same products, no offer picked: no discount at all (only picked offers count).
         $plain = $this->quote($row, $user, $lines, [], false);
         if ($plain) {
             $row['withoutOffer'] = round($plain['subtotal'] - $plain['discount'], 2);
+            // Nothing applies by itself: no pick, no discount.
             if ($plain['discount'] > 0) {
-                $deals = Bundle::query()->whereIn('id', $plain['appliedBundleIds'])->get();
-                $byItself = $deals->every(fn (Bundle $deal) => $deal->isMixMatch());
-                $note = "without the offer the cart still takes {$this->mkd($plain['discount'])} off"
-                    . ($deals->isNotEmpty() ? ' (' . $deals->pluck('name')->implode(', ') . ')' : '');
-                if ($byItself) {
-                    $row['notes'][] = $note . ' — a pick-any deal, meant to apply by itself';
-                } else {
-                    $this->wrong($row, $note);
-                }
+                $this->wrong($row, "without picking the offer the cart still takes {$this->mkd($plain['discount'])} off ("
+                    . $this->names($plain['appliedBundleIds']) . ')');
             }
         }
 
@@ -269,7 +263,7 @@ class OfferAuditor
             $row['expected'] = round($expected, 2);
 
             $lines = collect($qty)->map(fn ($n, $id) => ['product' => $products[$id], 'qty' => $n])->values()->all();
-            $quote = $this->quote($row, $user, $lines, []);
+            $quote = $this->quote($row, $user, $lines, [(string) $deal->id]);
             if (! $quote) {
                 $rows[] = $row;
                 continue;
@@ -296,6 +290,15 @@ class OfferAuditor
             }
             $this->limits($row, $quote, $settings, $lines);
 
+            // Same cart, deal not picked: no discount (only picked deals count).
+            $unpicked = $this->quote($row, $user, $lines, [], false);
+            if ($unpicked) {
+                $row['withoutOffer'] = round($unpicked['subtotal'] - $unpicked['discount'], 2);
+                if ($unpicked['discount'] > 0) {
+                    $this->wrong($row, "without picking the deal the cart still takes {$this->mkd($unpicked['discount'])} off");
+                }
+            }
+
             // One unit short of the step: the step's reward must not be given yet.
             if ($tier['min'] > 1) {
                 $short = $lines;
@@ -305,10 +308,9 @@ class OfferAuditor
                     }
                 }
                 unset($line);
-                $plain = $this->quote($row, $user, $short, [], false);
+                $plain = $this->quote($row, $user, $short, [(string) $deal->id], false);
                 $lower = collect($tiers)->filter(fn ($t) => $t['min'] < $tier['min'])->last();
                 if ($plain) {
-                    $row['withoutOffer'] = round($plain['subtotal'] - $plain['discount'], 2);
                     if (! $lower && $plain['discount'] > 0 && in_array((string) $deal->id, $plain['appliedBundleIds'], true)) {
                         $this->wrong($row, "one shade short of the first step the cart still takes {$this->mkd($plain['discount'])} off");
                     }
@@ -502,7 +504,7 @@ class OfferAuditor
         $out .= "**{$count(self::WRONG)} WRONG**, {$count(self::CHECK)} CHECK (under the estimated cost), {$count(self::OK)} OK, {$count(self::SKIP)} not running, {$count(self::NA)} not for that audience.\n\n";
         $out .= "Totals are the goods only (no shipping), in MKD. Expected = the offer card's price worked out by hand; "
             . "real = PricingService::quote. \"No offer\" = same products without choosing the offer "
-            . "(for pick-any deals: one shade short of the step).\n\n";
+            . "(nothing may be taken off).\n\n";
 
         $out .= "## Price check\n\n| # | Offer | Type | Step | Who | Expected | Real | Diff | No offer | Result | Why / notes |\n|---|---|---|---|---|---:|---:|---:|---:|---|---|\n";
         $order = [self::WRONG => 0, self::CHECK => 1, self::OK => 2, self::NA => 3, self::SKIP => 4];

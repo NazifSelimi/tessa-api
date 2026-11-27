@@ -44,7 +44,10 @@ class PickAnyDealRulesTest extends TestCase
         $items = collect($quantities)->map(fn ($qty, $id) => ['product_id' => $id, 'qty' => $qty])->values()->all();
 
         return $this->withToken($this->stylist->createToken('t')->plainTextToken)
-            ->postJson('/api/v1/cart/quote', ['items' => $items])->assertOk()->json('data');
+            // Only picked deals count: pick every deal this test made.
+            ->postJson('/api/v1/cart/quote', ['items' => $items, 'bundle_ids' => Bundle::query()
+                ->where('promotion_type', Bundle::MIX_MATCH)->where('is_active', true)->pluck('id')->all()])
+            ->assertOk()->json('data');
     }
 
     #[Test]

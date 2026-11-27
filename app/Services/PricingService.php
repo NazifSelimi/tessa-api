@@ -120,7 +120,7 @@ class PricingService
      * @param bool|null $asStylist admin preview only: price as a salon (true) or a shopper (false)
      *                             instead of by the account's own role.
      */
-    public function quote(?User $user, array $lines, array $bundleIds = [], ?Coupon $coupon = null, bool $strict = true, ?bool $asStylist = null): array
+    public function quote(?User $user, array $lines, array $bundleIds = [], ?Coupon $coupon = null, bool $strict = true, ?bool $asStylist = null, bool $suggest = true): array
     {
         $settings = $this->settings();
         $isStylist = $asStylist ?? ($user?->isStylist() ?? false);
@@ -159,15 +159,11 @@ class PricingService
             ];
         }
 
-        ['discount' => $bundleDiscount, 'applied' => $appliedBundles, 'skipped' => $skippedBundles, 'remaining' => $remaining]
-            = $this->bundleDiscount($bundleIds, $quantities, $prices, $user, $strict, $isStylist);
-
-        // "Pick any colours" offers apply by themselves once the cart reaches a step,
-        // counting only the units no normal offer used (one tube, one deal).
-        ['discount' => $dealDiscount, 'applied' => $dealIds, 'progress' => $colourDeals]
-            = $this->colourDeals($user, $remaining, $prices, $familyOf);
-        $bundleDiscount += $dealDiscount;
-        $appliedBundles = array_merge($appliedBundles, $dealIds);
+        // Only the offers and pick-any deals the customer picked (bundle_ids) count;
+        // nothing applies by itself. Two picks that need the same units: the last one wins.
+        ['discount' => $bundleDiscount, 'applied' => $appliedBundles, 'skipped' => $skippedBundles,
+            'replaced' => $replacedBundles, 'progress' => $colourDeals, 'used' => $offersUsed]
+            = $this->pickedOffers($bundleIds, $quantities, $prices, $familyOf, $user, $strict, $isStylist);
 
         $couponDiscount = $coupon ? $coupon->calculateDiscount(max(0, $subtotal - $bundleDiscount)) : 0.0;
 
@@ -190,6 +186,15 @@ class PricingService
         // discount down also keeps it inside the profit floor.
         $bundleDiscount = $this->wholeDenars($bundleDiscount);
         $couponDiscount = $this->wholeDenars($couponDiscount);
+
+        // "Offer used: <name> −<saving>": what each offer really gives after the cap and floor,
+        // earliest pick first, so the lines add up to the offer discount.
+        $left = $bundleDiscount;
+        foreach ($offersUsed as &$used) {
+            $used['saving'] = min($this->wholeDenars($used['saving']), $left);
+            $left -= $used['saving'];
+        }
+        unset($used);
 
         // A stylist's referral credit is a cost too, so discount plus credit
         // stay inside the floor: the client discount gives way first, then the credit.
@@ -219,6 +224,13 @@ class PricingService
             'maxDiscountPercentage' => $settings['maxDiscountPercentage'],
             'appliedBundleIds' => $appliedBundles,
             'skippedBundles' => $skippedBundles,
+            // Picked offers another, later pick took the products of: the cart drops them.
+            'replacedBundles' => $replacedBundles,
+            'offersUsed' => $offersUsed,
+            // Offers the cart matches but the customer did not pick: the shop asks "Use offer X and save Y?".
+            'suggestedOffers' => ! $strict && $suggest
+                ? $this->suggestions($user, $lines, $bundleIds, $quantities, $prices, $familyOf, $isStylist, $asStylist, $bundleDiscount)
+                : [],
             'colourDeals' => $colourDeals,
             'couponCode' => $coupon?->code,
             'shipping' => $shipping,
@@ -355,64 +367,6 @@ class PricingService
     }
 
     /**
-     * "Pick any" offers: every product the offer counts (shades of its colour
-     * lines, or its own product list) adds to one total. The highest step
-     * reached gives its free units (the cheapest ones), its gifts that are in
-     * the cart (gift_ids: one of each; gift: gift_qty units from the offer's
-     * gift list, e.g. an oxidant). Also returns how far each offer is, so the
-     * cart can say "4 more for a free oxidant".
-     *
-     * One tube counts for only one deal: $quantities holds only the units no
-     * normal offer used, and the deals are worked out biggest saving first,
-     * each counting only the units a bigger deal has not already taken.
-     */
-    private function colourDeals(?User $user, array $quantities, array $prices, array $familyOf): array
-    {
-        $result = ['discount' => 0.0, 'applied' => [], 'progress' => []];
-        $quantities = array_filter($quantities, fn ($qty) => $qty > 0);
-        if (! $quantities || ! app(FeatureService::class)->enabled('colour_deals')) {
-            return $result;
-        }
-
-        $deals = Bundle::query()->with(['products', 'family'])
-            ->where('promotion_type', Bundle::MIX_MATCH)
-            ->where('is_active', true)
-            ->get()
-            ->filter(fn (Bundle $deal) => $deal->isRunning() && $deal->isAvailableFor($user))
-            ->values();
-
-        // First: what each deal would give on its own, to know which one is bigger.
-        $order = $deals->keys()->sortBy(fn ($i) => [
-            -($this->evaluateDeal($deals[$i], $quantities, $prices, $familyOf)['saving'] ?? 0), $i,
-        ])->values();
-
-        // Then: biggest saving first, each deal only on the units still free.
-        $available = $quantities;
-        foreach ($order as $i) {
-            $deal = $this->evaluateDeal($deals[$i], $available, $prices, $familyOf);
-            if (! $deal) {
-                continue;
-            }
-
-            if ($deal['saving'] > 0) {
-                $result['discount'] += $deal['saving'];
-                $result['applied'][] = (string) $deals[$i]->id;
-                // A deal that gives something uses all the units it counted, and its gifts.
-                foreach ($deal['taken'] as $id => $qty) {
-                    $available[$id] -= $qty;
-                }
-                $available = array_filter($available, fn ($qty) => $qty > 0);
-            }
-            $result['progress'][$i] = $deal['progress'];
-        }
-        // The cart lists the deals in their usual order.
-        ksort($result['progress']);
-        $result['progress'] = array_values($result['progress']);
-
-        return $result;
-    }
-
-    /**
      * One pick-any deal on the given units. Null when it counts none of them.
      *
      * @return array{saving: float, taken: array<int|string, int>, progress: array}|null
@@ -518,56 +472,179 @@ class PricingService
         return (float) floor($amount + 0.0001);
     }
 
-    private function bundleDiscount(array $bundleIds, array $quantities, array $prices, ?User $user, bool $strict, bool $isStylist): array
+    /**
+     * The offers and pick-any deals the customer picked, newest pick first: a
+     * pick takes the product units it needs, so when two picks need the same
+     * units the one picked last keeps them and the other is "replaced". An
+     * offer whose products are not all in the cart gives nothing and says what
+     * to add. A picked deal gives the reward of the step its units reach.
+     *
+     * @return array{discount: float, applied: array, skipped: array, replaced: array, progress: array, used: array}
+     */
+    private function pickedOffers(array $bundleIds, array $quantities, array $prices, array $familyOf, ?User $user, bool $strict, bool $isStylist): array
     {
-        $result = ['discount' => 0.0, 'applied' => [], 'skipped' => [], 'remaining' => $quantities];
-        if (empty($bundleIds)) {
+        $result = ['discount' => 0.0, 'applied' => [], 'skipped' => [], 'replaced' => [], 'progress' => [], 'used' => []];
+        $ids = array_values(array_unique(array_map('strval', $bundleIds)));
+        if (! $ids) {
             return $result;
         }
 
-        // Offers switched off on /admin/features never discount a cart.
-        $bundles = app(FeatureService::class)->enabled('bundles')
-            ? Bundle::query()->with('products')->findMany($bundleIds)
-            : collect();
-        $fail = function (string $id, string $message) use ($strict, &$result) {
+        $features = app(FeatureService::class);
+        $bundles = Bundle::query()->with(['products', 'family'])->findMany($ids)->keyBy(fn (Bundle $b) => (string) $b->id);
+        $fail = function (string $id, string $message, array $extra = []) use ($strict, &$result) {
             if ($strict) {
                 throw ValidationException::withMessages(['bundle_ids' => [$message]]);
             }
-            $result['skipped'][] = ['bundleId' => $id, 'reason' => $message];
+            $result['skipped'][] = ['bundleId' => $id, 'reason' => $message] + $extra;
         };
-
-        foreach (array_diff(array_map('strval', $bundleIds), $bundles->pluck('id')->map(fn ($id) => (string) $id)->all()) as $missing) {
-            $fail($missing, 'One or more selected offers are unavailable.');
-        }
-        // Colour deals are priced by colourDeals(), whichever products the cart has.
-        $bundles = $bundles->reject(fn (Bundle $bundle) => $bundle->isMixMatch());
-
-        $remaining = $quantities;
         $priceOf = fn (Product $product) => $prices[$product->id] ?? $product->resolvePrice($isStylist);
 
-        foreach ($bundles as $bundle) {
-            if (!$bundle->isAvailableFor($user)) {
-                $fail((string) $bundle->id, "{$bundle->name} is not available for this account.");
+        $available = array_filter($quantities, fn ($qty) => $qty > 0);
+        // product id => ids of the picks that took its units, to say who replaced whom.
+        $takenBy = [];
+        $take = function (string $id, array $units) use (&$available, &$takenBy) {
+            foreach ($units as $productId => $qty) {
+                $available[$productId] = ($available[$productId] ?? 0) - $qty;
+                $takenBy[$productId][] = $id;
+            }
+            $available = array_filter($available, fn ($qty) => $qty > 0);
+        };
+        $replacedBy = function (string $id, Bundle $bundle, array $productIds) use (&$result, &$takenBy, $bundles, $fail) {
+            $by = collect($productIds)->flatMap(fn ($productId) => $takenBy[$productId] ?? [])->unique()->first();
+            $byName = $by !== null ? $bundles[$by]?->name : null;
+            $result['replaced'][] = ['bundleId' => $id, 'name' => $bundle->name, 'byBundleId' => $by, 'byName' => $byName];
+            $fail($id, "Offer {$bundle->name} was replaced by offer {$byName} (they share products).", [
+                'name' => $bundle->name, 'replacedBy' => $by,
+            ]);
+        };
+
+        $applied = [];
+        foreach (array_reverse($ids) as $id) {
+            $bundle = $bundles[$id] ?? null;
+            $on = $bundle && $features->enabled($bundle->isMixMatch() ? 'colour_deals' : 'bundles');
+            if (! $bundle || ! $on) {
+                $fail($id, 'One or more selected offers are unavailable.');
+                continue;
+            }
+            if (! $bundle->isAvailableFor($user)) {
+                $fail($id, "{$bundle->name} is not available for this account.", ['name' => $bundle->name]);
                 continue;
             }
 
-            $qualifies = $bundle->products->every(
-                fn ($product) => ($remaining[$product->id] ?? 0) >= (int) $product->pivot->quantity
-            );
-            if (!$qualifies) {
-                $fail((string) $bundle->id, "Add all items from {$bundle->name} to use this offer.");
+            if ($bundle->isMixMatch()) {
+                $deal = $this->evaluateDeal($bundle, $available, $prices, $familyOf);
+                if ($deal && $deal['saving'] > 0) {
+                    $take($id, $deal['taken']);
+                    $applied[$id] = $deal['saving'];
+                    $result['progress'][$id] = $deal['progress'];
+                    continue;
+                }
+                $full = $this->evaluateDeal($bundle, $quantities, $prices, $familyOf);
+                if ($full && $full['saving'] > 0) {
+                    // The cart reaches a step, but a later pick took those units.
+                    $replacedBy($id, $bundle, array_keys($full['taken']));
+                    continue;
+                }
+                // Picked, no step reached yet: no discount, the cart says how many more.
+                if ($deal ?? $full) {
+                    $result['progress'][$id] = ($deal ?? $full)['progress'];
+                }
+                if (! $strict) {
+                    $result['skipped'][] = ['bundleId' => $id, 'name' => $bundle->name, 'reason' => "Add more to reach a step of {$bundle->name}.", 'missing' => []];
+                }
                 continue;
             }
 
-            foreach ($bundle->products as $product) {
-                $remaining[$product->id] -= (int) $product->pivot->quantity;
+            $need = $bundle->products->mapWithKeys(fn ($product) => [$product->id => (int) $product->pivot->quantity]);
+            $missing = $bundle->products
+                ->filter(fn ($product) => ($quantities[$product->id] ?? 0) < $need[$product->id])
+                ->map(fn ($product) => [
+                    'productId' => (string) $product->id,
+                    'name' => $product->name,
+                    'qty' => $need[$product->id] - ($quantities[$product->id] ?? 0),
+                ])->values()->all();
+            if ($missing) {
+                $names = collect($missing)->map(fn ($m) => ($m['qty'] > 1 ? "{$m['qty']}× " : '') . $m['name'])->implode(', ');
+                $fail($id, "Add {$names} to use {$bundle->name}.", ['name' => $bundle->name, 'missing' => $missing]);
+                continue;
+            }
+            $short = $need->filter(fn ($qty, $productId) => ($available[$productId] ?? 0) < $qty)->keys()->all();
+            if ($short) {
+                $replacedBy($id, $bundle, $short);
+                continue;
             }
 
-            $result['discount'] += $this->offerSaving($bundle, $priceOf)['saving'];
-            $result['applied'][] = (string) $bundle->id;
+            $take($id, $need->all());
+            $applied[$id] = $this->offerSaving($bundle, $priceOf)['saving'];
         }
-        $result['remaining'] = $remaining;
+
+        // Back to pick order.
+        foreach ($ids as $id) {
+            if (isset($applied[$id])) {
+                $result['discount'] += $applied[$id];
+                $result['applied'][] = $id;
+                $result['used'][] = ['bundleId' => $id, 'name' => $bundles[$id]->name, 'saving' => $applied[$id]];
+            }
+        }
+        $result['progress'] = array_values(array_filter(array_map(fn ($id) => $result['progress'][$id] ?? null, $ids)));
 
         return $result;
+    }
+
+    /**
+     * Running offers and deals the cart matches that the customer did not
+     * pick, with what picking each one would save (the cart priced again with
+     * it picked, so the cap, the floor and a replaced pick are counted).
+     */
+    private function suggestions(?User $user, array $lines, array $bundleIds, array $quantities, array $prices, array $familyOf, bool $isStylist, ?bool $asStylist, float $currentDiscount): array
+    {
+        $quantities = array_filter($quantities, fn ($qty) => $qty > 0);
+        if (! $quantities) {
+            return [];
+        }
+        $picked = array_map('strval', $bundleIds);
+        $features = app(FeatureService::class);
+        // Admin "view as": the offers of the audience being viewed.
+        $fits = fn (Bundle $bundle) => $bundle->isRunning() && ($asStylist === null
+            ? $bundle->isAvailableFor($user)
+            : match ($bundle->audience) { 'stylist' => $asStylist, 'customer' => ! $asStylist, default => true });
+
+        $candidates = collect();
+        if ($features->enabled('bundles')) {
+            $candidates = $candidates->merge(Bundle::query()->with('products')
+                ->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('promotion_type')->orWhere('promotion_type', '!=', Bundle::MIX_MATCH))
+                ->whereNotIn('id', $picked ?: [0])
+                ->whereHas('products', fn ($q) => $q->whereIn('products.id', array_keys($quantities)))
+                ->get()
+                ->filter($fits)
+                ->filter(fn (Bundle $b) => $b->products->every(fn ($p) => ($quantities[$p->id] ?? 0) >= (int) $p->pivot->quantity)));
+        }
+        if ($features->enabled('colour_deals')) {
+            $candidates = $candidates->merge(Bundle::query()->with(['products', 'family'])
+                ->where('promotion_type', Bundle::MIX_MATCH)->where('is_active', true)
+                ->whereNotIn('id', $picked ?: [0])
+                ->get()
+                ->filter($fits)
+                ->filter(fn (Bundle $deal) => ($this->evaluateDeal($deal, $quantities, $prices, $familyOf)['saving'] ?? 0) > 0));
+        }
+
+        $found = [];
+        foreach ($candidates->take(10) as $candidate) {
+            $with = $this->quote($user, $lines, [...$picked, (string) $candidate->id], null, false, $asStylist, false);
+            $saving = $with['bundleDiscount'] - $currentDiscount;
+            if (in_array((string) $candidate->id, $with['appliedBundleIds'], true) && $saving >= 1) {
+                $found[] = [
+                    'bundleId' => (string) $candidate->id,
+                    'name' => $candidate->name,
+                    'saving' => $saving,
+                    // Picked offers this one would take the place of.
+                    'replaces' => array_column($with['replacedBundles'], 'name'),
+                ];
+            }
+        }
+        usort($found, fn ($a, $b) => $b['saving'] <=> $a['saving']);
+
+        return array_slice($found, 0, 3);
     }
 }

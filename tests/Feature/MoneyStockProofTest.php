@@ -65,12 +65,12 @@ class MoneyStockProofTest extends TestCase
     {
         $this->features(['colour_deals' => true]);
         $shade = $this->shade();
-        $this->pickAny($shade, 'stylist');
-        $this->pickAny($shade, 'all');
+        $first = $this->pickAny($shade, 'stylist');
+        $second = $this->pickAny($shade, 'all');
         $salon = User::factory()->create(['role' => User::ROLE_STYLIST]);
 
         // 10 tubes × 300 = 3000. One tube free = 300 off. Today: 600 off (2 tubes free).
-        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 10]]);
+        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 10]], [$first->id, $second->id]);
         $this->assertEquals(300, $quote['bundleDiscount']);
     }
 
@@ -80,7 +80,7 @@ class MoneyStockProofTest extends TestCase
     {
         $this->features(['colour_deals' => true, 'bundles' => true]);
         $shade = $this->shade();
-        $this->pickAny($shade, 'all');
+        $deal = $this->pickAny($shade, 'all');
         $offer = Bundle::create([
             'name' => '10 tubes −20%', 'audience' => 'all', 'promotion_type' => 'percentage',
             'discount_percentage' => 20, 'is_active' => true,
@@ -90,24 +90,32 @@ class MoneyStockProofTest extends TestCase
 
         // 10 tubes × 300 = 3000. The offer gives 600 off and uses all 10 tubes.
         // Today the same 10 tubes also reach the pick-any step: +300 → 900 off.
-        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 10]], [$offer->id]);
+        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 10]], [$deal->id, $offer->id]);
         $this->assertEquals(600, $quote['bundleDiscount']);
+        // The deal was picked first, the offer last: the offer keeps the tubes.
+        $this->assertSame((string) $deal->id, $quote['replacedBundles'][0]['bundleId']);
     }
 
-    /** Q2: when two pick-any deals count the same tubes, only the bigger saving applies. */
+    /** When two picked pick-any deals count the same tubes, the one picked last applies. */
     #[Test]
-    public function the_bigger_of_two_overlapping_pick_any_deals_applies()
+    public function of_two_picked_pick_any_deals_on_the_same_tubes_the_last_picked_applies()
     {
         $this->features(['colour_deals' => true]);
         $shade = $this->shade();
-        $this->pickAny($shade, 'all');                       // 10 → 1 free (300)
+        $smaller = $this->pickAny($shade, 'all');                       // 10 → 1 free (300)
         $bigger = $this->pickAny($shade, 'stylist');
         $bigger->update(['tiers' => [['min' => 10, 'free' => 2, 'gift' => false]]]); // 10 → 2 free (600)
         $salon = User::factory()->create(['role' => User::ROLE_STYLIST]);
+        $tubes = [['product_id' => $shade->id, 'qty' => 10]];
 
-        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 10]]);
+        $quote = $this->quote($salon, $tubes, [$smaller->id, $bigger->id]);
         $this->assertEquals(600, $quote['bundleDiscount']);
         $this->assertSame([(string) $bigger->id], $quote['appliedBundleIds']);
+
+        $quote = $this->quote($salon, $tubes, [$bigger->id, $smaller->id]);
+        $this->assertEquals(300, $quote['bundleDiscount']);
+        $this->assertSame([(string) $smaller->id], $quote['appliedBundleIds']);
+        $this->assertSame((string) $bigger->id, $quote['replacedBundles'][0]['bundleId']);
     }
 
     /** Q2: tubes the normal offer did not use still count toward a pick-any step. */
@@ -116,7 +124,7 @@ class MoneyStockProofTest extends TestCase
     {
         $this->features(['colour_deals' => true, 'bundles' => true]);
         $shade = $this->shade();
-        $this->pickAny($shade, 'all');
+        $deal = $this->pickAny($shade, 'all');
         $offer = Bundle::create([
             'name' => '10 tubes −20%', 'audience' => 'all', 'promotion_type' => 'percentage',
             'discount_percentage' => 20, 'is_active' => true,
@@ -124,8 +132,8 @@ class MoneyStockProofTest extends TestCase
         $offer->products()->sync([$shade->id => ['quantity' => 10, 'is_bonus' => false, 'bonus_quantity' => 0]]);
         $salon = User::factory()->create(['role' => User::ROLE_STYLIST]);
 
-        // 20 tubes: 10 in the offer (600 off), the other 10 reach the pick-any step (300 off).
-        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 20]], [$offer->id]);
+        // 20 tubes, both picked: 10 in the offer (600 off), the other 10 reach the pick-any step (300 off).
+        $quote = $this->quote($salon, [['product_id' => $shade->id, 'qty' => 20]], [$deal->id, $offer->id]);
         $this->assertEquals(900, $quote['bundleDiscount']);
         $this->assertSame(10, $quote['colourDeals'][0]['count']);
     }

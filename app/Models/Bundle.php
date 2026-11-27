@@ -144,8 +144,8 @@ class Bundle extends Model
 
     /**
      * Other switched-on offers and deals that share a product with this one
-     * while both can run for the same shoppers. A product belongs to only one
-     * offer at a time, so one sale is never discounted twice.
+     * while both can run for the same shoppers. Shown to Admin as a warning only:
+     * offers may share products, the cart uses only the one the customer picks.
      *
      * @return array<int, array{id: int, name: string, products: array<int, string>}>
      */
