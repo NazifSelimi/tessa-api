@@ -34,6 +34,8 @@ class CartQuoteController extends Controller
             'items' => ['required', 'array', 'min:1', 'max:200'],
             'items.*.product_id' => ['required', 'integer'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
+            // Admin "view as" switch: the cart shows salon or shopper prices, so price it the same way.
+            'view_as' => ['nullable', 'in:stylist,customer'],
         ]);
 
         $user = $request->bearerToken() ? ApiUserResolver::fromRequest($request) : null;
@@ -63,7 +65,10 @@ class CartQuoteController extends Controller
             }
         }
 
-        $quote = $this->pricing->quote($user, $lines, $validated['bundle_ids'] ?? [], $coupon, false);
+        $asStylist = $user?->isAdmin() && !empty($validated['view_as'])
+            ? $validated['view_as'] === 'stylist'
+            : null;
+        $quote = $this->pricing->quote($user, $lines, $validated['bundle_ids'] ?? [], $coupon, false, $asStylist);
         $quote['couponError'] = $couponError;
         $quote['isReferralCode'] = (bool) $coupon?->isReferral();
         $quote['couponRequiresLogin'] = $couponError === __(ReferralService::GUEST_ERROR);

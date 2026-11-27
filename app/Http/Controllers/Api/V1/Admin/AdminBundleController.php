@@ -7,7 +7,9 @@ use App\Http\Resources\BundleResource;
 use App\Models\Bundle;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class AdminBundleController extends Controller
 {
@@ -20,18 +22,28 @@ class AdminBundleController extends Controller
 
     public function store(Request $request)
     {
-        $bundle = Bundle::create($this->clean($this->validated($request)));
-        $this->syncProducts($bundle, $request->input('products', []));
+        $data = $this->clean($this->validated($request));
+        $bundle = DB::transaction(function () use ($data, $request) {
+            $bundle = Bundle::create($data);
+            $this->syncProducts($bundle, $request->input('products', []));
+            $this->assertNoOverlap($bundle);
+
+            return $bundle;
+        });
 
         return ApiResponse::ok(new BundleResource($bundle->load('products.images')), 201);
     }
 
     public function update(Request $request, Bundle $bundle)
     {
-        $bundle->update($this->clean($this->validated($request, true), $bundle));
-        if ($request->has('products')) {
-            $this->syncProducts($bundle, $request->input('products', []));
-        }
+        $data = $this->clean($this->validated($request, true), $bundle);
+        DB::transaction(function () use ($bundle, $data, $request) {
+            $bundle->update($data);
+            if ($request->has('products')) {
+                $this->syncProducts($bundle, $request->input('products', []));
+            }
+            $this->assertNoOverlap($bundle->unsetRelation('products'));
+        });
 
         return ApiResponse::ok(new BundleResource($bundle->load('products.images')));
     }
@@ -62,6 +74,21 @@ class AdminBundleController extends Controller
         };
 
         $bundles = Bundle::query()->whereIn('id', $data['ids'])->get();
+        // Switching on, widening the audience or moving the end date can make two offers share a product.
+        if (in_array($data['action'], ['activate', 'audience', 'ends_at'], true)) {
+            DB::transaction(function () use ($bundles, $data, $value) {
+                foreach ($bundles as $bundle) {
+                    $bundle->update(match ($data['action']) {
+                        'activate' => ['is_active' => true],
+                        'audience' => ['audience' => $value],
+                        'ends_at' => ['ends_at' => $value ?: null],
+                    });
+                }
+                $bundles->each(fn (Bundle $bundle) => $this->assertNoOverlap($bundle));
+            });
+
+            return ApiResponse::ok(['updated' => $bundles->count()], 200, null, "{$bundles->count()} offers updated");
+        }
         foreach ($bundles as $bundle) {
             match ($data['action']) {
                 'activate' => $bundle->update(['is_active' => true]),
@@ -96,6 +123,26 @@ class AdminBundleController extends Controller
         $bundle->update(['image_path' => null]);
 
         return ApiResponse::ok(new BundleResource($bundle->load('products.images')), 200, null, 'Bundle picture removed');
+    }
+
+    /** A product may be in only one running offer or deal at a time (same shoppers, same dates). */
+    private function assertNoOverlap(Bundle $bundle): void
+    {
+        $clashes = $bundle->refresh()->overlappingOffers();
+        if (! $clashes) {
+            return;
+        }
+        $lines = array_map(
+            fn ($clash) => sprintf('%s is already in the offer "%s" (#%d).', implode(', ', $clash['products']), $clash['name'], $clash['id']),
+            $clashes,
+        );
+
+        throw ValidationException::withMessages([
+            'products' => array_merge(
+                ["A product can be in only one offer at a time. Take it out of one offer, change the dates or the audience, or switch one offer off."],
+                $lines,
+            ),
+        ]);
     }
 
     private function forgetImage(Bundle $bundle): void

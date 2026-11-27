@@ -116,10 +116,14 @@ class PricingService
      * @param bool $strict Checkout rejects offers the cart does not qualify for;
      *                     the cart preview skips them and says why instead.
      */
-    public function quote(?User $user, array $lines, array $bundleIds = [], ?Coupon $coupon = null, bool $strict = true): array
+    /**
+     * @param bool|null $asStylist admin preview only: price as a salon (true) or a shopper (false)
+     *                             instead of by the account's own role.
+     */
+    public function quote(?User $user, array $lines, array $bundleIds = [], ?Coupon $coupon = null, bool $strict = true, ?bool $asStylist = null): array
     {
         $settings = $this->settings();
-        $isStylist = $user?->isStylist() ?? false;
+        $isStylist = $asStylist ?? ($user?->isStylist() ?? false);
 
         $subtotal = 0.0;
         $floorTotal = 0.0;
@@ -156,7 +160,7 @@ class PricingService
         }
 
         ['discount' => $bundleDiscount, 'applied' => $appliedBundles, 'skipped' => $skippedBundles, 'remaining' => $remaining]
-            = $this->bundleDiscount($bundleIds, $quantities, $prices, $user, $strict);
+            = $this->bundleDiscount($bundleIds, $quantities, $prices, $user, $strict, $isStylist);
 
         // "Pick any colours" offers apply by themselves once the cart reaches a step,
         // counting only the units no normal offer used (one tube, one deal).
@@ -514,7 +518,7 @@ class PricingService
         return (float) floor($amount + 0.0001);
     }
 
-    private function bundleDiscount(array $bundleIds, array $quantities, array $prices, ?User $user, bool $strict): array
+    private function bundleDiscount(array $bundleIds, array $quantities, array $prices, ?User $user, bool $strict, bool $isStylist): array
     {
         $result = ['discount' => 0.0, 'applied' => [], 'skipped' => [], 'remaining' => $quantities];
         if (empty($bundleIds)) {
@@ -539,7 +543,6 @@ class PricingService
         $bundles = $bundles->reject(fn (Bundle $bundle) => $bundle->isMixMatch());
 
         $remaining = $quantities;
-        $isStylist = $user?->isStylist() ?? false;
         $priceOf = fn (Product $product) => $prices[$product->id] ?? $product->resolvePrice($isStylist);
 
         foreach ($bundles as $bundle) {

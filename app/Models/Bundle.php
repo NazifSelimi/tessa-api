@@ -141,4 +141,74 @@ class Bundle extends Model
             default => true,
         };
     }
+
+    /**
+     * Other switched-on offers and deals that share a product with this one
+     * while both can run for the same shoppers. A product belongs to only one
+     * offer at a time, so one sale is never discounted twice.
+     *
+     * @return array<int, array{id: int, name: string, products: array<int, string>}>
+     */
+    public function overlappingOffers(): array
+    {
+        if (! $this->is_active || $this->is_dynamic || ($this->ends_at && $this->ends_at->isPast())) {
+            return [];
+        }
+
+        $this->loadMissing('products');
+        $mine = $this->productIdsIncludingLines();
+        if (! $mine) {
+            return [];
+        }
+
+        $found = [];
+        $others = static::query()->with('products')
+            ->whereKeyNot($this->getKey())
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('is_dynamic')->orWhere('is_dynamic', false))
+            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()))
+            ->get();
+        foreach ($others as $other) {
+            if (! $this->sharesTimeAndAudienceWith($other)) {
+                continue;
+            }
+            $shared = array_intersect_key($mine, $other->productIdsIncludingLines());
+            if ($shared) {
+                $found[] = ['id' => (int) $other->id, 'name' => $other->name, 'products' => array_values($shared)];
+            }
+        }
+
+        return $found;
+    }
+
+    /** Product id => name for every product the offer uses: its list, gifts and colour-line shades. */
+    private function productIdsIncludingLines(): array
+    {
+        $ids = $this->products->mapWithKeys(fn ($product) => [(int) $product->id => $product->name])->all();
+        foreach ($this->sortedTiers() as $tier) {
+            foreach ($tier['gift_ids'] as $id) {
+                $ids[(int) $id] ??= Product::query()->whereKey($id)->value('name') ?? "#{$id}";
+            }
+        }
+        if ($this->isMixMatch() && $families = $this->familyIds()) {
+            Product::query()->whereIn('product_family_id', $families)->pluck('name', 'id')
+                ->each(function ($name, $id) use (&$ids) {
+                    $ids[(int) $id] ??= $name;
+                });
+        }
+
+        return $ids;
+    }
+
+    private function sharesTimeAndAudienceWith(self $other): bool
+    {
+        $audiences = [$this->audience ?: 'all', $other->audience ?: 'all'];
+        if (! in_array('all', $audiences, true) && $audiences[0] !== $audiences[1]) {
+            return false;
+        }
+        $startsBeforeOtherEnds = ! $this->starts_at || ! $other->ends_at || $this->starts_at < $other->ends_at;
+        $otherStartsBeforeThisEnds = ! $other->starts_at || ! $this->ends_at || $other->starts_at < $this->ends_at;
+
+        return $startsBeforeOtherEnds && $otherStartsBeforeThisEnds;
+    }
 }
