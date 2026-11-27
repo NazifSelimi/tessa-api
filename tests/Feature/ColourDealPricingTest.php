@@ -132,6 +132,16 @@ class ColourDealPricingTest extends TestCase
     public function admins_save_a_pick_any_colours_offer_with_steps()
     {
         $token = User::factory()->create(['role' => User::ROLE_ADMIN])->createToken('t')->plainTextToken;
+        // Same colour line and gift as the running deal: refused while that one is on.
+        $body = [
+            'name' => 'Admin colour deal', 'audience' => 'stylist', 'promotion_type' => 'mix_match', 'is_active' => true,
+            'product_family_id' => $this->family->id,
+            'tiers' => [['min' => 10, 'free' => 0, 'gift' => true]],
+            'products' => [['product_id' => $this->oxidant->id, 'quantity' => 1]],
+        ];
+        $this->withToken($token)->postJson('/api/v1/admin/bundles', $body)->assertStatus(422);
+        $this->deal->update(['is_active' => false]);
+
         $response = $this->withToken($token)->postJson('/api/v1/admin/bundles', [
             'name' => 'Admin colour deal', 'audience' => 'stylist', 'promotion_type' => 'mix_match', 'is_active' => true,
             'product_family_id' => $this->family->id,
